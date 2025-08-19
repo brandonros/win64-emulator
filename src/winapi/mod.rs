@@ -1,8 +1,9 @@
 use unicorn_engine::Unicorn;
 
 pub mod kernel32;
+pub mod module_registry;
 
-fn handle_winapi_call<D>(emu: &mut Unicorn<D>, dll_name: &str, function_name: &str) {
+pub fn handle_winapi_call<D>(emu: &mut Unicorn<D>, dll_name: &str, function_name: &str) {
     // Cast the generic Unicorn to the specific type we need
     let emu_ptr = emu as *mut Unicorn<D> as *mut Unicorn<()>;
     let emu_ref = unsafe { &mut *emu_ptr };

@@ -6,7 +6,7 @@ use unicorn_engine::Unicorn;
 
 use crate::pe::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 use super::iat::IAT_FUNCTION_MAP;
-use crate::winapi::kernel32;
+use crate::winapi;
 
 // Thread-local state for the code hook - all in one block for efficiency
 // Using UnsafeCell for maximum single-threaded performance (no RefCell overhead)
@@ -80,8 +80,8 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
             .map(|info| (info.0.clone(), info.1.clone()))
             .unwrap_or_else(|| ("Unknown".to_string(), "Unknown".to_string()));
         
-        // Handle the API call
-        handle_api_call(emu, &function_info.0, &function_info.1);
+        // Handle the API call using the centralized dispatcher
+        winapi::handle_winapi_call(emu, &function_info.0, &function_info.1);
         
         // Skip the mock function by advancing RIP to the return address
         // Pop return address from stack and jump to it

@@ -14,6 +14,7 @@ const MOCK_FUNCTION_BASE: u64 = 0x7F000000;
 pub struct LoadedPE {
     entry_point: u64,
     image_base: u64,
+    image_size: usize,
     sections: Vec<LoadedSection>,
     symbols: HashMap<String, u64>,
     imports: Vec<ImportedFunction>,
@@ -39,10 +40,12 @@ impl LoadedPE {
         let pe_file = PeFile64::parse(&*data)?;
         let image_base = pe_file.nt_headers().optional_header.image_base.get(object::LittleEndian);
         let entry_point = image_base + pe_file.nt_headers().optional_header.address_of_entry_point.get(object::LittleEndian) as u64;
+        let image_size = pe_file.nt_headers().optional_header.size_of_image.get(object::LittleEndian) as usize;
         
         log::info!("📋 PE64 File Information:");
         log::info!("  Image Base: 0x{:016x}", image_base);
         log::info!("  Entry Point: 0x{:016x}", entry_point);
+        log::info!("  Image Size: 0x{:x}", image_size);
         
         // Load sections - handle both object crate addresses and PE RVAs
         let mut sections = Vec::new();
@@ -112,6 +115,7 @@ impl LoadedPE {
         Ok(LoadedPE {
             entry_point,
             image_base,
+            image_size,
             sections,
             symbols,
             imports,
@@ -125,6 +129,10 @@ impl LoadedPE {
     
     pub fn image_base(&self) -> u64 {
         self.image_base
+    }
+    
+    pub fn image_size(&self) -> usize {
+        self.image_size
     }
     
     pub fn sections(&self) -> &[LoadedSection] {

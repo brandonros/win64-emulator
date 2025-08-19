@@ -77,3 +77,44 @@ pub fn setup_memory(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(),
     
     Ok(())
 }
+
+pub fn read_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<String, uc_error> {
+    let mut bytes = Vec::new();
+    let mut current_addr = addr;
+    
+    // Read up to 256 bytes or until we hit a null terminator
+    for _ in 0..256 {
+        let mut byte = [0u8; 1];
+        emu.mem_read(current_addr, &mut byte)?;
+        
+        if byte[0] == 0 {
+            break;
+        }
+        
+        bytes.push(byte[0]);
+        current_addr += 1;
+    }
+    
+    Ok(String::from_utf8_lossy(&bytes).to_string())
+}
+
+pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<String, uc_error> {
+    let mut bytes = Vec::new();
+    let mut current_addr = addr;
+    
+    // Read up to 256 wide chars or until we hit a null terminator
+    for _ in 0..256 {
+        let mut wchar = [0u8; 2];
+        emu.mem_read(current_addr, &mut wchar)?;
+        
+        let wide_char = u16::from_le_bytes(wchar);
+        if wide_char == 0 {
+            break;
+        }
+        
+        bytes.push(wide_char);
+        current_addr += 2;
+    }
+    
+    Ok(String::from_utf16_lossy(&bytes))
+}
