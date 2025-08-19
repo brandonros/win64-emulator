@@ -6,6 +6,7 @@ use unicorn_engine::Permission;
 use crate::loader_error::LoaderError;
 use super::types::{ImportedFunction, LoadedSection, IATEntry};
 use super::imports;
+use super::exports::{self, ExportedFunction};
 
 // TODO: This should be moved to emulation module
 const MOCK_FUNCTION_BASE: u64 = 0x7F000000;
@@ -19,6 +20,7 @@ pub struct LoadedPE {
     symbols: HashMap<String, u64>,
     imports: Vec<ImportedFunction>,
     iat_entries: Vec<IATEntry>,    // Pre-resolved IAT entries
+    exports: Vec<ExportedFunction>, // Exported functions
 }
 
 impl LoadedPE {
@@ -95,6 +97,9 @@ impl LoadedPE {
         // Parse imports from PE import table
         let imports = imports::parse_imports(&pe_file, &data, image_base)?;
         
+        // Parse exports from PE export table
+        let exports = exports::parse_exports(&pe_file, &data, image_base)?;
+        
         // Build IAT entries with resolved mock addresses
         let mut iat_entries = Vec::new();
         let mut current_mock_addr = MOCK_FUNCTION_BASE;
@@ -110,6 +115,7 @@ impl LoadedPE {
         
         log::info!("  Loaded {} symbols", symbols.len());
         log::info!("  Found {} imported functions", imports.len());
+        log::info!("  Found {} exported functions", exports.len());
         log::info!("  Created {} IAT entries", iat_entries.len());
         
         Ok(LoadedPE {
@@ -120,6 +126,7 @@ impl LoadedPE {
             symbols,
             imports,
             iat_entries,
+            exports,
         })
     }
     
@@ -149,6 +156,10 @@ impl LoadedPE {
     
     pub fn iat_entries(&self) -> &[IATEntry] {
         &self.iat_entries
+    }
+    
+    pub fn exports(&self) -> &[ExportedFunction] {
+        &self.exports
     }
     
     fn get_section_permissions(section: &object::Section) -> Permission {
@@ -221,5 +232,53 @@ mod tests {
             assert_ne!(import.iat_address(), 0, 
                 "IAT address for {} should not be 0", import.function_name());
         }
+    }
+    
+    #[test]
+    fn test_kernel32_exports() {
+        // Load kernel32.dll from the Windows system directory
+        let kernel32_path = "./assets/kernel32.dll";
+        
+        let loaded_pe = LoadedPE::from_file(kernel32_path).expect("Failed to load kernel32.dll");
+        
+        // Get all exports
+        let exports = loaded_pe.exports();
+        
+        // Verify we have exports
+        assert!(!exports.is_empty(), "kernel32.dll should have exports");
+        
+        // Check for GetModuleHandleA specifically
+        let get_module_handle_a = exports
+            .iter()
+            .find(|exp| exp.name == "GetModuleHandleA");
+        
+        assert!(get_module_handle_a.is_some(), "GetModuleHandleA should be exported by kernel32.dll");
+        
+        let export = get_module_handle_a.unwrap();
+        assert_ne!(export.address, 0, "GetModuleHandleA should have a valid address");
+        assert_ne!(export.ordinal, 0, "GetModuleHandleA should have a valid ordinal");
+        
+        // Check for a few other common exports
+        let common_exports = vec![
+            "GetModuleHandleW",
+            "GetProcAddress",
+            "LoadLibraryA",
+            "LoadLibraryW",
+            "ExitProcess",
+            "CreateFileA",
+            "CreateFileW",
+            "ReadFile",
+            "WriteFile",
+            "CloseHandle"
+        ];
+        
+        for export_name in &common_exports {
+            let found = exports.iter().any(|exp| exp.name == *export_name);
+            assert!(found, "{} should be exported by kernel32.dll", export_name);
+        }
+        
+        println!("kernel32.dll has {} total exports", exports.len());
+        println!("GetModuleHandleA found at address: 0x{:x}, ordinal: {}", 
+                 export.address, export.ordinal);
     }
 }
