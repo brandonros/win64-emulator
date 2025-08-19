@@ -49,8 +49,7 @@ pub fn setup_iat(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc
             // but we log which ones are actually used
             for dll_name in seen_dlls {
                 if MODULE_REGISTRY.read().unwrap().get_module_handle(Some(&dll_name)).is_none() {
-                    log::warn!("  ⚠️  DLL '{}' is imported but not in module registry", dll_name);
-                    // Could dynamically register it here if needed
+                    panic!("  ⚠️  DLL '{}' is imported but not in module registry", dll_name);
                 }
             }
         }

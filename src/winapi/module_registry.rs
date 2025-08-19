@@ -7,6 +7,18 @@ pub const KERNEL32_BASE: u64 = 0x7FF800000000;
 pub const NTDLL_BASE: u64 = 0x7FF900000000;
 pub const USER32_BASE: u64 = 0x7FF700000000;
 pub const GDI32_BASE: u64 = 0x7FF600000000;
+pub const ADVAPI32_BASE: u64 = 0x7FF500000000;
+pub const OLEAUT32_BASE: u64 = 0x7FF400000000;
+pub const SHELL32_BASE: u64 = 0x7FF300000000;
+pub const VERSION_BASE: u64 = 0x7FF200000000;
+pub const OLE32_BASE: u64 = 0x7FF100000000;
+pub const VCRUNTIME140_BASE: u64 = 0x7FF000000000;
+pub const API_MS_WIN_CORE_SYNCH_BASE: u64 = 0x7FEF00000000;
+pub const API_MS_WIN_CRT_RUNTIME_BASE: u64 = 0x7FEE00000000;
+pub const API_MS_WIN_CRT_MATH_BASE: u64 = 0x7FED00000000;
+pub const API_MS_WIN_CRT_STDIO_BASE: u64 = 0x7FEC00000000;
+pub const API_MS_WIN_CRT_LOCALE_BASE: u64 = 0x7FEB00000000;
+pub const API_MS_WIN_CRT_HEAP_BASE: u64 = 0x7FEA00000000;
 
 // Main executable base (standard Windows x64)
 pub const MAIN_MODULE_BASE: u64 = 0x140000000;
@@ -48,6 +60,18 @@ impl ModuleRegistry {
         registry.register_module("ntdll.dll", NTDLL_BASE, 0x200000);
         registry.register_module("user32.dll", USER32_BASE, 0x100000);
         registry.register_module("gdi32.dll", GDI32_BASE, 0x80000);
+        registry.register_module("advapi32.dll", ADVAPI32_BASE, 0x100000);
+        registry.register_module("oleaut32.dll", OLEAUT32_BASE, 0x80000);
+        registry.register_module("shell32.dll", SHELL32_BASE, 0x180000);
+        registry.register_module("version.dll", VERSION_BASE, 0x20000);
+        registry.register_module("ole32.dll", OLE32_BASE, 0x100000);
+        registry.register_module("vcruntime140.dll", VCRUNTIME140_BASE, 0x20000);
+        registry.register_module("api-ms-win-core-synch-l1-2-0.dll", API_MS_WIN_CORE_SYNCH_BASE, 0x10000);
+        registry.register_module("api-ms-win-crt-runtime-l1-1-0.dll", API_MS_WIN_CRT_RUNTIME_BASE, 0x10000);
+        registry.register_module("api-ms-win-crt-math-l1-1-0.dll", API_MS_WIN_CRT_MATH_BASE, 0x10000);
+        registry.register_module("api-ms-win-crt-stdio-l1-1-0.dll", API_MS_WIN_CRT_STDIO_BASE, 0x10000);
+        registry.register_module("api-ms-win-crt-locale-l1-1-0.dll", API_MS_WIN_CRT_LOCALE_BASE, 0x10000);
+        registry.register_module("api-ms-win-crt-heap-l1-1-0.dll", API_MS_WIN_CRT_HEAP_BASE, 0x10000);
         
         registry
     }
