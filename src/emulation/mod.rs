@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use unicorn_engine::{uc_error, Arch, Mode, RegisterX86, Unicorn};
 use crate::loader_error::LoaderError;
 use crate::pe::{LoadedPE, ImportedFunction};
@@ -14,6 +15,26 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new(pe_path: &str) -> Result<Self, LoaderError> {
+        // register kernel32
+        let kernel32_pe = LoadedPE::from_file("./assets/kernel32.dll")?;
+        {
+            let mut registry = MODULE_REGISTRY.write().unwrap();
+            let base_addr = registry.allocate_base_address(0x100000);
+            let mut kernel32_exports = HashMap::new();
+            for (name, _export) in kernel32_pe.exports() {
+                let mock_addr = registry.allocate_mock_address();
+                kernel32_exports.insert(name.clone(), mock_addr);
+                log::debug!("  kernel32!{} -> 0x{:x}", name, mock_addr);
+            }
+            registry.register_module_with_exports(
+                "kernel32.dll",
+                base_addr,
+                0x100000,
+                kernel32_exports
+            );
+        }
+
+        // Now load the main PE
         let loaded_pe = LoadedPE::from_file(pe_path)?;
         
         // Register the main module in the module registry
