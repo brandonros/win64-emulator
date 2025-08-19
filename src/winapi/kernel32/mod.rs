@@ -15,5 +15,6 @@ declare_api!(GetCurrentThreadId);
 declare_api!(GetStartupInfoA);
 declare_api!(TlsAlloc);
 declare_api!(TlsGetValue);
+declare_api!(TlsSetValue);
 declare_api!(GetLastError);
 declare_api!(LocalAlloc);
