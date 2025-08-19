@@ -18,6 +18,9 @@ pub const TEB_TLS_SLOTS_OFFSET: u64 = 0x1480;  // Offset of TlsSlots[64] array i
 pub const TLS_MINIMUM_AVAILABLE: usize = 64;    // Number of TLS slots in TEB
 pub const TLS_OUT_OF_INDEXES: u32 = 0xFFFFFFFF; // Return value when no slots available
 
+// Error handling
+pub const TEB_LAST_ERROR_VALUE_OFFSET: u64 = 0x68;  // Offset of LastErrorValue in TEB
+
 pub fn setup_memory(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc_error> {
     log::info!("\n🗺️  Setting up memory layout:");
     
