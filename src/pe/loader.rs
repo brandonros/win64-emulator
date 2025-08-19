@@ -278,8 +278,8 @@ mod tests {
             assert!(exports.contains_key(*export_name), "{} should be exported by kernel32.dll", export_name);
         }
         
-        println!("kernel32.dll has {} total exports", exports.len());
-        println!("GetModuleHandleA found at address: 0x{:x}, ordinal: {}", 
+        log::info!("kernel32.dll has {} total exports", exports.len());
+        log::info!("GetModuleHandleA found at address: 0x{:x}, ordinal: {}", 
                  export.address, export.ordinal);
     }
 }

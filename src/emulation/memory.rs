@@ -126,6 +126,30 @@ pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<
     Ok(String::from_utf16_lossy(&bytes))
 }
 
+pub fn write_word_le(emu: &mut Unicorn<()>, addr: u64, value: u16) {
+    emu.mem_write(addr, &value.to_le_bytes()).unwrap();
+}
+
+pub fn write_word_be(emu: &mut Unicorn<()>, addr: u64, value: u16) {
+    emu.mem_write(addr, &value.to_be_bytes()).unwrap();
+}
+
+pub fn write_dword_le(emu: &mut Unicorn<()>, addr: u64, value: u32) {
+    emu.mem_write(addr, &value.to_le_bytes()).unwrap();
+}
+
+pub fn write_dword_be(emu: &mut Unicorn<()>, addr: u64, value: u32) {
+    emu.mem_write(addr, &value.to_be_bytes()).unwrap();
+}
+
+pub fn write_qword_le(emu: &mut Unicorn<()>, addr: u64, value: u64) {
+    emu.mem_write(addr, &value.to_le_bytes()).unwrap();
+}
+
+pub fn write_qword_be(emu: &mut Unicorn<()>, addr: u64, value: u64) {
+    emu.mem_write(addr, &value.to_be_bytes()).unwrap();
+}
+
 pub fn setup_teb(emu: &mut Unicorn<'static, ()>) -> Result<(), uc_error> {
     log::info!("  Setting up TEB at 0x{:016x}", TEB_BASE);
     

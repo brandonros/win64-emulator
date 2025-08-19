@@ -1,13 +1,15 @@
 #![allow(non_snake_case)]
 
-mod GetModuleHandleA;
-pub use GetModuleHandleA::*;
+// Macro to declare and re-export a WinAPI function module
+macro_rules! declare_api {
+    ($name:ident) => {
+        mod $name;
+        pub use $name::*;
+    };
+}
 
-mod LoadLibraryA;
-pub use LoadLibraryA::*;
-
-mod GetProcAddress;
-pub use GetProcAddress::*;
-
-mod GetCurrentThreadId;
-pub use GetCurrentThreadId::*;
+declare_api!(GetModuleHandleA);
+declare_api!(LoadLibraryA);
+declare_api!(GetProcAddress);
+declare_api!(GetCurrentThreadId);
+declare_api!(GetStartupInfoA);

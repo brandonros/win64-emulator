@@ -1,5 +1,6 @@
 use unicorn_engine::Unicorn;
 
+pub mod structures;
 pub mod kernel32;
 pub mod module_registry;
 
