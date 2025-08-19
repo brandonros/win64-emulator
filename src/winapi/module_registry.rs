@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use std::sync::RwLock;
-use once_cell::sync::Lazy;
+use std::sync::{LazyLock, RwLock};
 
 // Mock base addresses for system DLLs
 pub const KERNEL32_BASE: u64 = 0x7FF800000000;
@@ -41,7 +40,7 @@ impl LoadedModule {
 }
 
 // Global module registry
-pub static MODULE_REGISTRY: Lazy<RwLock<ModuleRegistry>> = Lazy::new(|| {
+pub static MODULE_REGISTRY: LazyLock<RwLock<ModuleRegistry>> = LazyLock::new(|| {
     RwLock::new(ModuleRegistry::new())
 });
 

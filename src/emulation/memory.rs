@@ -98,6 +98,7 @@ pub fn read_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<Strin
     Ok(String::from_utf8_lossy(&bytes).to_string())
 }
 
+#[allow(dead_code)]
 pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<String, uc_error> {
     let mut bytes = Vec::new();
     let mut current_addr = addr;
