@@ -9,6 +9,14 @@ use unicorn_engine::{uc_error, Arch, Mode, Permission, RegisterX86, Unicorn};
 use crate::hooks;
 use crate::{loaded_pe::LoadedPE, loader_error::LoaderError, structs::ImportedFunction};
 
+// Memory layout constants
+const STACK_BASE: u64 = 0x7fff0000;
+const STACK_SIZE: usize = 0x10000;
+const HEAP_BASE: u64 = 0x10000000;
+const HEAP_SIZE: usize = 0x100000;
+pub const MOCK_FUNCTION_BASE: u64 = 0x7F000000;
+pub const MOCK_FUNCTION_SIZE: usize = 0x10000;
+
 // Global IAT function map for the hook to access
 pub static IAT_FUNCTION_MAP: LazyLock<Arc<RwLock<HashMap<u64, (String, String)>>>> = 
     LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
@@ -92,19 +100,15 @@ impl PE64Emulator {
         }
         
         // Set up stack
-        let stack_base = 0x7fff0000;
-        let stack_size = 0x10000;
-        if stack_base >= max_addr || stack_base + stack_size as u64 <= min_addr {
-            emu.mem_map(stack_base, stack_size, Permission::READ | Permission::WRITE)?;
-            log::info!("  Stack: 0x{:016x} - 0x{:016x}", stack_base, stack_base + stack_size as u64);
+        if STACK_BASE >= max_addr || STACK_BASE + STACK_SIZE as u64 <= min_addr {
+            emu.mem_map(STACK_BASE, STACK_SIZE, Permission::READ | Permission::WRITE)?;
+            log::info!("  Stack: 0x{:016x} - 0x{:016x}", STACK_BASE, STACK_BASE + STACK_SIZE as u64);
         }
         
         // Set up heap (basic)
-        let heap_base = 0x10000000;
-        let heap_size = 0x100000;
-        if heap_base >= max_addr || heap_base + heap_size as u64 <= min_addr {
-            emu.mem_map(heap_base, heap_size, Permission::READ | Permission::WRITE)?;
-            log::info!("  Heap: 0x{:016x} - 0x{:016x}", heap_base, heap_base + heap_size as u64);
+        if HEAP_BASE >= max_addr || HEAP_BASE + HEAP_SIZE as u64 <= min_addr {
+            emu.mem_map(HEAP_BASE, HEAP_SIZE, Permission::READ | Permission::WRITE)?;
+            log::info!("  Heap: 0x{:016x} - 0x{:016x}", HEAP_BASE, HEAP_BASE + HEAP_SIZE as u64);
         }
         
         Ok(())
@@ -115,9 +119,7 @@ impl PE64Emulator {
         
         // Map memory for mock functions if we have any IAT entries
         if !pe.iat_entries().is_empty() {
-            let mock_function_base = 0x7F000000u64;
-            let mock_size = 0x10000;
-            emu.mem_map(mock_function_base, mock_size, Permission::READ | Permission::EXEC)?;
+            emu.mem_map(MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE, Permission::READ | Permission::EXEC)?;
             
             // Clear and populate the global IAT function map
             {
@@ -159,7 +161,7 @@ impl PE64Emulator {
         log::info!("  RIP: 0x{:016x}", pe.entry_point());
         
         // Set stack pointer
-        let stack_pointer = 0x7fff0000 + 0x8000; // Middle of stack
+        let stack_pointer = STACK_BASE + (STACK_SIZE as u64 / 2); // Middle of stack
         emu.reg_write(RegisterX86::RSP, stack_pointer)?;
         log::info!("  RSP: 0x{:016x}", stack_pointer);
         

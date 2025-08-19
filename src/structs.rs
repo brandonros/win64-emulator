@@ -69,3 +69,10 @@ impl ImportedFunction {
         self.iat_address
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct IATEntry {
+    pub iat_address: u64,           // Address in IAT where this entry lives
+    pub resolved_address: u64,      // The mock function address we'll call
+    pub import: ImportedFunction,
+}

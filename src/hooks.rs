@@ -6,11 +6,9 @@ use std::time::Instant;
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::Unicorn;
 
-static COUNTER: AtomicU64 = AtomicU64::new(0);
+use crate::pe64_emulator::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 
-// Just check if address is in the mock function range (0x7F000000 - 0x7F010000)
-const MOCK_FUNC_BASE: u64 = 0x7F000000;
-const MOCK_FUNC_END: u64 = 0x7F010000;
+static COUNTER: AtomicU64 = AtomicU64::new(0);
 
 static START_TIME: LazyLock<Instant> = LazyLock::new(|| Instant::now());
 
@@ -29,7 +27,8 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     let count = COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
     
     // Check if we're about to execute in the mock IAT function range
-    if addr >= MOCK_FUNC_BASE && addr < MOCK_FUNC_END {
+    let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
+    if addr >= MOCK_FUNCTION_BASE && addr < mock_func_end {
         // Look up which function this is
         let function_info = crate::pe64_emulator::IAT_FUNCTION_MAP
             .read()
