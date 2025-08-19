@@ -5,8 +5,9 @@ use crate::winapi::module_registry::MODULE_REGISTRY;
 
 pub mod memory;
 mod cpu;
-mod iat;
+pub mod iat;
 mod hooks;
+
 pub struct Emulator {
     emu: Unicorn<'static, ()>,
     loaded_pe: LoadedPE,
