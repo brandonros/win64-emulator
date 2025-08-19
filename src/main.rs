@@ -4,6 +4,7 @@ use crate::emulation::Emulator;
 mod pe;
 mod loader_error;
 mod emulation;
+mod winapi;
 
 // Example usage and testing
 fn main() -> Result<(), LoaderError> {

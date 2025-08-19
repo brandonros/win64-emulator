@@ -6,6 +6,7 @@ use unicorn_engine::Unicorn;
 
 use crate::pe::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 use super::iat::IAT_FUNCTION_MAP;
+use crate::winapi::kernel32;
 
 // Thread-local state for the code hook - all in one block for efficiency
 // Using UnsafeCell for maximum single-threaded performance (no RefCell overhead)
@@ -54,8 +55,8 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         *start_ptr
     });
 
-    // Only calculate IPS every 10000 instructions instead of every instruction
-    let ips = if count % 10000 == 0 {
+    // Only calculate IPS every 1000 instructions instead of every instruction
+    let ips = if count % 1000 == 0 {
         // Calculate and cache new IPS
         let start_micros = START_TIME_MICROS.with(|s| unsafe { *s.get() });
         let now_micros = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
@@ -76,13 +77,24 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
             .read()
             .unwrap()
             .get(&addr)
-            .map(|info| format!("{}!{}", info.0, info.1))
-            .unwrap_or_else(|| "Unknown IAT function".to_string());
+            .map(|info| (info.0.clone(), info.1.clone()))
+            .unwrap_or_else(|| ("Unknown".to_string(), "Unknown".to_string()));
         
-        log::info!("🛑 STOPPING: About to execute IAT function at 0x{:016x}", addr);
-        log::info!("   Function: {}", function_info);
-        log::info!("   This is a mock IAT function - execution should not reach here!");
-        panic!("IAT function {} reached at 0x{:016x}", function_info, addr);
+        // Handle the API call
+        handle_api_call(emu, &function_info.0, &function_info.1);
+        
+        // Skip the mock function by advancing RIP to the return address
+        // Pop return address from stack and jump to it
+        let rsp = emu.reg_read(unicorn_engine::RegisterX86::RSP).unwrap();
+        let mut return_addr = [0u8; 8];
+        emu.mem_read(rsp, &mut return_addr).unwrap();
+        let return_addr = u64::from_le_bytes(return_addr);
+        
+        // Update RSP (pop the return address)
+        emu.reg_write(unicorn_engine::RegisterX86::RSP, rsp + 8).unwrap();
+        
+        // Jump to return address
+        emu.reg_write(unicorn_engine::RegisterX86::RIP, return_addr).unwrap();
     }
     
     // Read and decode and log the instruction
