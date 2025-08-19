@@ -1,10 +1,5 @@
 #![allow(non_snake_case)]
 
-macro_rules! declare_structure {
-    ($name:ident) => {
-        mod $name;
-        pub use $name::*;
-    };
-}
-
-declare_structure!(StartupInfo64);
+#[path = "StartupInfo64.rs"]
+mod startup_info_64;
+pub use startup_info_64::StartupInfo64;

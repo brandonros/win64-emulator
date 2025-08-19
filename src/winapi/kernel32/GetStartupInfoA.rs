@@ -1,5 +1,6 @@
 use unicorn_engine::Unicorn;
 use unicorn_engine::RegisterX86;
+use crate::winapi::structures::StartupInfo64;
 
 pub fn GetStartupInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Get the pointer to STARTUPINFO structure from RCX register
