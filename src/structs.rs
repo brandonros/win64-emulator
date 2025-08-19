@@ -1,5 +1,3 @@
-use unicorn_engine::Permission;
-
 #[derive(Debug, Clone)]
 pub struct ImportedFunction {
     dll_name: String,
@@ -13,17 +11,15 @@ pub struct LoadedSection {
     virtual_address: u64,
     virtual_size: u64,
     raw_data: Vec<u8>,
-    permissions: Permission,
 }
 
 impl LoadedSection {
-    pub fn new(name: String, virtual_address: u64, virtual_size: u64, raw_data: Vec<u8>, permissions: Permission) -> Self {
+    pub fn new(name: String, virtual_address: u64, virtual_size: u64, raw_data: Vec<u8>) -> Self {
         Self {
             name,
             virtual_address,
             virtual_size,
             raw_data,
-            permissions,
         }
     }
     
@@ -41,10 +37,6 @@ impl LoadedSection {
     
     pub fn raw_data(&self) -> &[u8] {
         &self.raw_data
-    }
-    
-    pub fn permissions(&self) -> Permission {
-        self.permissions
     }
 }
 

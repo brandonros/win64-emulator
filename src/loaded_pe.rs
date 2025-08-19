@@ -74,7 +74,6 @@ impl LoadedPE {
                 virtual_address,
                 virtual_size,
                 raw_data,
-                permissions,
             ));
         }
         

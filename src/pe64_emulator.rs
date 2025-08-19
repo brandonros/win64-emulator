@@ -1,9 +1,6 @@
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, RwLock};
-use std::time::Instant;
 
-use iced_x86::{Decoder, DecoderOptions, Formatter as _, IntelFormatter};
 use unicorn_engine::{uc_error, Arch, Mode, Permission, RegisterX86, Unicorn};
 
 use crate::hooks;
@@ -258,15 +255,5 @@ impl PE64Emulator {
     
     pub fn get_imports(&self) -> &[ImportedFunction] {
         &self.loaded_pe.imports()
-    }
-    
-    fn read_memory(&mut self, addr: u64, size: usize) -> Result<Vec<u8>, uc_error> {
-        let mut data = vec![0u8; size];
-        self.emu.mem_read(addr, &mut data)?;
-        Ok(data)
-    }
-    
-    fn write_memory(&mut self, addr: u64, data: &[u8]) -> Result<(), uc_error> {
-        self.emu.mem_write(addr, data)
     }
 }
