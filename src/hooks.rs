@@ -1,7 +1,6 @@
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::LazyLock;
-use std::time::Instant;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::Unicorn;
@@ -10,7 +9,8 @@ use crate::pe64_emulator::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
-static START_TIME: LazyLock<Instant> = LazyLock::new(|| Instant::now());
+// Store start time as microseconds since UNIX epoch
+static START_TIME_MICROS: AtomicU64 = AtomicU64::new(0);
 
 // Thread-local formatter with minimal overhead
 // Safe because it's only accessed from single thread
@@ -23,8 +23,38 @@ thread_local! {
     });
 }
 
+// Thread-local reusable buffer for instruction bytes
+// Avoids heap allocation on every instruction
+// Safe: single-threaded access only (thread_local)
+// 32 bytes is enough for any x86-64 instruction (max is 15 bytes)
+thread_local! {
+    static CODE_BUFFER: UnsafeCell<[u8; 32]> = UnsafeCell::new([0u8; 32]);
+}
+
+// Thread-local reusable string buffer for formatted output
+// Avoids heap allocation on every instruction
+thread_local! {
+    static OUTPUT_BUFFER: UnsafeCell<String> = UnsafeCell::new(String::with_capacity(64));
+}
+
 pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     let count = COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
+    
+    // Initialize start time on first call (compare_exchange for thread safety)
+    let mut start_micros = START_TIME_MICROS.load(Ordering::Relaxed);
+    if start_micros == 0 {
+        let now_micros = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_micros() as u64;
+        let _ = START_TIME_MICROS.compare_exchange(
+            0,
+            now_micros,
+            Ordering::Relaxed,
+            Ordering::Relaxed
+        );
+        start_micros = START_TIME_MICROS.load(Ordering::Relaxed);
+    }
     
     // Check if we're about to execute in the mock IAT function range
     let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
@@ -43,25 +73,40 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         panic!("IAT function {} reached at 0x{:016x}", function_info, addr);
     }
     
-    // Read the instruction bytes
-    let mut code_bytes = vec![0u8; size as usize];
-    emu.mem_read(addr, &mut code_bytes).unwrap();
-    
-    // Disassemble the instruction
-    let mut decoder = Decoder::with_ip(64, &code_bytes, addr, DecoderOptions::NONE);
-    let instruction = decoder.decode();
-    
-    // Format the instruction
-    let mut output = String::new();
-    FORMATTER.with(|f| {
+    // Read and decode the instruction
+    CODE_BUFFER.with(|buf| {
         // Safe: thread_local ensures single-threaded access
-        unsafe { (*f.get()).format(&instruction, &mut output) }
+        let buffer = unsafe { &mut *buf.get() };
+        
+        // Read directly into the slice we need
+        let slice = &mut buffer[0..size as usize];
+        emu.mem_read(addr, slice).unwrap();
+        
+        // Disassemble the instruction
+        let mut decoder = Decoder::with_ip(64, slice, addr, DecoderOptions::NONE);
+        let instruction = decoder.decode();
+        
+        // Format the instruction using reusable string buffer and log directly
+        OUTPUT_BUFFER.with(|out| {
+            let output = unsafe { &mut *out.get() };
+            output.clear(); // Clear previous content
+            FORMATTER.with(|f| {
+                // Safe: thread_local ensures single-threaded access
+                unsafe { (*f.get()).format(&instruction, output) }
+            });
+            
+            // Calculate instructions per second
+            let now_micros = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_micros() as u64;
+            let elapsed_micros = now_micros.saturating_sub(start_micros).max(1); // Avoid divide by zero
+            let elapsed_secs = elapsed_micros as f64 / 1_000_000.0;
+            let ips = count as f64 / elapsed_secs;
+            
+            // Log directly using the buffer - no clone needed!
+            log::info!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
+                    ips, count, addr, output);
+        });
     });
-    
-    // Calculate instructions per second
-    let elapsed = START_TIME.elapsed();
-    let elapsed_secs = elapsed.as_secs_f64().max(0.000001); // Avoid divide by zero
-    let ips = count as f64 / elapsed_secs;
-    log::info!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
-            ips, count, addr, output);
 }
