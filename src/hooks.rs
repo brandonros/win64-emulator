@@ -1,5 +1,4 @@
 use std::cell::UnsafeCell;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
@@ -7,10 +6,12 @@ use unicorn_engine::Unicorn;
 
 use crate::pe64_emulator::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 
-static COUNTER: AtomicU64 = AtomicU64::new(0);
-
-// Store start time as microseconds since UNIX epoch
-static START_TIME_MICROS: AtomicU64 = AtomicU64::new(0);
+// Thread-local counters for maximum single-threaded performance
+// No atomic overhead, direct memory access
+thread_local! {
+    static COUNTER: UnsafeCell<u64> = UnsafeCell::new(0);
+    static START_TIME_MICROS: UnsafeCell<u64> = UnsafeCell::new(0);
+}
 
 // Thread-local formatter with minimal overhead
 // Safe because it's only accessed from single thread
@@ -38,23 +39,24 @@ thread_local! {
 }
 
 pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
-    let count = COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
+    // Safe: single-threaded execution only
+    let count = COUNTER.with(|c| unsafe {
+        let counter = &mut *c.get();
+        *counter += 1;
+        *counter
+    });
     
-    // Initialize start time on first call (compare_exchange for thread safety)
-    let mut start_micros = START_TIME_MICROS.load(Ordering::Relaxed);
-    if start_micros == 0 {
-        let now_micros = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_micros() as u64;
-        let _ = START_TIME_MICROS.compare_exchange(
-            0,
-            now_micros,
-            Ordering::Relaxed,
-            Ordering::Relaxed
-        );
-        start_micros = START_TIME_MICROS.load(Ordering::Relaxed);
-    }
+    // Initialize start time on first call
+    let start_micros = START_TIME_MICROS.with(|s| unsafe {
+        let start_ptr = &mut *s.get();
+        if *start_ptr == 0 {
+            *start_ptr = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_micros() as u64;
+        }
+        *start_ptr
+    });
     
     // Check if we're about to execute in the mock IAT function range
     let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
