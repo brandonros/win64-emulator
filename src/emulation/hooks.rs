@@ -100,13 +100,13 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     // Check if we're about to execute in the mock IAT function range
     let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
     if addr >= MOCK_FUNCTION_BASE && addr < mock_func_end {
-        // Look up which function this is
+        // Look up which function this is - panic if not found
         let function_info = IAT_FUNCTION_MAP
             .read()
             .unwrap()
             .get(&addr)
             .map(|info| (info.0.clone(), info.1.clone()))
-            .unwrap_or_else(|| ("Unknown".to_string(), "Unknown".to_string()));
+            .expect(&format!("Mock function at 0x{:016x} not found in IAT_FUNCTION_MAP! This is a bug.", addr));
         
         // Handle the API call using the centralized dispatcher
         log::info!("🔷 API Call: {}!{}", function_info.0, function_info.1);

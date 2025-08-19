@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::error::Error;
 use std::sync::{LazyLock, RwLock};
 use crate::pe::LoadedPE;
+use crate::emulation::iat::IAT_FUNCTION_MAP;
 
 // Main executable base (standard Windows x64)
 pub const MAIN_MODULE_BASE: u64 = 0x140000000;
@@ -178,9 +178,20 @@ impl ModuleRegistry {
         
         // Build export map with mock addresses for hook interception
         let mut dll_exports = HashMap::new();
+        
+        // Also update the IAT function map so hooks know what to call
+        let mut iat_map = IAT_FUNCTION_MAP.write().unwrap();
+        
         for (name, _export) in dll_pe.exports() {
             let mock_addr = self.allocate_mock_address();
             dll_exports.insert(name.clone(), mock_addr);
+            
+            // Add to IAT function map for hook interception
+            iat_map.insert(
+                mock_addr,
+                (dll_name.to_string(), name.clone())
+            );
+            
             log::debug!("  {}!{} -> 0x{:x}", dll_name, name, mock_addr);
         }
         
