@@ -3,8 +3,12 @@ use std::collections::HashMap;
 use object::{read::pe::PeFile64, Architecture, BinaryFormat, Object as _, ObjectSection as _, ObjectSymbol as _};
 use unicorn_engine::Permission;
 
-use crate::{loader_error::LoaderError, structs::{ImportedFunction, LoadedSection, IATEntry}};
-use crate::pe64_emulator::MOCK_FUNCTION_BASE;
+use crate::loader_error::LoaderError;
+use super::types::{ImportedFunction, LoadedSection, IATEntry};
+use super::imports;
+
+// TODO: This should be moved to emulation module
+const MOCK_FUNCTION_BASE: u64 = 0x7F000000;
 
 #[derive(Debug)]
 pub struct LoadedPE {
@@ -86,7 +90,7 @@ impl LoadedPE {
         }
         
         // Parse imports from PE import table
-        let imports = Self::parse_imports(&pe_file, &data, image_base)?;
+        let imports = imports::parse_imports(&pe_file, &data, image_base)?;
         
         // Build IAT entries with resolved mock addresses
         let mut iat_entries = Vec::new();

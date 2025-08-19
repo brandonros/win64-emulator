@@ -1,11 +1,9 @@
-use crate::{loader_error::LoaderError, pe64_emulator::PE64Emulator};
+use crate::loader_error::LoaderError;
+use crate::emulation::Emulator;
 
-mod loaded_pe;
-mod imports;
+mod pe;
 mod loader_error;
-mod structs;
-mod pe64_emulator;
-mod hooks;
+mod emulation;
 
 // Example usage and testing
 fn main() -> Result<(), LoaderError> {
@@ -19,7 +17,7 @@ fn main() -> Result<(), LoaderError> {
     
     log::info!("📁 Loading PE file: {}", pe_path);
     
-    let mut emulator = PE64Emulator::new(pe_path)?;
+    let mut emulator = Emulator::new(pe_path)?;
 
     log::info!("\n✅ PE file loaded successfully!");
             

@@ -5,6 +5,28 @@ pub struct ImportedFunction {
     iat_address: u64,  // Address in the IAT where this function pointer is stored
 }
 
+impl ImportedFunction {
+    pub fn new(dll_name: String, function_name: String, iat_address: u64) -> Self {
+        Self {
+            dll_name,
+            function_name,
+            iat_address,
+        }
+    }
+    
+    pub fn dll_name(&self) -> &str {
+        &self.dll_name
+    }
+    
+    pub fn function_name(&self) -> &str {
+        &self.function_name
+    }
+    
+    pub fn iat_address(&self) -> u64 {
+        self.iat_address
+    }
+}
+
 #[derive(Debug)]
 pub struct LoadedSection {
     name: String,
@@ -14,7 +36,12 @@ pub struct LoadedSection {
 }
 
 impl LoadedSection {
-    pub fn new(name: String, virtual_address: u64, virtual_size: u64, raw_data: Vec<u8>) -> Self {
+    pub fn new(
+        name: String,
+        virtual_address: u64,
+        virtual_size: u64,
+        raw_data: Vec<u8>,
+    ) -> Self {
         Self {
             name,
             virtual_address,
@@ -37,28 +64,6 @@ impl LoadedSection {
     
     pub fn raw_data(&self) -> &[u8] {
         &self.raw_data
-    }
-}
-
-impl ImportedFunction {
-    pub fn new(dll_name: String, function_name: String, iat_address: u64) -> Self {
-        Self {
-            dll_name,
-            function_name,
-            iat_address,
-        }
-    }
-    
-    pub fn dll_name(&self) -> &str {
-        &self.dll_name
-    }
-    
-    pub fn function_name(&self) -> &str {
-        &self.function_name
-    }
-    
-    pub fn iat_address(&self) -> u64 {
-        self.iat_address
     }
 }
 

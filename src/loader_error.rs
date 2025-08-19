@@ -2,7 +2,6 @@ use std::fmt;
 
 use unicorn_engine::uc_error;
 
-
 // Custom error type that can handle both object parsing and unicorn errors
 #[derive(Debug)]
 pub enum LoaderError {

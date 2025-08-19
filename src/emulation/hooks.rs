@@ -4,7 +4,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::Unicorn;
 
-use crate::pe64_emulator::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
+use crate::pe::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
+use super::iat::IAT_FUNCTION_MAP;
 
 // Thread-local state for the code hook - all in one block for efficiency
 // Using UnsafeCell for maximum single-threaded performance (no RefCell overhead)
@@ -71,7 +72,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
     if addr >= MOCK_FUNCTION_BASE && addr < mock_func_end {
         // Look up which function this is
-        let function_info = crate::pe64_emulator::IAT_FUNCTION_MAP
+        let function_info = IAT_FUNCTION_MAP
             .read()
             .unwrap()
             .get(&addr)
