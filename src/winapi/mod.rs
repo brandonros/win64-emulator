@@ -3,6 +3,7 @@ use unicorn_engine::Unicorn;
 pub mod structures;
 pub mod kernel32;
 pub mod module_registry;
+pub mod heap_manager;
 
 pub fn handle_winapi_call<D>(emu: &mut Unicorn<D>, dll_name: &str, function_name: &str) {
     // Cast the generic Unicorn to the specific type we need
@@ -18,6 +19,7 @@ pub fn handle_winapi_call<D>(emu: &mut Unicorn<D>, dll_name: &str, function_name
         ("kernel32.dll", "TlsAlloc") => kernel32::TlsAlloc(emu_ref).unwrap(),
         ("kernel32.dll", "TlsGetValue") => kernel32::TlsGetValue(emu_ref).unwrap(),        
         ("kernel32.dll", "GetLastError") => kernel32::GetLastError(emu_ref).unwrap(),
+        ("kernel32.dll", "LocalAlloc") => kernel32::LocalAlloc(emu_ref).unwrap(),
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
         }

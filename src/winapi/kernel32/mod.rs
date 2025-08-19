@@ -16,3 +16,4 @@ declare_api!(GetStartupInfoA);
 declare_api!(TlsAlloc);
 declare_api!(TlsGetValue);
 declare_api!(GetLastError);
+declare_api!(LocalAlloc);
