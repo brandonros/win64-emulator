@@ -4,6 +4,7 @@ mod loaded_pe;
 mod loader_error;
 mod structs;
 mod pe64_emulator;
+mod hooks;
 
 // Example usage and testing
 fn main() -> Result<(), LoaderError> {
