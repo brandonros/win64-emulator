@@ -20,6 +20,7 @@ pub fn handle_winapi_call<D>(emu: &mut Unicorn<D>, dll_name: &str, function_name
         ("kernel32.dll", "TlsGetValue") => kernel32::TlsGetValue(emu_ref).unwrap(),
         ("kernel32.dll", "TlsSetValue") => kernel32::TlsSetValue(emu_ref).unwrap(),        
         ("kernel32.dll", "GetLastError") => kernel32::GetLastError(emu_ref).unwrap(),
+        ("kernel32.dll", "SetLastError") => kernel32::SetLastError(emu_ref).unwrap(),
         ("kernel32.dll", "LocalAlloc") => kernel32::LocalAlloc(emu_ref).unwrap(),
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
