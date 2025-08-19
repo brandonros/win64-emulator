@@ -1,5 +1,5 @@
 [package]
-name = "unicorn_poc"
+name = "win64-emulator"
 version = "0.1.0"
 edition = "2024"
 

@@ -69,34 +69,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         LAST_IPS.with(|i| unsafe { *i.get() })
     };
     
-    // Check if we're about to execute in the mock IAT function range
-    let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
-    if addr >= MOCK_FUNCTION_BASE && addr < mock_func_end {
-        // Look up which function this is
-        let function_info = IAT_FUNCTION_MAP
-            .read()
-            .unwrap()
-            .get(&addr)
-            .map(|info| (info.0.clone(), info.1.clone()))
-            .unwrap_or_else(|| ("Unknown".to_string(), "Unknown".to_string()));
-        
-        // Handle the API call using the centralized dispatcher
-        winapi::handle_winapi_call(emu, &function_info.0, &function_info.1);
-        
-        // Skip the mock function by advancing RIP to the return address
-        // Pop return address from stack and jump to it
-        let rsp = emu.reg_read(unicorn_engine::RegisterX86::RSP).unwrap();
-        let mut return_addr = [0u8; 8];
-        emu.mem_read(rsp, &mut return_addr).unwrap();
-        let return_addr = u64::from_le_bytes(return_addr);
-        
-        // Update RSP (pop the return address)
-        emu.reg_write(unicorn_engine::RegisterX86::RSP, rsp + 8).unwrap();
-        
-        // Jump to return address
-        emu.reg_write(unicorn_engine::RegisterX86::RIP, return_addr).unwrap();
-    }
-    
     // Read and decode and log the instruction
     CODE_BUFFER.with(|buf| {
         // Safe: thread_local ensures single-threaded access
@@ -124,4 +96,33 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                     ips, count, addr, output);
         });
     });
+
+    // Check if we're about to execute in the mock IAT function range
+    let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
+    if addr >= MOCK_FUNCTION_BASE && addr < mock_func_end {
+        // Look up which function this is
+        let function_info = IAT_FUNCTION_MAP
+            .read()
+            .unwrap()
+            .get(&addr)
+            .map(|info| (info.0.clone(), info.1.clone()))
+            .unwrap_or_else(|| ("Unknown".to_string(), "Unknown".to_string()));
+        
+        // Handle the API call using the centralized dispatcher
+        log::info!("🔷 API Call: {}!{}", function_info.0, function_info.1);
+        winapi::handle_winapi_call(emu, &function_info.0, &function_info.1);
+        
+        // Skip the mock function by advancing RIP to the return address
+        // Pop return address from stack and jump to it
+        let rsp = emu.reg_read(unicorn_engine::RegisterX86::RSP).unwrap();
+        let mut return_addr = [0u8; 8];
+        emu.mem_read(rsp, &mut return_addr).unwrap();
+        let return_addr = u64::from_le_bytes(return_addr);
+        
+        // Update RSP (pop the return address)
+        emu.reg_write(unicorn_engine::RegisterX86::RSP, rsp + 8).unwrap();
+        
+        // Jump to return address
+        emu.reg_write(unicorn_engine::RegisterX86::RIP, return_addr).unwrap();
+    }
 }

@@ -2,3 +2,6 @@
 
 mod GetModuleHandleA;
 pub use GetModuleHandleA::*;
+
+mod LoadLibraryA;
+pub use LoadLibraryA::*;

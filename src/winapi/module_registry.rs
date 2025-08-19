@@ -23,6 +23,7 @@ pub const API_MS_WIN_CRT_HEAP_BASE: u64 = 0x7FEA00000000;
 pub const MAIN_MODULE_BASE: u64 = 0x140000000;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct LoadedModule {
     pub name: String,
     pub base_address: u64,
