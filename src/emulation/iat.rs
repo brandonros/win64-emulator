@@ -15,10 +15,9 @@ pub fn setup_iat(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc
     if !pe.iat_entries().is_empty() {
         emu.mem_map(MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE, Permission::READ | Permission::EXEC)?;
         
-        // Clear and populate the global IAT function map
+        // Populate the global IAT function map
         {
             let mut map = IAT_FUNCTION_MAP.write().unwrap();
-            map.clear();
             
             // Write resolved addresses to IAT
             for entry in pe.iat_entries() {
