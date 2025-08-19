@@ -13,3 +13,4 @@ declare_api!(LoadLibraryA);
 declare_api!(GetProcAddress);
 declare_api!(GetCurrentThreadId);
 declare_api!(GetStartupInfoA);
+declare_api!(TlsAlloc);

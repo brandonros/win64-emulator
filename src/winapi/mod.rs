@@ -15,6 +15,7 @@ pub fn handle_winapi_call<D>(emu: &mut Unicorn<D>, dll_name: &str, function_name
         ("kernel32.dll", "GetProcAddress") => kernel32::GetProcAddress(emu_ref).unwrap(),
         ("kernel32.dll", "GetCurrentThreadId") => kernel32::GetCurrentThreadId(emu_ref).unwrap(),
         ("kernel32.dll", "GetStartupInfoA") => kernel32::GetStartupInfoA(emu_ref).unwrap(),
+        ("kernel32.dll", "TlsAlloc") => kernel32::TlsAlloc(emu_ref).unwrap(),
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
         }

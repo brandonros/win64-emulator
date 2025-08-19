@@ -13,6 +13,11 @@ pub const TEB_SIZE: usize = 0x2000;
 pub const PEB_BASE: u64 = 0x7FFE2000;
 pub const PEB_SIZE: usize = 0x1000;
 
+// TLS (Thread Local Storage) constants
+pub const TEB_TLS_SLOTS_OFFSET: u64 = 0x1480;  // Offset of TlsSlots[64] array in TEB
+pub const TLS_MINIMUM_AVAILABLE: usize = 64;    // Number of TLS slots in TEB
+pub const TLS_OUT_OF_INDEXES: u32 = 0xFFFFFFFF; // Return value when no slots available
+
 pub fn setup_memory(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc_error> {
     log::info!("\n🗺️  Setting up memory layout:");
     
@@ -181,6 +186,13 @@ pub fn setup_teb(emu: &mut Unicorn<'static, ()>) -> Result<(), uc_error> {
     
     // Offset 0x60: PEB pointer
     emu.mem_write(TEB_BASE + 0x60, &PEB_BASE.to_le_bytes())?;
+    
+    // Offset 0x1480: TlsSlots[64] array - initialize to zeros
+    // The array is already zeroed when we initialized the TEB with zeros above,
+    // but we'll explicitly document this for clarity
+    // TlsSlots is a 64-element array of pointers (8 bytes each on x64)
+    // Total size: 64 * 8 = 512 bytes
+    log::info!("    TEB.TlsSlots = 0x{:016x} (64 slots initialized)", TEB_BASE + TEB_TLS_SLOTS_OFFSET);
     
     log::info!("    TEB.StackBase = 0x{:016x}", stack_top);
     log::info!("    TEB.StackLimit = 0x{:016x}", STACK_BASE);
