@@ -20,7 +20,7 @@ pub struct LoadedPE {
     symbols: HashMap<String, u64>,
     imports: Vec<ImportedFunction>,
     iat_entries: Vec<IATEntry>,    // Pre-resolved IAT entries
-    exports: Vec<ExportedFunction>, // Exported functions
+    exports: HashMap<String, ExportedFunction>, // Exported functions indexed by name
 }
 
 impl LoadedPE {
@@ -98,7 +98,11 @@ impl LoadedPE {
         let imports = imports::parse_imports(&pe_file, &data, image_base)?;
         
         // Parse exports from PE export table
-        let exports = exports::parse_exports(&pe_file, &data, image_base)?;
+        let export_list = exports::parse_exports(&pe_file, &data, image_base)?;
+        let mut exports = HashMap::new();
+        for export in export_list {
+            exports.insert(export.name.clone(), export);
+        }
         
         // Build IAT entries with resolved mock addresses
         let mut iat_entries = Vec::new();
@@ -158,7 +162,7 @@ impl LoadedPE {
         &self.iat_entries
     }
     
-    pub fn exports(&self) -> &[ExportedFunction] {
+    pub fn exports(&self) -> &HashMap<String, ExportedFunction> {
         &self.exports
     }
     
@@ -248,9 +252,7 @@ mod tests {
         assert!(!exports.is_empty(), "kernel32.dll should have exports");
         
         // Check for GetModuleHandleA specifically
-        let get_module_handle_a = exports
-            .iter()
-            .find(|exp| exp.name == "GetModuleHandleA");
+        let get_module_handle_a = exports.get("GetModuleHandleA");
         
         assert!(get_module_handle_a.is_some(), "GetModuleHandleA should be exported by kernel32.dll");
         
@@ -273,8 +275,7 @@ mod tests {
         ];
         
         for export_name in &common_exports {
-            let found = exports.iter().any(|exp| exp.name == *export_name);
-            assert!(found, "{} should be exported by kernel32.dll", export_name);
+            assert!(exports.contains_key(*export_name), "{} should be exported by kernel32.dll", export_name);
         }
         
         println!("kernel32.dll has {} total exports", exports.len());

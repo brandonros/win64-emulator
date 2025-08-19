@@ -15,13 +15,14 @@ pub struct Emulator {
 impl Emulator {
     pub fn new(pe_path: &str) -> Result<Self, LoaderError> {
         let loaded_pe = LoadedPE::from_file(pe_path)?;
-        let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64)?;
         
         // Register the main module in the module registry
         {
             let mut registry = MODULE_REGISTRY.write().unwrap();
             registry.register_main_module(loaded_pe.image_base(), loaded_pe.image_size() as u64);
         }
+
+        let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64)?;
         
         // Set up memory regions for the PE
         memory::setup_memory(&mut emu, &loaded_pe)?;
