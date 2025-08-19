@@ -56,7 +56,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     });
 
     // Only calculate IPS every 1000 instructions instead of every instruction
-    let ips = if count % 1000 == 0 {
+    let _ips = if count % 1000 == 0 {
         // Calculate and cache new IPS
         let start_micros = START_TIME_MICROS.with(|s| unsafe { *s.get() });
         let now_micros = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
@@ -91,9 +91,8 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 unsafe { (*f.get()).format(&instruction, output) }
             });
             
-            // Log directly using the buffer - no clone needed!
-            log::info!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
-                    ips, count, addr, output);
+            // Log directly using the buffer
+            //log::info!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", ips, count, addr, output);
         });
     });
 

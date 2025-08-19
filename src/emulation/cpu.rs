@@ -1,7 +1,6 @@
 use unicorn_engine::{uc_error, RegisterX86, Unicorn};
 use crate::pe::LoadedPE;
-use super::memory::STACK_BASE;
-use super::memory::STACK_SIZE;
+use super::memory::{STACK_BASE, STACK_SIZE, TEB_BASE};
 
 pub fn setup_cpu_state(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc_error> {
     log::info!("\n🖥️  Setting up CPU state:");
@@ -23,6 +22,11 @@ pub fn setup_cpu_state(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<
                   RegisterX86::RDX, RegisterX86::RSI, RegisterX86::RDI] {
         emu.reg_write(reg, 0)?;
     }
+    
+    // Set up GS base to point to TEB for x64 Windows compatibility
+    // GS_BASE register points to TEB
+    emu.reg_write(RegisterX86::GS_BASE, TEB_BASE)?;
+    log::info!("  GS_BASE: 0x{:016x} (TEB)", TEB_BASE);
     
     Ok(())
 }

@@ -7,6 +7,12 @@ pub const STACK_SIZE: usize = 0x10000;
 pub const HEAP_BASE: u64 = 0x10000000;
 pub const HEAP_SIZE: usize = 0x100000;
 
+// Thread Environment Block (TEB) and Process Environment Block (PEB)
+pub const TEB_BASE: u64 = 0x7FFE0000;
+pub const TEB_SIZE: usize = 0x2000;
+pub const PEB_BASE: u64 = 0x7FFE2000;
+pub const PEB_SIZE: usize = 0x1000;
+
 pub fn setup_memory(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc_error> {
     log::info!("\n🗺️  Setting up memory layout:");
     
@@ -118,4 +124,74 @@ pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<
     }
     
     Ok(String::from_utf16_lossy(&bytes))
+}
+
+pub fn setup_teb(emu: &mut Unicorn<'static, ()>) -> Result<(), uc_error> {
+    log::info!("  Setting up TEB at 0x{:016x}", TEB_BASE);
+    
+    // Map TEB memory
+    emu.mem_map(TEB_BASE, TEB_SIZE, Permission::READ | Permission::WRITE)?;
+    
+    // Initialize TEB with zeros
+    let teb_data = vec![0u8; TEB_SIZE];
+    emu.mem_write(TEB_BASE, &teb_data)?;
+    
+    // Write critical TEB fields for x64
+    // Offset 0x08: StackBase (top of stack)
+    let stack_top = STACK_BASE + STACK_SIZE as u64;
+    emu.mem_write(TEB_BASE + 0x08, &stack_top.to_le_bytes())?;
+    
+    // Offset 0x10: StackLimit (bottom of stack)
+    emu.mem_write(TEB_BASE + 0x10, &STACK_BASE.to_le_bytes())?;
+    
+    // Offset 0x30: Self pointer (linear address of TEB)
+    emu.mem_write(TEB_BASE + 0x30, &TEB_BASE.to_le_bytes())?;
+    
+    // Offset 0x48: Thread ID (using our mock value)
+    let thread_id: u64 = 0x1000;
+    emu.mem_write(TEB_BASE + 0x48, &thread_id.to_le_bytes())?;
+    
+    // Offset 0x40: Process ID (mock value)
+    let process_id: u64 = 0x100;
+    emu.mem_write(TEB_BASE + 0x40, &process_id.to_le_bytes())?;
+    
+    // Offset 0x60: PEB pointer
+    emu.mem_write(TEB_BASE + 0x60, &PEB_BASE.to_le_bytes())?;
+    
+    log::info!("    TEB.StackBase = 0x{:016x}", stack_top);
+    log::info!("    TEB.StackLimit = 0x{:016x}", STACK_BASE);
+    log::info!("    TEB.Self = 0x{:016x}", TEB_BASE);
+    log::info!("    TEB.ProcessId = 0x{:x}", process_id);
+    log::info!("    TEB.ThreadId = 0x{:x}", thread_id);
+    log::info!("    TEB.Peb = 0x{:016x}", PEB_BASE);
+    
+    Ok(())
+}
+
+pub fn setup_peb(emu: &mut Unicorn<'static, ()>, image_base: u64) -> Result<(), uc_error> {
+    log::info!("  Setting up PEB at 0x{:016x}", PEB_BASE);
+    
+    // Map PEB memory
+    emu.mem_map(PEB_BASE, PEB_SIZE, Permission::READ | Permission::WRITE)?;
+    
+    // Initialize PEB with zeros
+    let peb_data = vec![0u8; PEB_SIZE];
+    emu.mem_write(PEB_BASE, &peb_data)?;
+    
+    // Write critical PEB fields for x64
+    // Offset 0x10: ImageBaseAddress
+    emu.mem_write(PEB_BASE + 0x10, &image_base.to_le_bytes())?;
+    
+    // Offset 0x03: BeingDebugged (set to 0 for not being debugged)
+    emu.mem_write(PEB_BASE + 0x02, &[0u8])?;
+    
+    // Offset 0x0C: Ldr (we'll leave this null for now)
+    // Offset 0x18: ProcessHeap (point to our heap)
+    emu.mem_write(PEB_BASE + 0x18, &HEAP_BASE.to_le_bytes())?;
+    
+    log::info!("    PEB.ImageBaseAddress = 0x{:016x}", image_base);
+    log::info!("    PEB.ProcessHeap = 0x{:016x}", HEAP_BASE);
+    log::info!("    PEB.BeingDebugged = 0");
+    
+    Ok(())
 }
