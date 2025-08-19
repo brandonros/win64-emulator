@@ -47,3 +47,9 @@ impl From<&str> for LoaderError {
         LoaderError::InvalidFormat(msg.to_string())
     }
 }
+
+impl From<String> for LoaderError {
+    fn from(msg: String) -> Self {
+        LoaderError::InvalidFormat(msg)
+    }
+}
