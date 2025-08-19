@@ -28,6 +28,8 @@ pub struct LoadedModule {
     pub name: String,
     pub base_address: u64,
     pub size: u64,
+    pub exports: HashMap<String, u64>,  // Export name -> address
+
 }
 
 impl LoadedModule {
@@ -36,6 +38,16 @@ impl LoadedModule {
             name,
             base_address,
             size,
+            exports: HashMap::new(),
+        }
+    }
+    
+    pub fn with_exports(name: String, base_address: u64, size: u64, exports: HashMap<String, u64>) -> Self {
+        Self {
+            name,
+            base_address,
+            size,
+            exports,
         }
     }
 }
@@ -121,5 +133,44 @@ impl ModuleRegistry {
                 size,
             )
         );
+    }
+    
+    pub fn register_module_with_exports(&mut self, name: &str, base: u64, size: u64, exports: HashMap<String, u64>) {
+        let normalized_name = name.to_lowercase();
+        self.modules.insert(
+            normalized_name.clone(),
+            LoadedModule::with_exports(
+                normalized_name.clone(),
+                base,
+                size,
+                exports,
+            )
+        );
+        
+        // Also register without .dll extension
+        if normalized_name.ends_with(".dll") {
+            let without_ext = normalized_name.trim_end_matches(".dll");
+            // Clone the module with same exports
+            let module = self.modules.get(&normalized_name).unwrap().clone();
+            self.modules.insert(without_ext.to_string(), module);
+        }
+    }
+    
+    pub fn get_proc_address(&self, module_base: u64, function_name: &str) -> Option<u64> {
+        // Find module by base address
+        for module in self.modules.values() {
+            if module.base_address == module_base {
+                // Look up function in exports
+                return module.exports.get(function_name).copied();
+            }
+        }
+        None
+    }
+    
+    pub fn add_export_to_module(&mut self, module_name: &str, function_name: &str, address: u64) {
+        let normalized_name = module_name.to_lowercase();
+        if let Some(module) = self.modules.get_mut(&normalized_name) {
+            module.exports.insert(function_name.to_string(), address);
+        }
     }
 }

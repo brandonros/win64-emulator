@@ -3,6 +3,8 @@
 mod types;
 mod loader;
 mod imports;
+mod exports;
+mod utils;
 
 // Re-export the public API
 pub use types::ImportedFunction;

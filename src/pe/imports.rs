@@ -1,6 +1,7 @@
 use object::read::pe::PeFile64;
 
 use crate::loader_error::LoaderError;
+use crate::pe::utils;
 use super::types::ImportedFunction;
 
 pub fn parse_imports(pe_file: &PeFile64, data: &[u8], image_base: u64) -> Result<Vec<ImportedFunction>, LoaderError> {
@@ -28,7 +29,7 @@ pub fn parse_imports(pe_file: &PeFile64, data: &[u8], image_base: u64) -> Result
     log::info!("🔗 Parsing imports from RVA 0x{:x}", import_table_rva);
     
     // Convert RVA to file offset
-    let import_table_offset = rva_to_file_offset(pe_file, import_table_rva)
+    let import_table_offset = utils::rva_to_file_offset(pe_file, import_table_rva)
         .ok_or("Could not convert import table RVA to file offset")?;
     
     let mut offset = import_table_offset as usize;
@@ -56,8 +57,8 @@ pub fn parse_imports(pe_file: &PeFile64, data: &[u8], image_base: u64) -> Result
         
         // Get DLL name
         let dll_name = if name_rva != 0 {
-            if let Some(name_offset) = rva_to_file_offset(pe_file, name_rva) {
-                read_cstring(data, name_offset as usize).unwrap_or_else(|_| format!("dll_{:x}", name_rva))
+            if let Some(name_offset) = utils::rva_to_file_offset(pe_file, name_rva) {
+                utils::read_cstring(data, name_offset as usize).unwrap_or_else(|_| format!("dll_{:x}", name_rva))
             } else {
                 format!("unknown_dll_{:x}", name_rva)
             }
@@ -109,7 +110,7 @@ fn parse_dll_imports(
         import_address_table_rva
     };
     
-    let ilt_offset = rva_to_file_offset(pe_file, table_rva)
+    let ilt_offset = utils::rva_to_file_offset(pe_file, table_rva)
         .ok_or("Could not convert table RVA to file offset")?;
     
     log::info!("      Table RVA 0x{:x} -> file offset 0x{:x}", table_rva, ilt_offset);
@@ -145,10 +146,10 @@ fn parse_dll_imports(
             // Import by name
             let hint_name_rva = (ilt_entry & 0x7FFFFFFF) as u32;
             log::info!("        Import by name, hint/name RVA: 0x{:x}", hint_name_rva);
-            if let Some(hint_name_offset) = rva_to_file_offset(pe_file, hint_name_rva) {
+            if let Some(hint_name_offset) = utils::rva_to_file_offset(pe_file, hint_name_rva) {
                 // Skip hint (2 bytes) and read function name
                 log::info!("        Hint/name file offset: 0x{:x}", hint_name_offset);
-                read_cstring(data, hint_name_offset as usize + 2)
+                utils::read_cstring(data, hint_name_offset as usize + 2)
                     .unwrap_or_else(|_| format!("func_{:x}", hint_name_rva))
             } else {
                 format!("unknown_func_{:x}", hint_name_rva)
@@ -177,29 +178,4 @@ fn parse_dll_imports(
     }
     
     Ok(imports)
-}
-
-fn rva_to_file_offset(pe_file: &PeFile64, rva: u32) -> Option<u32> {
-    let sections = pe_file.section_table();
-    
-    for section in sections.iter() {
-        let section_va = section.virtual_address.get(object::LittleEndian);
-        let section_size = section.virtual_size.get(object::LittleEndian);
-        let raw_ptr = section.pointer_to_raw_data.get(object::LittleEndian);
-        
-        if rva >= section_va && rva < section_va + section_size {
-            return Some(rva - section_va + raw_ptr);
-        }
-    }
-    
-    None
-}
-
-fn read_cstring(data: &[u8], mut offset: usize) -> Result<String, LoaderError> {
-    let mut bytes = Vec::new();
-    while offset < data.len() && data[offset] != 0 {
-        bytes.push(data[offset]);
-        offset += 1;
-    }
-    String::from_utf8(bytes).map_err(|_| LoaderError::from("Invalid UTF-8 in string"))
 }
