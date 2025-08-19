@@ -6,35 +6,27 @@ use unicorn_engine::Unicorn;
 
 use crate::pe64_emulator::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 
-// Thread-local counters for maximum single-threaded performance
-// No atomic overhead, direct memory access
+// Thread-local state for the code hook - all in one block for efficiency
+// Using UnsafeCell for maximum single-threaded performance (no RefCell overhead)
 thread_local! {
+    // Instruction counter
     static COUNTER: UnsafeCell<u64> = UnsafeCell::new(0);
+    
+    // Start time in microseconds since UNIX epoch
     static START_TIME_MICROS: UnsafeCell<u64> = UnsafeCell::new(0);
-}
-
-// Thread-local formatter with minimal overhead
-// Safe because it's only accessed from single thread
-thread_local! {
+    
+    // Intel formatter for disassembly output
     static FORMATTER: UnsafeCell<IntelFormatter> = UnsafeCell::new({
         let mut formatter = IntelFormatter::new();
         formatter.options_mut().set_digit_separator("");
         formatter.options_mut().set_first_operand_char_index(6);
         formatter
     });
-}
-
-// Thread-local reusable buffer for instruction bytes
-// Avoids heap allocation on every instruction
-// Safe: single-threaded access only (thread_local)
-// 32 bytes is enough for any x86-64 instruction (max is 15 bytes)
-thread_local! {
+    
+    // Reusable buffer for instruction bytes (32 bytes covers all x86-64 instructions)
     static CODE_BUFFER: UnsafeCell<[u8; 32]> = UnsafeCell::new([0u8; 32]);
-}
-
-// Thread-local reusable string buffer for formatted output
-// Avoids heap allocation on every instruction
-thread_local! {
+    
+    // Reusable string buffer for formatted output
     static OUTPUT_BUFFER: UnsafeCell<String> = UnsafeCell::new(String::with_capacity(64));
 }
 
