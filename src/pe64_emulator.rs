@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, LazyLock, RwLock};
 use std::time::Instant;
 
 use iced_x86::{Decoder, DecoderOptions, Formatter as _, IntelFormatter};
@@ -6,6 +8,10 @@ use unicorn_engine::{uc_error, Arch, Mode, Permission, RegisterX86, Unicorn};
 
 use crate::hooks;
 use crate::{loaded_pe::LoadedPE, loader_error::LoaderError, structs::ImportedFunction};
+
+// Global IAT function map for the hook to access
+pub static IAT_FUNCTION_MAP: LazyLock<Arc<RwLock<HashMap<u64, (String, String)>>>> = 
+    LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 pub struct PE64Emulator {
     emu: Unicorn<'static, ()>,
@@ -113,17 +119,28 @@ impl PE64Emulator {
             let mock_size = 0x10000;
             emu.mem_map(mock_function_base, mock_size, Permission::READ | Permission::EXEC)?;
             
-            // Write resolved addresses to IAT
-            for entry in pe.iat_entries() {
-                // Write the resolved address to the IAT entry
-                let resolved_addr_bytes = entry.resolved_address.to_le_bytes();
-                emu.mem_write(entry.iat_address, &resolved_addr_bytes)?;
+            // Clear and populate the global IAT function map
+            {
+                let mut map = IAT_FUNCTION_MAP.write().unwrap();
+                map.clear();
                 
-                // No need to write anything at the mock address - we'll panic if we get there
-                
-                log::info!("  IAT[0x{:016x}] = 0x{:016x} ({}!{})", 
-                         entry.iat_address, entry.resolved_address, 
-                         entry.import.dll_name(), entry.import.function_name());
+                // Write resolved addresses to IAT
+                for entry in pe.iat_entries() {
+                    // Write the resolved address to the IAT entry
+                    let resolved_addr_bytes = entry.resolved_address.to_le_bytes();
+                    emu.mem_write(entry.iat_address, &resolved_addr_bytes)?;
+                    
+                    // Add to our global map for the hook to use
+                    map.insert(
+                        entry.resolved_address,
+                        (entry.import.dll_name().to_string(), 
+                         entry.import.function_name().to_string())
+                    );
+                    
+                    log::info!("  IAT[0x{:016x}] = 0x{:016x} ({}!{})", 
+                             entry.iat_address, entry.resolved_address, 
+                             entry.import.dll_name(), entry.import.function_name());
+                }
             }
             
             log::info!("  Populated {} IAT entries", pe.iat_entries().len());

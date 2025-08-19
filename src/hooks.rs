@@ -30,9 +30,18 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     
     // Check if we're about to execute in the mock IAT function range
     if addr >= MOCK_FUNC_BASE && addr < MOCK_FUNC_END {
+        // Look up which function this is
+        let function_info = crate::pe64_emulator::IAT_FUNCTION_MAP
+            .read()
+            .unwrap()
+            .get(&addr)
+            .map(|info| format!("{}!{}", info.0, info.1))
+            .unwrap_or_else(|| "Unknown IAT function".to_string());
+        
         log::info!("🛑 STOPPING: About to execute IAT function at 0x{:016x}", addr);
+        log::info!("   Function: {}", function_info);
         log::info!("   This is a mock IAT function - execution should not reach here!");
-        panic!("IAT function reached at 0x{:016x}", addr);
+        panic!("IAT function {} reached at 0x{:016x}", function_info, addr);
     }
     
     // Read the instruction bytes
