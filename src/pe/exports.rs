@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{loader_error::LoaderError, pe::utils};
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ExportedFunction {
     pub name: String,
     pub address: u64,

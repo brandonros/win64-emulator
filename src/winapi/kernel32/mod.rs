@@ -8,3 +8,6 @@ pub use LoadLibraryA::*;
 
 mod GetProcAddress;
 pub use GetProcAddress::*;
+
+mod GetCurrentThreadId;
+pub use GetCurrentThreadId::*;

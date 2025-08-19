@@ -79,31 +79,6 @@ impl ModuleRegistry {
         addr
     }
     
-    pub fn register_module(&mut self, name: &str, base: u64, size: u64) {
-        let normalized_name = name.to_lowercase();
-        self.modules.insert(
-            normalized_name.clone(),
-            LoadedModule::new(
-                normalized_name.clone(),
-                base,
-                size,
-            )
-        );
-        
-        // Also register without .dll extension
-        if normalized_name.ends_with(".dll") {
-            let without_ext = normalized_name.trim_end_matches(".dll");
-            self.modules.insert(
-                without_ext.to_string(),
-                LoadedModule::new(
-                    normalized_name.clone(),
-                    base,
-                    size,
-                )
-            );
-        }
-    }
-    
     pub fn get_module_handle(&self, name: Option<&str>) -> Option<u64> {
         match name {
             None => Some(MAIN_MODULE_BASE), // NULL means main module
@@ -157,14 +132,7 @@ impl ModuleRegistry {
         }
         None
     }
-    
-    pub fn add_export_to_module(&mut self, module_name: &str, function_name: &str, address: u64) {
-        let normalized_name = module_name.to_lowercase();
-        if let Some(module) = self.modules.get_mut(&normalized_name) {
-            module.exports.insert(function_name.to_string(), address);
-        }
-    }
-    
+
     // Helper function to load and register a system DLL with mock exports
     pub fn load_system_dll(&mut self, dll_path: &str, dll_name: &str, size: u64) -> Result<(), String> {
         // Try to load the DLL
