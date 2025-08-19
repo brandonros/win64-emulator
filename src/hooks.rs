@@ -28,6 +28,9 @@ thread_local! {
     
     // Reusable string buffer for formatted output
     static OUTPUT_BUFFER: UnsafeCell<String> = UnsafeCell::new(String::with_capacity(64));
+
+    // only update IPS periodically
+    static LAST_IPS: UnsafeCell<f64> = UnsafeCell::new(0.0);
 }
 
 pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
@@ -39,7 +42,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     });
     
     // Initialize start time on first call
-    let start_micros = START_TIME_MICROS.with(|s| unsafe {
+    let _start_micros = START_TIME_MICROS.with(|s| unsafe {
         let start_ptr = &mut *s.get();
         if *start_ptr == 0 {
             *start_ptr = SystemTime::now()
@@ -49,6 +52,20 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         }
         *start_ptr
     });
+
+    // Only calculate IPS every 10000 instructions instead of every instruction
+    let ips = if count % 10000 == 0 {
+        // Calculate and cache new IPS
+        let start_micros = START_TIME_MICROS.with(|s| unsafe { *s.get() });
+        let now_micros = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
+        let elapsed_micros = now_micros.saturating_sub(start_micros).max(1);
+        let new_ips = (count as f64) / (elapsed_micros as f64 / 1_000_000.0);
+        LAST_IPS.with(|i| unsafe { *i.get() = new_ips });
+        new_ips
+    } else {
+        // Use cached IPS
+        LAST_IPS.with(|i| unsafe { *i.get() })
+    };
     
     // Check if we're about to execute in the mock IAT function range
     let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
@@ -67,7 +84,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         panic!("IAT function {} reached at 0x{:016x}", function_info, addr);
     }
     
-    // Read and decode the instruction
+    // Read and decode and log the instruction
     CODE_BUFFER.with(|buf| {
         // Safe: thread_local ensures single-threaded access
         let buffer = unsafe { &mut *buf.get() };
@@ -88,15 +105,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 // Safe: thread_local ensures single-threaded access
                 unsafe { (*f.get()).format(&instruction, output) }
             });
-            
-            // Calculate instructions per second
-            let now_micros = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_micros() as u64;
-            let elapsed_micros = now_micros.saturating_sub(start_micros).max(1); // Avoid divide by zero
-            let elapsed_secs = elapsed_micros as f64 / 1_000_000.0;
-            let ips = count as f64 / elapsed_secs;
             
             // Log directly using the buffer - no clone needed!
             log::info!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
