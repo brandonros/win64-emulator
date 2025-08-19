@@ -29,7 +29,7 @@ impl PE64Emulator {
     }
     
     fn setup_memory(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc_error> {
-        println!("\n🗺️  Setting up memory layout:");
+        log::info!("\n🗺️  Setting up memory layout:");
         
         // For packed executables, we need to ensure the entry point is covered
         let entry_point = pe.entry_point();
@@ -54,9 +54,9 @@ impl PE64Emulator {
         
         let total_size = max_addr - min_addr;
         
-        println!("  Image range: 0x{:016x} - 0x{:016x} (size: 0x{:x})", 
+        log::info!("  Image range: 0x{:016x} - 0x{:016x} (size: 0x{:x})", 
                  min_addr, max_addr, total_size);
-        println!("  Entry point: 0x{:016x} (covered: {})", 
+        log::info!("  Entry point: 0x{:016x} (covered: {})", 
                  entry_point, entry_point >= min_addr && entry_point < max_addr);
         
         // Map the entire image range
@@ -66,7 +66,7 @@ impl PE64Emulator {
         for section in pe.sections() {
             if !section.raw_data().is_empty() {
                 emu.mem_write(section.virtual_address(), &section.raw_data())?;
-                println!("  Loaded section '{}' at 0x{:016x}", 
+                log::info!("  Loaded section '{}' at 0x{:016x}", 
                          section.name(), section.virtual_address());
             }
         }
@@ -75,12 +75,12 @@ impl PE64Emulator {
         let mut entry_code = vec![0u8; 16];
         if let Ok(()) = emu.mem_read(entry_point, &mut entry_code) {
             let has_code = entry_code.iter().any(|&b| b != 0);
-            println!("  Entry point has code: {} (first bytes: {:02x?})", 
+            log::info!("  Entry point has code: {} (first bytes: {:02x?})", 
                      has_code, &entry_code[..8]);
             
             if !has_code {
-                println!("  ⚠️  Entry point appears to be unmapped - this may be a packed executable");
-                println!("      Consider using a different unpacking approach or manual analysis");
+                log::info!("  ⚠️  Entry point appears to be unmapped - this may be a packed executable");
+                log::info!("      Consider using a different unpacking approach or manual analysis");
             }
         }
         
@@ -89,7 +89,7 @@ impl PE64Emulator {
         let stack_size = 0x10000;
         if stack_base >= max_addr || stack_base + stack_size as u64 <= min_addr {
             emu.mem_map(stack_base, stack_size, Permission::READ | Permission::WRITE)?;
-            println!("  Stack: 0x{:016x} - 0x{:016x}", stack_base, stack_base + stack_size as u64);
+            log::info!("  Stack: 0x{:016x} - 0x{:016x}", stack_base, stack_base + stack_size as u64);
         }
         
         // Set up heap (basic)
@@ -97,14 +97,14 @@ impl PE64Emulator {
         let heap_size = 0x100000;
         if heap_base >= max_addr || heap_base + heap_size as u64 <= min_addr {
             emu.mem_map(heap_base, heap_size, Permission::READ | Permission::WRITE)?;
-            println!("  Heap: 0x{:016x} - 0x{:016x}", heap_base, heap_base + heap_size as u64);
+            log::info!("  Heap: 0x{:016x} - 0x{:016x}", heap_base, heap_base + heap_size as u64);
         }
         
         Ok(())
     }
     
     fn setup_iat(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc_error> {
-        println!("\n📌 Setting up Import Address Table:");
+        log::info!("\n📌 Setting up Import Address Table:");
         
         // Map memory for mock functions if we have any IAT entries
         if !pe.iat_entries().is_empty() {
@@ -120,30 +120,30 @@ impl PE64Emulator {
                 
                 // No need to write anything at the mock address - we'll panic if we get there
                 
-                println!("  IAT[0x{:016x}] = 0x{:016x} ({}!{})", 
+                log::info!("  IAT[0x{:016x}] = 0x{:016x} ({}!{})", 
                          entry.iat_address, entry.resolved_address, 
                          entry.import.dll_name(), entry.import.function_name());
             }
             
-            println!("  Populated {} IAT entries", pe.iat_entries().len());
+            log::info!("  Populated {} IAT entries", pe.iat_entries().len());
         } else {
-            println!("  No IAT entries to populate");
+            log::info!("  No IAT entries to populate");
         }
         
         Ok(())
     }
     
     fn setup_cpu_state(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc_error> {
-        println!("\n🖥️  Setting up CPU state:");
+        log::info!("\n🖥️  Setting up CPU state:");
         
         // Set entry point
         emu.reg_write(RegisterX86::RIP, pe.entry_point())?;
-        println!("  RIP: 0x{:016x}", pe.entry_point());
+        log::info!("  RIP: 0x{:016x}", pe.entry_point());
         
         // Set stack pointer
         let stack_pointer = 0x7fff0000 + 0x8000; // Middle of stack
         emu.reg_write(RegisterX86::RSP, stack_pointer)?;
-        println!("  RSP: 0x{:016x}", stack_pointer);
+        log::info!("  RSP: 0x{:016x}", stack_pointer);
         
         // Set up basic registers (Windows x64 ABI)
         emu.reg_write(RegisterX86::RBP, stack_pointer)?;
@@ -158,7 +158,7 @@ impl PE64Emulator {
     }
     
     pub fn run(&mut self, max_instructions: u64) -> Result<(), LoaderError> {
-        println!("\n🚀 Starting execution at 0x{:016x}", self.loaded_pe.entry_point());
+        log::info!("\n🚀 Starting execution at 0x{:016x}", self.loaded_pe.entry_point());
         
         // Set up hooks for debugging
         self.setup_hooks()?;
@@ -172,10 +172,10 @@ impl PE64Emulator {
         );
         
         match result {
-            Ok(_) => println!("✅ Execution completed successfully"),
+            Ok(_) => log::info!("✅ Execution completed successfully"),
             Err(e) => {
                 let rip = self.emu.reg_read(RegisterX86::RIP)?;
-                println!("❌ Execution stopped at 0x{:016x}: {:?}", rip, e);
+                log::info!("❌ Execution stopped at 0x{:016x}: {:?}", rip, e);
                 self.dump_cpu_state()?;
             }
         }
@@ -201,8 +201,8 @@ impl PE64Emulator {
             
             // Check if we're about to execute in the mock IAT function range
             if addr >= MOCK_FUNC_BASE && addr < MOCK_FUNC_END {
-                println!("🛑 STOPPING: About to execute IAT function at 0x{:016x}", addr);
-                println!("   This is a mock IAT function - execution should not reach here!");
+                log::info!("🛑 STOPPING: About to execute IAT function at 0x{:016x}", addr);
+                log::info!("   This is a mock IAT function - execution should not reach here!");
                 panic!("IAT function reached at 0x{:016x}", addr);
             }
             
@@ -222,7 +222,7 @@ impl PE64Emulator {
             let elapsed = start_time.elapsed();
             let elapsed_secs = elapsed.as_secs_f64().max(0.000001); // Avoid divide by zero
             let ips = count as f64 / elapsed_secs;
-            println!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
+            log::info!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
                     ips, count, addr, output);
         })?;
 
@@ -232,7 +232,7 @@ impl PE64Emulator {
             0,
             u64::MAX,
             |_emu, mem_type, addr, size, value| {
-                println!("❌ Invalid memory access: {:?} at 0x{:016x} (size: {}, value: 0x{:x})", 
+                log::info!("❌ Invalid memory access: {:?} at 0x{:016x} (size: {}, value: 0x{:x})", 
                         mem_type, addr, size, value);
                 false // Don't handle the error, let it propagate
             }
@@ -242,7 +242,7 @@ impl PE64Emulator {
     }
     
     fn dump_cpu_state(&mut self) -> Result<(), uc_error> {
-        println!("\n📊 CPU State:");
+        log::info!("\n📊 CPU State:");
         
         let registers = [
             ("RIP", RegisterX86::RIP),
@@ -258,14 +258,14 @@ impl PE64Emulator {
         
         for (name, reg) in registers {
             let value = self.emu.reg_read(reg)?;
-            println!("  {}: 0x{:016x}", name, value);
+            log::info!("  {}: 0x{:016x}", name, value);
         }
         
         // Show some memory around RIP
         let rip = self.emu.reg_read(RegisterX86::RIP)?;
         let mut code = vec![0u8; 16];
         if self.emu.mem_read(rip, &mut code).is_ok() {
-            println!("  Code at RIP: {:02x?}", code);
+            log::info!("  Code at RIP: {:02x?}", code);
         }
         
         Ok(())

@@ -42,9 +42,9 @@ impl LoadedPE {
         let image_base = pe_file.nt_headers().optional_header.image_base.get(object::LittleEndian);
         let entry_point = image_base + pe_file.nt_headers().optional_header.address_of_entry_point.get(object::LittleEndian) as u64;
         
-        println!("📋 PE64 File Information:");
-        println!("  Image Base: 0x{:016x}", image_base);
-        println!("  Entry Point: 0x{:016x}", entry_point);
+        log::info!("📋 PE64 File Information:");
+        log::info!("  Image Base: 0x{:016x}", image_base);
+        log::info!("  Entry Point: 0x{:016x}", entry_point);
         
         // Load sections - handle both object crate addresses and PE RVAs
         let mut sections = Vec::new();
@@ -60,7 +60,7 @@ impl LoadedPE {
             } else {
                 // Looks like an absolute address, use as-is but warn if it doesn't match image base
                 if section_addr < image_base || section_addr > image_base + 0x10000000 {
-                    println!("  ⚠️  Section '{}' has suspicious VA: 0x{:016x} (image base: 0x{:016x})", 
+                    log::info!("  ⚠️  Section '{}' has suspicious VA: 0x{:016x} (image base: 0x{:016x})", 
                              name, section_addr, image_base);
                 }
                 section_addr
@@ -72,7 +72,7 @@ impl LoadedPE {
             // Determine permissions based on section characteristics
             let permissions = Self::get_section_permissions(&section);
             
-            println!("  Section '{}': VA=0x{:016x} (raw: 0x{:016x}), Size=0x{:x}, Perms={:?}", 
+            log::info!("  Section '{}': VA=0x{:016x} (raw: 0x{:016x}), Size=0x{:x}, Perms={:?}", 
                      name, virtual_address, section_addr, virtual_size, permissions);
             
             sections.push(LoadedSection::new(
@@ -109,9 +109,9 @@ impl LoadedPE {
             current_mock_addr += 0x10; // Space between mock functions
         }
         
-        println!("  Loaded {} symbols", symbols.len());
-        println!("  Found {} imported functions", imports.len());
-        println!("  Created {} IAT entries", iat_entries.len());
+        log::info!("  Loaded {} symbols", symbols.len());
+        log::info!("  Found {} imported functions", imports.len());
+        log::info!("  Created {} IAT entries", iat_entries.len());
         
         Ok(LoadedPE {
             entry_point,
@@ -134,18 +134,18 @@ impl LoadedPE {
         let import_dir = match data_dirs.get(IMAGE_DIRECTORY_ENTRY_IMPORT) {
             Some(dir) => dir,
             None => {
-                println!("  No import directory found");
+                log::info!("  No import directory found");
                 return Ok(imports);
             }
         };
         
         let import_table_rva = import_dir.virtual_address.get(LittleEndian);
         if import_table_rva == 0 {
-            println!("  Import table is empty");
+            log::info!("  Import table is empty");
             return Ok(imports);
         }
         
-        println!("🔗 Parsing imports from RVA 0x{:x}", import_table_rva);
+        log::info!("🔗 Parsing imports from RVA 0x{:x}", import_table_rva);
         
         // Convert RVA to file offset
         let import_table_offset = Self::rva_to_file_offset(pe_file, import_table_rva)
@@ -185,11 +185,11 @@ impl LoadedPE {
                 "unknown_dll".to_string()
             };
             
-            println!("  📚 DLL: {} (ILT: 0x{:x}, IAT: 0x{:x})", dll_name, import_lookup_table, import_address_table);
+            log::info!("  📚 DLL: {} (ILT: 0x{:x}, IAT: 0x{:x})", dll_name, import_lookup_table, import_address_table);
             
             // Parse functions from this DLL
             if import_lookup_table != 0 || import_address_table != 0 {
-                println!("    ILT: 0x{:x}, IAT: 0x{:x}", import_lookup_table, import_address_table);
+                log::info!("    ILT: 0x{:x}, IAT: 0x{:x}", import_lookup_table, import_address_table);
                 let dll_imports = Self::parse_dll_imports(
                     pe_file, 
                     data,
@@ -198,11 +198,11 @@ impl LoadedPE {
                     import_address_table, 
                     image_base
                 ).unwrap_or_else(|e| {
-                    println!("    ⚠️ Failed to parse imports: {}", e);
+                    log::info!("    ⚠️ Failed to parse imports: {}", e);
                     Vec::new()
                 });
                 
-                println!("    Found {} functions", dll_imports.len());
+                log::info!("    Found {} functions", dll_imports.len());
                 imports.extend(dll_imports);
             }
             
@@ -232,7 +232,7 @@ impl LoadedPE {
         let ilt_offset = Self::rva_to_file_offset(pe_file, table_rva)
             .ok_or("Could not convert table RVA to file offset")?;
         
-        println!("      Table RVA 0x{:x} -> file offset 0x{:x}", table_rva, ilt_offset);
+        log::info!("      Table RVA 0x{:x} -> file offset 0x{:x}", table_rva, ilt_offset);
         
         let mut ilt_pos = ilt_offset as usize;
         let mut iat_entry_index = 0;
@@ -240,7 +240,7 @@ impl LoadedPE {
         // Parse Import Lookup Table (64-bit entries for PE64)
         loop {
             if ilt_pos + 8 > data.len() {
-                println!("      End of data reached at offset 0x{:x}", ilt_pos);
+                log::info!("      End of data reached at offset 0x{:x}", ilt_pos);
                 break;
             }
             
@@ -250,24 +250,24 @@ impl LoadedPE {
             ]);
             
             if ilt_entry == 0 {
-                println!("      End of ILT (null entry) at offset 0x{:x}", ilt_pos);
+                log::info!("      End of ILT (null entry) at offset 0x{:x}", ilt_pos);
                 break;
             }
             
-            println!("      ILT entry[{}]: 0x{:016x}", iat_entry_index, ilt_entry);
+            log::info!("      ILT entry[{}]: 0x{:016x}", iat_entry_index, ilt_entry);
             
             let function_name = if ilt_entry & 0x8000000000000000 != 0 {
                 // Import by ordinal
                 let ordinal = ilt_entry & 0xFFFF;
-                println!("        Import by ordinal: {}", ordinal);
+                log::info!("        Import by ordinal: {}", ordinal);
                 format!("Ordinal_{}", ordinal)
             } else {
                 // Import by name
                 let hint_name_rva = (ilt_entry & 0x7FFFFFFF) as u32;
-                println!("        Import by name, hint/name RVA: 0x{:x}", hint_name_rva);
+                log::info!("        Import by name, hint/name RVA: 0x{:x}", hint_name_rva);
                 if let Some(hint_name_offset) = Self::rva_to_file_offset(pe_file, hint_name_rva) {
                     // Skip hint (2 bytes) and read function name
-                    println!("        Hint/name file offset: 0x{:x}", hint_name_offset);
+                    log::info!("        Hint/name file offset: 0x{:x}", hint_name_offset);
                     Self::read_cstring(data, hint_name_offset as usize + 2)
                         .unwrap_or_else(|_| format!("func_{:x}", hint_name_rva))
                 } else {
@@ -278,7 +278,7 @@ impl LoadedPE {
             // Calculate IAT address for this import
             let iat_address = image_base + import_address_table_rva as u64 + (iat_entry_index * 8) as u64;
             
-            println!("        Function: {} at IAT 0x{:016x}", function_name, iat_address);
+            log::info!("        Function: {} at IAT 0x{:016x}", function_name, iat_address);
             
             imports.push(ImportedFunction::new(
                 dll_name.to_string(),
@@ -291,7 +291,7 @@ impl LoadedPE {
             
             // Safety limit to avoid infinite loops
             if iat_entry_index > 1000 {
-                println!("      Hit safety limit of 1000 imports");
+                log::info!("      Hit safety limit of 1000 imports");
                 break;
             }
         }
