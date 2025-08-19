@@ -27,6 +27,9 @@ impl Emulator {
             registry.load_system_dll("./assets/version.dll", "version.dll", 0x100000)?;
             registry.load_system_dll("./assets/ole32.dll", "ole32.dll", 0x100000)?;
             registry.load_system_dll("./assets/vcruntime140.dll", "vcruntime140.dll", 0x100000)?;
+            registry.load_system_dll("./assets/shlwapi.dll", "shlwapi.dll", 0x100000)?;            
+            registry.load_system_dll("./assets/comctl32.dll", "comctl32.dll", 0x100000)?;                        
+            registry.load_system_dll("./assets/psapi.dll", "psapi.dll", 0x100000)?;                                    
             registry.load_system_dll("./assets/api-ms-win-core-synch-l1-2-0.dll", "api-ms-win-core-synch-l1-2-0.dll", 0x100000)?;
             registry.load_system_dll("./assets/api-ms-win-crt-runtime-l1-1-0.dll", "api-ms-win-crt-runtime-l1-1-0.dll", 0x100000)?;
             registry.load_system_dll("./assets/api-ms-win-crt-math-l1-1-0.dll", "api-ms-win-crt-math-l1-1-0.dll", 0x100000)?;

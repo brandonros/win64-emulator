@@ -1,5 +1,5 @@
 use unicorn_engine::{Unicorn, RegisterX86};
-use crate::emulation::memory::read_string_from_memory;
+use crate::emulation::memory;
 use crate::winapi::module_registry::MODULE_REGISTRY;
 
 pub fn GetModuleHandleA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
@@ -14,7 +14,7 @@ pub fn GetModuleHandleA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
         log::info!("kernel32!GetModuleHandleA(NULL) -> 0x{:016x}", handle);
     } else {
         // Read the module name string from memory
-        let module_name = read_string_from_memory(emu, module_name_ptr)?;
+        let module_name = memory::read_string_from_memory(emu, module_name_ptr)?;
         let handle = MODULE_REGISTRY.read().unwrap()
             .get_module_handle(Some(&module_name))
             .unwrap_or_else(|| {
