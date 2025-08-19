@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, RwLock};
+use crate::pe::LoadedPE;
 
 // Main executable base (standard Windows x64)
 pub const MAIN_MODULE_BASE: u64 = 0x140000000;
@@ -161,5 +162,31 @@ impl ModuleRegistry {
         if let Some(module) = self.modules.get_mut(&normalized_name) {
             module.exports.insert(function_name.to_string(), address);
         }
+    }
+    
+    // Helper function to load and register a system DLL with mock exports
+    pub fn load_system_dll(&mut self, dll_path: &str, dll_name: &str, size: u64) -> Result<(), String> {
+        // Try to load the DLL
+        let dll_pe = LoadedPE::from_file(dll_path)
+            .map_err(|e| format!("Failed to load {}: {:?}", dll_name, e))?;
+        
+        log::info!("📚 Loaded {} with {} exports", dll_name, dll_pe.exports().len());
+        
+        // Allocate base address for the DLL
+        let base_addr = self.allocate_base_address(size);
+        
+        // Build export map with mock addresses for hook interception
+        let mut dll_exports = HashMap::new();
+        for (name, _export) in dll_pe.exports() {
+            let mock_addr = self.allocate_mock_address();
+            dll_exports.insert(name.clone(), mock_addr);
+            log::debug!("  {}!{} -> 0x{:x}", dll_name, name, mock_addr);
+        }
+        
+        // Register the module with its exports
+        self.register_module_with_exports(dll_name, base_addr, size, dll_exports);
+        log::info!("  Registered {} at base 0x{:x}", dll_name, base_addr);
+        
+        Ok(())
     }
 }
