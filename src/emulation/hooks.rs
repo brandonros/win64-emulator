@@ -2,7 +2,7 @@ use std::cell::UnsafeCell;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
-use unicorn_engine::Unicorn;
+use unicorn_engine::{MemType, Unicorn};
 
 use crate::pe::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 use super::iat::IAT_FUNCTION_MAP;
@@ -35,7 +35,20 @@ thread_local! {
     static LAST_IPS: UnsafeCell<f64> = UnsafeCell::new(0.0);
 }
 
+pub fn memory_hook_callback<D>(emu: &mut Unicorn<D>, mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
+    log::info!("❌ Invalid memory access: {:?} at 0x{:016x} (size: {}, value: 0x{:x})", 
+            mem_type, addr, size, value);
+    false // Don't handle the error, let it propagate
+}
+
 pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
+    // Check for NULL pointer execution
+    if addr == 0 {
+        log::error!("❌ Attempted to execute at NULL address (0x0000000000000000)!");
+        emu.emu_stop().unwrap();
+        return;
+    }
+    
     // Safe: single-threaded execution only
     let count = COUNTER.with(|c| unsafe {
         let counter = &mut *c.get();
@@ -55,8 +68,8 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         *start_ptr
     });
 
-    // Only calculate IPS every 1000 instructions instead of every instruction
-    let _ips = if count % 1000 == 0 {
+    // Only calculate IPS every N instructions instead of every instruction
+    let ips = if count % 5000 == 0 {
         // Calculate and cache new IPS
         let start_micros = START_TIME_MICROS.with(|s| unsafe { *s.get() });
         let now_micros = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
@@ -91,8 +104,42 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 unsafe { (*f.get()).format(&instruction, output) }
             });
             
-            // Log directly using the buffer
-            //log::info!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", ips, count, addr, output);
+            // For indirect jumps/calls, also show the target address
+            use iced_x86::{Mnemonic, OpKind};
+            let mnemonic = instruction.mnemonic();
+            if (mnemonic == Mnemonic::Jmp || mnemonic == Mnemonic::Call) && 
+               instruction.op_count() > 0 {
+                
+                // Check if this is an indirect jump/call through memory
+                if instruction.op0_kind() == OpKind::Memory {
+                    // Get the memory address being dereferenced
+                    let mem_addr = instruction.memory_displacement64();
+                    
+                    // Try to read the target address from memory
+                    let mut target_bytes = [0u8; 8];
+                    if emu.mem_read(mem_addr, &mut target_bytes).is_ok() {
+                        let target = u64::from_le_bytes(target_bytes);
+                        
+                        // Check if we're about to jump to NULL
+                        if target == 0 {
+                            log::error!("❌ Attempted jump to NULL address from 0x{:016x}!", addr);
+                            log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {} -> 0x{:016x}", 
+                                       ips, count, addr, output, target);
+                            emu.emu_stop().unwrap();
+                            return;
+                        }
+                        
+                        log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {} -> 0x{:016x}", 
+                                   ips, count, addr, output, target);
+                    } else {
+                        log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", ips, count, addr, output);
+                    }
+                } else {
+                    log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", ips, count, addr, output);
+                }
+            } else {
+                log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", ips, count, addr, output);
+            }
         });
     });
 

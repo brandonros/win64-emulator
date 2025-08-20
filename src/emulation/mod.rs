@@ -101,11 +101,7 @@ impl Emulator {
             unicorn_engine::unicorn_const::HookType::MEM_INVALID,
             0,
             u64::MAX,
-            |_emu, mem_type, addr, size, value| {
-                log::info!("❌ Invalid memory access: {:?} at 0x{:016x} (size: {}, value: 0x{:x})", 
-                        mem_type, addr, size, value);
-                false // Don't handle the error, let it propagate
-            }
+            self::hooks::memory_hook_callback
         )?;
         
         Ok(())

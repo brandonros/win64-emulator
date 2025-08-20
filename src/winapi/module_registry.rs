@@ -160,7 +160,7 @@ impl ModuleRegistry {
                 (dll_name.to_string(), name.clone())
             );
             
-            log::debug!("  {}!{} -> 0x{:x}", dll_name, name, mock_addr);
+            log::info!("  {}!{} -> 0x{:x}", dll_name, name, mock_addr);
         }
         
         // Register the module with its exports
