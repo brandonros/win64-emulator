@@ -8,7 +8,8 @@ mod winapi;
 
 // Example usage and testing
 fn main() -> Result<(), LoaderError> {
-    fast_log::init(fast_log::Config::new().console().chan_len(Some(1000000))).unwrap();
+    //fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
+    fast_log::init(fast_log::Config::new().file("/tmp/win64-emulator.log").chan_len(Some(100000))).unwrap();
 
     log::info!("🔧 PE64 Loader with IAT Parsing");
     log::info!("=================================\n");
@@ -43,7 +44,10 @@ fn main() -> Result<(), LoaderError> {
     
     // Start execution with a limit
     log::info!("\n⚡ Starting emulation...");
-    emulator.run(0)?; // Just run 100 instructions to see what happens
+    emulator.run(0)?;
+
+    // flush logger on exit
+    log::logger().flush();
     
     Ok(())
 }
