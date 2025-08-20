@@ -36,7 +36,8 @@ impl LoadedPE {
         let (nt_headers, _data_directories) = ImageNtHeaders64::parse(&*file_bytes, &mut offset)?;
         let optional_header = nt_headers.optional_header();
         let image_base = optional_header.image_base.get(LittleEndian);
-        let entry_point = optional_header.address_of_entry_point.get(LittleEndian) as u64;
+        let entry_point_rva = optional_header.address_of_entry_point.get(LittleEndian) as u64;
+        let entry_point = image_base + entry_point_rva;
         let image_size = optional_header.size_of_image.get(LittleEndian) as usize;
         
         log::info!("📋 PE64 File Information:");

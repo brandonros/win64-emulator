@@ -3,9 +3,6 @@ use std::sync::{LazyLock, RwLock};
 use crate::pe::LoadedPE;
 use crate::emulation::iat::IAT_FUNCTION_MAP;
 
-// Main executable base (standard Windows x64)
-pub const MAIN_MODULE_BASE: u64 = 0x140000000;
-
 // Base address for system DLLs (they'll be allocated sequentially from here)
 pub const SYSTEM_DLL_BASE: u64 = 0x7FF000000000;
 
@@ -64,14 +61,13 @@ impl ModuleRegistry {
         }
     }
     
-    // Allocate a base address for a new DLL
     pub fn allocate_base_address(&mut self, size: u64) -> u64 {
         let base = self.next_dll_base;
-        // Align to 64KB boundary and leave some space
+        // This could potentially allocate addresses that conflict with MAIN_MODULE_BASE
         self.next_dll_base += ((size + 0xFFFF) & !0xFFFF) + 0x10000;
         base
     }
-    
+
     // Allocate a mock function address for hook interception
     pub fn allocate_mock_address(&mut self) -> u64 {
         let addr = self.next_mock_addr;
@@ -81,7 +77,11 @@ impl ModuleRegistry {
     
     pub fn get_module_handle(&self, name: Option<&str>) -> Option<u64> {
         match name {
-            None => Some(MAIN_MODULE_BASE), // NULL means main module
+            None => {
+                // NULL means main module - look it up from registered modules
+                self.modules.get("main")
+                    .map(|m| m.base_address)
+            },
             Some(module_name) => {
                 let normalized = module_name.to_lowercase();
                 self.modules.get(&normalized)
