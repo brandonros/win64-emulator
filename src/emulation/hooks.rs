@@ -35,7 +35,7 @@ thread_local! {
     static LAST_IPS: UnsafeCell<f64> = UnsafeCell::new(0.0);
 }
 
-pub fn memory_hook_callback<D>(emu: &mut Unicorn<D>, mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
+pub fn memory_hook_callback<D>(_emu: &mut Unicorn<D>, mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
     log::info!("❌ Invalid memory access: {:?} at 0x{:016x} (size: {}, value: 0x{:x})", 
             mem_type, addr, size, value);
     false // Don't handle the error, let it propagate

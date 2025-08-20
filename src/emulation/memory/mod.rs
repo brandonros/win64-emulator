@@ -8,8 +8,7 @@ pub mod peb;
 
 // Re-export commonly used items
 pub use constants::*;
-pub use utils::{read_string_from_memory, read_wide_string_from_memory};
-pub use utils::{write_word_le, write_word_be, write_dword_le, write_dword_be, write_qword_le, write_qword_be};
+pub use utils::{read_string_from_memory, write_word_le, write_dword_le, write_qword_le};
 pub use teb::setup_teb;
 pub use peb::setup_peb;
 
