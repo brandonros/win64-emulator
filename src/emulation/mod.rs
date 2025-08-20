@@ -15,6 +15,15 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new(pe_path: &str) -> Result<Self, LoaderError> {
+        // Load the main PE
+        let loaded_pe = LoadedPE::from_file(pe_path)?;
+
+        // Register the main module in the module registry
+        {
+            let mut registry = MODULE_REGISTRY.write().unwrap();
+            registry.register_main_module(loaded_pe.image_base(), loaded_pe.image_size() as u64);
+        }
+
         // Load system DLLs
         {
             let mut registry = MODULE_REGISTRY.write().unwrap();
@@ -37,15 +46,6 @@ impl Emulator {
             registry.load_system_dll("./assets/api-ms-win-crt-stdio-l1-1-0.dll", "api-ms-win-crt-stdio-l1-1-0.dll", 0x100000)?;
             registry.load_system_dll("./assets/api-ms-win-crt-locale-l1-1-0.dll", "api-ms-win-crt-locale-l1-1-0.dll", 0x100000)?;
             registry.load_system_dll("./assets/api-ms-win-crt-heap-l1-1-0.dll", "api-ms-win-crt-heap-l1-1-0.dll", 0x100000)?;
-        }
-
-        // Now load the main PE
-        let loaded_pe = LoadedPE::from_file(pe_path)?;
-        
-        // Register the main module in the module registry
-        {
-            let mut registry = MODULE_REGISTRY.write().unwrap();
-            registry.register_main_module(loaded_pe.image_base(), loaded_pe.image_size() as u64);
         }
 
         let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64)?;

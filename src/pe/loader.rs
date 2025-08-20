@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use object::{read::pe::PeFile64, Architecture, BinaryFormat, Object as _, ObjectSection as _, ObjectSymbol as _};
+use object::pe::{ImageDosHeader, ImageNtHeaders64};
+use object::LittleEndian;
+use object::{Object as _, ObjectSection as _, ObjectSymbol as _};
+use object::read::pe::ImageNtHeaders as _;
 use unicorn_engine::Permission;
 
 use crate::loader_error::LoaderError;
@@ -25,24 +28,16 @@ pub struct LoadedPE {
 
 impl LoadedPE {
     pub fn from_file(path: &str) -> Result<Self, LoaderError> {
-        // Read the PE file
-        let data = std::fs::read(path)?;
-        let obj_file = object::File::parse(&*data)?;
-        
-        // Verify it's a PE64 file
-        if obj_file.format() != BinaryFormat::Pe {
-            return Err(LoaderError::from("Not a PE file"));
-        }
-        
-        if obj_file.architecture() != Architecture::X86_64 {
-            return Err(LoaderError::from("Not a 64-bit executable"));
-        }
-        
-        // Get PE-specific information
-        let pe_file = PeFile64::parse(&*data)?;
-        let image_base = pe_file.nt_headers().optional_header.image_base.get(object::LittleEndian);
-        let entry_point = image_base + pe_file.nt_headers().optional_header.address_of_entry_point.get(object::LittleEndian) as u64;
-        let image_size = pe_file.nt_headers().optional_header.size_of_image.get(object::LittleEndian) as usize;
+        let file_bytes = std::fs::read(path)?;
+        let file_kind = object::FileKind::parse(&*file_bytes)?;
+        assert_eq!(file_kind, object::FileKind::Pe64);
+        let dos_header = ImageDosHeader::parse(&*file_bytes)?;
+        let mut offset: u64 = dos_header.nt_headers_offset().into();
+        let (nt_headers, _data_directories) = ImageNtHeaders64::parse(&*file_bytes, &mut offset)?;
+        let optional_header = nt_headers.optional_header();
+        let image_base = optional_header.image_base.get(LittleEndian);
+        let entry_point = optional_header.address_of_entry_point.get(LittleEndian) as u64;
+        let image_size = optional_header.size_of_image.get(LittleEndian) as usize;
         
         log::info!("📋 PE64 File Information:");
         log::info!("  Image Base: 0x{:016x}", image_base);
@@ -50,8 +45,8 @@ impl LoadedPE {
         log::info!("  Image Size: 0x{:x}", image_size);
         
         // Load sections - handle both object crate addresses and PE RVAs
+        let obj_file = object::File::parse(&*file_bytes)?;
         let mut sections = Vec::new();
-        
         for section in obj_file.sections() {
             let name = section.name().unwrap_or("<unknown>").to_string();
             let section_addr = section.address();
@@ -93,12 +88,15 @@ impl LoadedPE {
                 symbols.insert(name.to_string(), image_base + address);
             }
         }
+
+        // open a pe64?
+        let pe_file = object::read::pe::PeFile64::parse(&*file_bytes)?;
         
         // Parse imports from PE import table
-        let imports = imports::parse_imports(&pe_file, &data, image_base)?;
+        let imports = imports::parse_imports(&pe_file, &file_bytes, image_base)?;
         
         // Parse exports from PE export table
-        let export_list = exports::parse_exports(&pe_file, &data, image_base)?;
+        let export_list = exports::parse_exports(&pe_file, &file_bytes, image_base)?;
         let mut exports = HashMap::new();
         for export in export_list {
             exports.insert(export.name.clone(), export);
@@ -281,5 +279,40 @@ mod tests {
         log::info!("kernel32.dll has {} total exports", exports.len());
         log::info!("GetModuleHandleA found at address: 0x{:x}, ordinal: {}", 
                  export.address, export.ordinal);
+    }
+
+    #[test] 
+    fn test_pe_parsing_steps() {
+        let path = "/Users/brandon/Desktop/win64-emulator/assets/enigma_test_protected.exe"; // Replace with actual test file
+        let file_bytes = std::fs::read(path).expect("Failed to read file");
+        
+        // Step 2: Parse file kind  
+        let file_kind = object::FileKind::parse(&*file_bytes).expect("Failed to get file kind");
+        assert_eq!(file_kind, object::FileKind::Pe64);
+        
+        // Step 3: Parse DOS header
+        let dos_header = ImageDosHeader::parse(&*file_bytes).expect("Failed to parse DOS header");
+        
+        // Step 4: Parse NT headers
+        let mut offset: u64 = dos_header.nt_headers_offset().into();
+        let (nt_headers, _data_directories) = ImageNtHeaders64::parse(&*file_bytes, &mut offset)
+            .expect("Failed to parse NT headers");
+        
+        // Step 5: Extract and verify PE information
+        let optional_header = nt_headers.optional_header();
+        let image_base = optional_header.image_base.get(LittleEndian);
+        let entry_point = optional_header.address_of_entry_point.get(LittleEndian) as u64;
+        let image_size = optional_header.size_of_image.get(LittleEndian) as usize;
+        
+        let expected_image_base = 0x0000000140000000; // Common for 64-bit executables
+        let expected_entry_point = 0x0000000001058b8c; // Replace with actual expected value
+        let expected_image_size = 0x105d000; // Replace with actual expected value
+
+        assert_eq!(image_base, expected_image_base, "Image base mismatch!");
+        assert_eq!(entry_point, expected_entry_point, "Entry point mismatch!");
+        assert_eq!(image_size, expected_image_size, "Image size mismatch!");
+
+        let loaded_pe = LoadedPE::from_file(path).expect("Failed to load PE with from_file");
+        assert_eq!(loaded_pe.entry_point, expected_entry_point);
     }
 }
