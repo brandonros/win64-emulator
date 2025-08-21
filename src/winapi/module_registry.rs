@@ -38,6 +38,10 @@ impl LoadedModule {
             exports,
         }
     }
+    
+    pub fn get_proc_address(&self, function_name: &str) -> Option<u64> {
+        self.exports.get(function_name).copied()
+    }
 }
 
 // Global module registry
@@ -122,12 +126,11 @@ impl ModuleRegistry {
         }
     }
     
-    pub fn get_proc_address(&self, module_base: u64, function_name: &str) -> Option<u64> {
+    pub fn get_loaded_module_by_module_base(&self, module_base: u64) -> Option<&LoadedModule> {
         // Find module by base address
         for module in self.modules.values() {
             if module.base_address == module_base {
-                // Look up function in exports
-                return module.exports.get(function_name).copied();
+                return Some(module);
             }
         }
         None
