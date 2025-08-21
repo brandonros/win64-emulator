@@ -39,6 +39,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetCommandLineA") => kernel32::GetCommandLineA(emu_ref),
         ("kernel32.dll", "GetCurrentProcessId") => kernel32::GetCurrentProcessId(emu_ref),
         ("kernel32.dll", "GetCPInfo") => kernel32::GetCPInfo(emu_ref),
+        ("kernel32.dll", "GetUserDefaultLCID") => kernel32::GetUserDefaultLCID(emu_ref),
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
         }
