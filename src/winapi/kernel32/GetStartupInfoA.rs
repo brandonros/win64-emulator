@@ -31,7 +31,7 @@ pub fn GetStartupInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
             hStdOutput: std::ptr::null_mut(),
             hStdError: std::ptr::null_mut(),
         };
-        structures::write_struct(emu, startup_info_ptr, &mock_startup_info);
+        structures::write_struct(emu, startup_info_ptr, &mock_startup_info)?;
     }
     
     Ok(())

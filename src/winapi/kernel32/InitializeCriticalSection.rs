@@ -19,7 +19,7 @@ pub fn InitializeCriticalSection(emu: &mut Unicorn<()>) -> Result<(), unicorn_en
             LockSemaphore: std::ptr::null_mut(),
             SpinCount: 0,
         };
-        structures::write_struct(emu, critical_section_ptr, &mock_critical_section);
+        structures::write_struct(emu, critical_section_ptr, &mock_critical_section)?;
     }
     
     Ok(())

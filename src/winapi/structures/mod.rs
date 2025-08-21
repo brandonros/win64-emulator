@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
-use unicorn_engine::Unicorn;
+use unicorn_engine::{uc_error, Unicorn};
 
-pub fn write_struct<T>(emu: &mut Unicorn<()>, addr: u64, data: &T) {
+pub fn write_struct<T>(emu: &mut Unicorn<()>, addr: u64, data: &T) -> Result<(), uc_error> {
     let size = std::mem::size_of::<T>();
     let bytes: &[u8] = unsafe {
         std::slice::from_raw_parts(
@@ -10,5 +10,5 @@ pub fn write_struct<T>(emu: &mut Unicorn<()>, addr: u64, data: &T) {
             size
         )
     };
-    emu.mem_write(addr, bytes).unwrap();
+    emu.mem_write(addr, bytes)
 }

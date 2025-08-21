@@ -29,3 +29,4 @@ declare_api!(GetProcessHeap);
 declare_api!(HeapAlloc);
 declare_api!(GetCommandLineA);
 declare_api!(GetCurrentProcessId);
+declare_api!(GetCPInfo);
