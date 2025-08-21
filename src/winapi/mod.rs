@@ -40,6 +40,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetCPInfo") => kernel32::GetCPInfo(emu_ref),
         ("kernel32.dll", "GetUserDefaultLCID") => kernel32::GetUserDefaultLCID(emu_ref),
         ("kernel32.dll", "SetThreadLocale") => kernel32::SetThreadLocale(emu_ref),
+        ("kernel32.dll", "GetThreadLocale") => kernel32::GetThreadLocale(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
