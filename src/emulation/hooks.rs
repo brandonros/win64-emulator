@@ -5,7 +5,7 @@ use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::{MemType, RegisterX86, Unicorn};
 
 use crate::emulation::memory::{STACK_BASE, STACK_SIZE};
-use crate::emulation::RegisterState;
+use crate::emulation::{memory, RegisterState};
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 use super::iat::IAT_FUNCTION_MAP;
 use crate::winapi;
@@ -51,14 +51,16 @@ thread_local! {
 
 pub fn memory_read_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, _value: i64) -> bool {
     if cfg!(feature = "log-mem-read") {
-        log::trace!("📖 Memory read: 0x{:016x} (size: {} bytes)", addr, size);
+        let region = memory::determine_memory_region(addr);
+        log::trace!("📖 Memory read [{:?}]: 0x{:016x} (size: {} bytes)", region, addr, size);
     }
     true
 }
 
 pub fn memory_write_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
     if cfg!(feature = "log-mem-write") {
-        log::trace!("✏️  Memory write: 0x{:016x} (size: {} bytes, value: 0x{:x})", addr, size, value);
+        let region = memory::determine_memory_region(addr);
+        log::trace!("✏️  Memory write [{:?}]: 0x{:016x} (size: {} bytes, value: 0x{:x})", region, addr, size, value);
     }
     true
 }

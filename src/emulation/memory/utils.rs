@@ -1,5 +1,7 @@
 use unicorn_engine::{uc_error, Unicorn};
 
+use crate::emulation::memory::{STACK_BASE, STACK_SIZE, HEAP_BASE, HEAP_SIZE, TEB_BASE, TEB_SIZE, PEB_BASE, PEB_SIZE};
+
 // String reading utilities
 
 pub fn read_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<String, uc_error> {
@@ -126,3 +128,32 @@ pub fn read_struct<T>(emu: &mut Unicorn<()>, addr: u64) -> Result<T, uc_error> {
     Ok(data)
 }
 
+#[derive(Debug)]
+pub enum MemoryRegion {
+    Stack,
+    Heap,
+    Tls,
+    Teb,
+    Peb,
+    Unknown
+}
+
+pub fn determine_memory_region(addr: u64) -> MemoryRegion {
+    if addr >= STACK_BASE && addr < STACK_BASE + STACK_SIZE as u64 {
+        MemoryRegion::Stack
+    } else if addr >= HEAP_BASE && addr < HEAP_BASE + HEAP_SIZE as u64 {
+        MemoryRegion::Heap
+    } else if addr >= TEB_BASE && addr < TEB_BASE + TEB_SIZE as u64 {
+        let tls_start = TEB_BASE + 0x1480;
+        let tls_end = tls_start + (64 * 8);
+        if addr >= tls_start && addr < tls_end {
+            MemoryRegion::Tls
+        } else {
+            MemoryRegion::Teb
+        }
+    } else if addr >= PEB_BASE && addr < PEB_BASE + PEB_SIZE as u64 {
+        MemoryRegion::Peb
+    } else {
+        MemoryRegion::Unknown
+    }
+}
