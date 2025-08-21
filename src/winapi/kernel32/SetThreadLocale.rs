@@ -13,7 +13,7 @@ pub fn SetThreadLocale(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
     
     log::debug!("[SetThreadLocale] Returning previous locale: 0x{:04x}", previous_locale);
     
-    // Return the previous LCID in EAX (even though docs say BOOL, it actually returns LCID)
+    // Return the previous LCID in EAX
     emu.reg_write(RegisterX86::EAX, previous_locale as u64)?;
     
     Ok(())

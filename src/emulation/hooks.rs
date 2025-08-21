@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::{MemType, Unicorn};
 
-use crate::pe::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
+use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 use super::iat::IAT_FUNCTION_MAP;
 use crate::winapi;
 
@@ -145,7 +145,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                     }
                 }
                 
-                //log::debug!("{}", log_msg);
+                log::debug!("{}", log_msg);
             });
         });
     });

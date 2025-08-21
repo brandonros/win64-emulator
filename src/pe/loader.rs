@@ -7,12 +7,10 @@ use object::read::pe::ImageNtHeaders as _;
 use unicorn_engine::Permission;
 
 use crate::loader_error::LoaderError;
+use crate::pe::constants::MOCK_FUNCTION_BASE;
 use super::types::{ImportedFunction, LoadedSection, IATEntry};
 use super::imports;
 use super::exports::{self, ExportedFunction};
-
-// TODO: This should be moved to emulation module
-const MOCK_FUNCTION_BASE: u64 = 0x7F000000;
 
 #[derive(Debug)]
 pub struct LoadedPE {

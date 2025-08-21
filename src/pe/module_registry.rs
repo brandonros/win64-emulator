@@ -1,14 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, RwLock};
+use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE, MOCK_FUNCTION_SPACING, SYSTEM_DLL_BASE};
 use crate::pe::LoadedPE;
 use crate::emulation::iat::IAT_FUNCTION_MAP;
-
-// Base address for system DLLs (they'll be allocated sequentially from here)
-pub const SYSTEM_DLL_BASE: u64 = 0x7FF000000000;
-
-// Base address for mock functions (for hook interception)
-pub const MOCK_FUNCTION_BASE: u64 = 0x7F000000;
-pub const MOCK_FUNCTION_SPACING: u64 = 0x10;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -75,6 +69,9 @@ impl ModuleRegistry {
     pub fn allocate_mock_address(&mut self) -> u64 {
         let addr = self.next_mock_addr;
         self.next_mock_addr += MOCK_FUNCTION_SPACING;
+        if addr >= MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64 {
+            panic!("Mock function address space exhausted! Need to map more memory.");
+        }
         addr
     }
     
