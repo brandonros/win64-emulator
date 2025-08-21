@@ -44,11 +44,50 @@ pub fn dump_cpu_state(emu: &mut Unicorn<'static, ()>) -> Result<(), uc_error> {
         ("RDX", RegisterX86::RDX),
         ("RSI", RegisterX86::RSI),
         ("RDI", RegisterX86::RDI),
+        ("R8",  RegisterX86::R8),
+        ("R9",  RegisterX86::R9),
+        ("R10", RegisterX86::R10),
+        ("R11", RegisterX86::R11),
+        ("R12", RegisterX86::R12),
+        ("R13", RegisterX86::R13),
+        ("R14", RegisterX86::R14),
+        ("R15", RegisterX86::R15),
     ];
     
+    // log registers
     for (name, reg) in registers {
         let value = emu.reg_read(reg)?;
         log::info!("  {}: 0x{:016x}", name, value);
+    }
+
+    // RFLAGS (super useful for debugging conditionals and exceptions)
+    let rflags = emu.reg_read(RegisterX86::RFLAGS)?;
+    log::info!("  RFLAGS: 0x{:016x} [CF:{} PF:{} ZF:{} SF:{} OF:{} DF:{}]",
+        rflags,
+        (rflags & 0x1) != 0,        // Carry Flag
+        (rflags & 0x4) != 0,        // Parity Flag  
+        (rflags & 0x40) != 0,       // Zero Flag
+        (rflags & 0x80) != 0,       // Sign Flag
+        (rflags & 0x800) != 0,      // Overflow Flag
+        (rflags & 0x400) != 0,      // Direction Flag
+    );
+    
+    // Segment registers (useful for TLS, exceptions, etc.)
+    let fs = emu.reg_read(RegisterX86::FS)?;
+    let gs = emu.reg_read(RegisterX86::GS)?;
+    if fs != 0 || gs != 0 {
+        log::info!("  FS: 0x{:016x}  GS: 0x{:016x}", fs, gs);
+    }
+    
+    // Stack preview (top few values)
+    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    log::info!("  Stack preview:");
+    for i in 0..4 {
+        let mut bytes = vec![0u8; 8];
+        if emu.mem_read(rsp + i*8, &mut bytes).is_ok() {
+            let value = u64::from_le_bytes(bytes.try_into().unwrap());
+            log::info!("    [RSP+0x{:02x}]: 0x{:016x}", i*8, value);
+        }
     }
     
     // Show some memory around RIP
