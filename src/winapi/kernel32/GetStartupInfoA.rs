@@ -2,7 +2,7 @@ use unicorn_engine::Unicorn;
 use unicorn_engine::RegisterX86;
 use windows_sys::Win32::System::Threading::STARTUPINFOA;
 
-use crate::winapi::structures;
+use crate::emulation::memory;
 
 pub fn GetStartupInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Get the pointer to STARTUPINFO structure from RCX register
@@ -31,7 +31,7 @@ pub fn GetStartupInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
             hStdOutput: std::ptr::null_mut(),
             hStdError: std::ptr::null_mut(),
         };
-        structures::write_struct(emu, startup_info_ptr, &mock_startup_info)?;
+        memory::write_struct(emu, startup_info_ptr, &mock_startup_info)?;
     }
     
     Ok(())

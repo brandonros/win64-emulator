@@ -5,6 +5,7 @@ pub mod constants;
 pub mod utils;
 pub mod teb;
 pub mod peb;
+pub mod heap_manager;
 
 pub use constants::*;
 pub use utils::*;

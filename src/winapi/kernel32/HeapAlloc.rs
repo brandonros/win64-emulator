@@ -1,7 +1,8 @@
 use unicorn_engine::Unicorn;
 use unicorn_engine::RegisterX86;
+
 use crate::emulation::memory::HEAP_BASE;
-use crate::winapi::heap_manager::HEAP_ALLOCATIONS;
+use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
 
 pub fn HeapAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     let heap_handle = emu.reg_read(RegisterX86::RCX)?;

@@ -2,7 +2,7 @@ use unicorn_engine::Unicorn;
 use unicorn_engine::RegisterX86;
 use windows_sys::Win32::System::Threading::CRITICAL_SECTION;
 
-use crate::winapi::structures;
+use crate::emulation::memory;
 
 pub fn InitializeCriticalSection(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Get the pointer to CRITICAL_SECTION structure from RCX register
@@ -19,7 +19,7 @@ pub fn InitializeCriticalSection(emu: &mut Unicorn<()>) -> Result<(), unicorn_en
             LockSemaphore: std::ptr::null_mut(),
             SpinCount: 0,
         };
-        structures::write_struct(emu, critical_section_ptr, &mock_critical_section)?;
+        memory::write_struct(emu, critical_section_ptr, &mock_critical_section)?;
     }
     
     Ok(())

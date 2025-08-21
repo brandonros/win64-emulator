@@ -1,6 +1,6 @@
 use unicorn_engine::{Unicorn, RegisterX86};
 
-use crate::winapi::heap_manager;
+use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
 
 pub fn LocalAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // HLOCAL LocalAlloc(UINT uFlags, SIZE_T uBytes)
@@ -17,7 +17,7 @@ pub fn LocalAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     }
     
     // Allocate memory
-    let mut heap = heap_manager::HEAP_ALLOCATIONS.lock().unwrap();
+    let mut heap = HEAP_ALLOCATIONS.lock().unwrap();
     let addr = match heap.allocate(size) {
         Ok(addr) => addr,
         Err(e) => {

@@ -2,10 +2,8 @@ use unicorn_engine::Unicorn;
 
 use crate::emulation::memory::{TEB_BASE, TEB_LAST_ERROR_VALUE_OFFSET};
 
-pub mod heap_manager;
 pub mod kernel32;
 pub mod module_registry;
-pub mod structures;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,

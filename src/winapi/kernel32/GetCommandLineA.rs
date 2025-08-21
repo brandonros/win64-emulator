@@ -3,7 +3,7 @@ use unicorn_engine::RegisterX86;
 use std::sync::OnceLock;
 
 use crate::emulation::memory;
-use crate::winapi::heap_manager::HEAP_ALLOCATIONS;
+use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
 
 // Store the command line address once allocated
 static COMMAND_LINE_A_ADDRESS: OnceLock<u64> = OnceLock::new();

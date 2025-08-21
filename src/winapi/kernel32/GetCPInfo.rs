@@ -2,7 +2,7 @@ use unicorn_engine::Unicorn;
 use unicorn_engine::RegisterX86;
 use windows_sys::Win32::Globalization::CPINFO;
 
-use crate::winapi::structures;
+use crate::emulation::memory;
 
 pub fn GetCPInfo(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Get parameters from registers (x64 calling convention)
@@ -31,7 +31,7 @@ pub fn GetCPInfo(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> 
             }
         };
         
-        structures::write_struct(emu, cpinfo_ptr, &mock_cpinfo)?;
+        memory::write_struct(emu, cpinfo_ptr, &mock_cpinfo)?;
     }
     
     // Return TRUE (1) for success

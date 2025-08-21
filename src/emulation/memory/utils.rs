@@ -102,3 +102,14 @@ pub fn write_qword_le(emu: &mut Unicorn<()>, addr: u64, value: u64) {
 pub fn write_qword_be(emu: &mut Unicorn<()>, addr: u64, value: u64) {
     emu.mem_write(addr, &value.to_be_bytes()).unwrap();
 }
+
+pub fn write_struct<T>(emu: &mut Unicorn<()>, addr: u64, data: &T) -> Result<(), uc_error> {
+    let size = std::mem::size_of::<T>();
+    let bytes: &[u8] = unsafe {
+        std::slice::from_raw_parts(
+            data as *const T as *const u8,
+            size
+        )
+    };
+    emu.mem_write(addr, bytes)
+}
