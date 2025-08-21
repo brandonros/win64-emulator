@@ -37,4 +37,14 @@ impl HeapManager {
         self.next_addr = new_next;
         Ok(addr)
     }
+
+    pub fn free(&mut self, addr: u64) -> Result<(), String> {
+        // Check if this address was actually allocated
+        if let Some(size) = self.allocations.remove(&addr) {
+            log::info!("[HeapManager] Freed {} bytes at 0x{:x}", size, addr);
+            Ok(())
+        } else {
+            Err(format!("Attempted to free unallocated address: 0x{:x}", addr))
+        }
+    }
 }

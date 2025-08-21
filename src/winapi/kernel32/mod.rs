@@ -41,3 +41,5 @@ declare_api!(TlsAlloc);
 declare_api!(TlsGetValue);
 declare_api!(TlsSetValue);
 declare_api!(WideCharToMultiByte);
+declare_api!(VirtualAlloc);
+declare_api!(VirtualFree);
