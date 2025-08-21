@@ -6,8 +6,8 @@ pub fn read_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<Strin
     let mut bytes = Vec::new();
     let mut current_addr = addr;
     
-    // Read up to 256 bytes or until we hit a null terminator
-    for _ in 0..256 {
+    // Read up to N bytes or until we hit a null terminator
+    for _ in 0..4096 {
         let mut byte = [0u8; 1];
         emu.mem_read(current_addr, &mut byte)?;
         
@@ -27,8 +27,8 @@ pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<
     let mut bytes = Vec::new();
     let mut current_addr = addr;
     
-    // Read up to 256 wide chars or until we hit a null terminator
-    for _ in 0..256 {
+    // Read up to N wide chars or until we hit a null terminator
+    for _ in 0..4096 {
         let mut wchar = [0u8; 2];
         emu.mem_read(current_addr, &mut wchar)?;
         
@@ -45,7 +45,7 @@ pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<
 }
 
 // Memory write utilities
-
+#[allow(dead_code)]
 pub fn write_word_le(emu: &mut Unicorn<()>, addr: u64, value: u16) {
     emu.mem_write(addr, &value.to_le_bytes()).unwrap();
 }
@@ -64,6 +64,7 @@ pub fn write_dword_be(emu: &mut Unicorn<()>, addr: u64, value: u32) {
     emu.mem_write(addr, &value.to_be_bytes()).unwrap();
 }
 
+#[allow(dead_code)]
 pub fn write_qword_le(emu: &mut Unicorn<()>, addr: u64, value: u64) {
     emu.mem_write(addr, &value.to_le_bytes()).unwrap();
 }

@@ -302,15 +302,16 @@ mod tests {
         // Step 5: Extract and verify PE information
         let optional_header = nt_headers.optional_header();
         let image_base = optional_header.image_base.get(LittleEndian);
-        let entry_point = optional_header.address_of_entry_point.get(LittleEndian) as u64;
+        let entry_point_rva = optional_header.address_of_entry_point.get(LittleEndian) as u64;
         let image_size = optional_header.size_of_image.get(LittleEndian) as usize;
         
         let expected_image_base = 0x0000000140000000; // Common for 64-bit executables
-        let expected_entry_point = 0x0000000001058b8c; // Replace with actual expected value
+        let expected_entry_point_rva = 0x0000000001058b8c; // Replace with actual expected value
+        let expected_entry_point = expected_image_base + expected_entry_point_rva;
         let expected_image_size = 0x105d000; // Replace with actual expected value
 
         assert_eq!(image_base, expected_image_base, "Image base mismatch!");
-        assert_eq!(entry_point, expected_entry_point, "Entry point mismatch!");
+        assert_eq!(entry_point_rva, expected_entry_point_rva, "Entry point mismatch!");
         assert_eq!(image_size, expected_image_size, "Image size mismatch!");
 
         let loaded_pe = LoadedPE::from_file(path).expect("Failed to load PE with from_file");
