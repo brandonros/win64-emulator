@@ -142,6 +142,7 @@ pub fn parse_exports(pe_file: &PeFile64, data: &[u8], base_address: u64) -> Resu
         
         // Skip null entries
         if func_rva == 0 {
+            log::warn!("null func_rva?");
             continue;
         }
         

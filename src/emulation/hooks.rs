@@ -163,7 +163,10 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         
         // Handle the API call using the centralized dispatcher
         log::info!("🔷 API Call: {}!{}", function_info.0, function_info.1);
-        winapi::handle_winapi_call(emu, &function_info.0, &function_info.1);
+        match winapi::handle_winapi_call(emu, &function_info.0, &function_info.1) {
+            Ok(_) => (),
+            Err(err) => panic!("handle_win_api_call failed: {err:?}")
+        }
         
         // Skip the mock function by advancing RIP to the return address
         // Pop return address from stack and jump to it

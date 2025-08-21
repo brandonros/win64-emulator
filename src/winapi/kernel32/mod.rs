@@ -19,3 +19,4 @@ declare_api!(TlsSetValue);
 declare_api!(GetLastError);
 declare_api!(SetLastError);
 declare_api!(LocalAlloc);
+declare_api!(InitializeCriticalSection);
