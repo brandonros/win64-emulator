@@ -63,7 +63,7 @@ pub fn setup_memory(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(),
     
     // Set up heap (basic)
     if HEAP_BASE >= max_addr || HEAP_BASE + HEAP_SIZE as u64 <= min_addr {
-        emu.mem_map(HEAP_BASE, HEAP_SIZE, Permission::READ | Permission::WRITE)?;
+        emu.mem_map(HEAP_BASE, HEAP_SIZE, Permission::READ | Permission::WRITE | Permission::EXEC)?; // adding EXEC for VirtualAlloc
         log::info!("  Heap: 0x{:016x} - 0x{:016x}", HEAP_BASE, HEAP_BASE + HEAP_SIZE as u64);
     }
     
