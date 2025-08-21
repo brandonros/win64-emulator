@@ -113,3 +113,16 @@ pub fn write_struct<T>(emu: &mut Unicorn<()>, addr: u64, data: &T) -> Result<(),
     };
     emu.mem_write(addr, bytes)
 }
+
+pub fn read_struct<T>(emu: &mut Unicorn<()>, addr: u64) -> Result<T, uc_error> {
+    let size = std::mem::size_of::<T>();
+    let mut bytes = vec![0u8; size];
+    emu.mem_read(addr, &mut bytes)?;
+    
+    let data: T = unsafe {
+        std::ptr::read(bytes.as_ptr() as *const T)
+    };
+    
+    Ok(data)
+}
+
