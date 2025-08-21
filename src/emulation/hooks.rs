@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::{MemType, Unicorn};
 
+use crate::emulation::RegisterState;
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 use super::iat::IAT_FUNCTION_MAP;
 use crate::winapi;
@@ -36,9 +37,30 @@ thread_local! {
 
     // only update IPS periodically
     static LAST_IPS: UnsafeCell<f64> = UnsafeCell::new(0.0);
+
+    // Previous register state for diffing
+    static PREV_REGISTERS: UnsafeCell<RegisterState> = UnsafeCell::new(RegisterState::default());
+    
+    // Buffer for register diff output
+    static REGISTER_DIFF_BUFFER: UnsafeCell<String> = UnsafeCell::new(String::with_capacity(256));
+    
+    // Flag to track if this is the first instruction
+    static FIRST_INSTRUCTION: UnsafeCell<bool> = UnsafeCell::new(true);
 }
 
-pub fn memory_hook_callback<D>(_emu: &mut Unicorn<D>, mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
+pub fn memory_read_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
+    log::trace!("📖 Memory read: 0x{:016x} (size: {} bytes, value: 0x{:x})", 
+            addr, size, value);
+    true
+}
+
+pub fn memory_write_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
+    log::trace!("✏️  Memory write: 0x{:016x} (size: {} bytes, value: 0x{:x})", 
+            addr, size, value);
+    true
+}
+
+pub fn memory_invalid_hook_callback<D>(_emu: &mut Unicorn<D>, mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
     log::info!("❌ Invalid memory access: {:?} at 0x{:016x} (size: {}, value: 0x{:x})", 
             mem_type, addr, size, value);
     false // Don't handle the error, let it propagate
@@ -47,12 +69,10 @@ pub fn memory_hook_callback<D>(_emu: &mut Unicorn<D>, mem_type: MemType, addr: u
 pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     // Check for NULL pointer execution
     if addr == 0 {
-        log::error!("❌ Attempted to execute at NULL address (0x0000000000000000)!");
-        emu.emu_stop().unwrap();
-        return;
+        panic!("❌ Attempted to execute at NULL address (0x0000000000000000)!");
     }
     
-    // Safe: single-threaded execution only
+    // get count
     let count = COUNTER.with(|c| unsafe {
         let counter = &mut *c.get();
         *counter += 1;
@@ -69,6 +89,42 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 .as_micros() as u64;
         }
         *start_ptr
+    });
+
+    // Capture current register state BEFORE the instruction executes
+    let current_regs = RegisterState::capture(emu);
+
+    // Check if we have a previous state to compare against
+    let is_first = FIRST_INSTRUCTION.with(|f| unsafe {
+        let first = &mut *f.get();
+        if *first {
+            *first = false;
+            true
+        } else {
+            false
+        }
+    });
+
+    // diff registers
+    if !is_first {
+        // Compare with previous state and log changes
+        REGISTER_DIFF_BUFFER.with(|buf| {
+            PREV_REGISTERS.with(|prev| {
+                let diff_buffer = unsafe { &mut *buf.get() };
+                let prev_state = unsafe { &*prev.get() };
+                
+                prev_state.diff(&current_regs, diff_buffer);
+                
+                if !diff_buffer.is_empty() {
+                    log::trace!("📝 Register changes: {}", diff_buffer);
+                }
+            });
+        });
+    }
+
+    // Store current state as previous for next instruction
+    PREV_REGISTERS.with(|prev| unsafe {
+        *prev.get() = current_regs;
     });
 
     // Only calculate IPS every N instructions instead of every instruction

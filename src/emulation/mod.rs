@@ -4,8 +4,11 @@ use crate::pe::{ImportedFunction, LoadedPE, MODULE_REGISTRY};
 
 pub mod memory;
 mod cpu;
+mod register_state;
 pub mod iat;
 mod hooks;
+
+pub use register_state::RegisterState;
 
 pub struct Emulator {
     emu: Unicorn<'static, ()>,
@@ -96,11 +99,23 @@ impl Emulator {
         let _code_hook = self.emu.add_code_hook(0, u64::MAX, self::hooks::code_hook_callback)?;
 
         // Add memory access hook for debugging
-        let _mem_hook = self.emu.add_mem_hook(
+        let _mem_read_hook = self.emu.add_mem_hook(
+            unicorn_engine::unicorn_const::HookType::MEM_READ_AFTER,
+            0,
+            u64::MAX,
+            self::hooks::memory_read_hook_callback
+        )?;
+        let _mem_write_hook = self.emu.add_mem_hook(
+            unicorn_engine::unicorn_const::HookType::MEM_WRITE,
+            0,
+            u64::MAX,
+            self::hooks::memory_write_hook_callback
+        )?;
+        let _mem_invalid_hook = self.emu.add_mem_hook(
             unicorn_engine::unicorn_const::HookType::MEM_INVALID,
             0,
             u64::MAX,
-            self::hooks::memory_hook_callback
+            self::hooks::memory_invalid_hook_callback
         )?;
         
         Ok(())
