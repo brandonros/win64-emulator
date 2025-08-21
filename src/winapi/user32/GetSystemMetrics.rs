@@ -14,6 +14,7 @@ pub fn GetSystemMetrics(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
         50 => 16,   // SM_CYSMICON - height of small icon
         19 => 1,    // SM_MOUSEPRESENT - mouse is installed
         80 => 1,    // SM_CMONITORS - number of monitors
+        42 => 0,    // SM_DBCSENABLED - DBCS support (1 = supported, 0 = not supported)
         _ => {
             log::warn!("[GetSystemMetrics] Unhandled metric index: {}", index);
             panic!("[GetSystemMetrics] Unimplemented system metric: {}", index);
