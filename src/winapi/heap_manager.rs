@@ -1,5 +1,7 @@
 use std::{collections::HashMap, sync::{LazyLock, Mutex}};
 
+use crate::emulation::memory::HEAP_BASE;
+
 // Track heap allocations
 pub static HEAP_ALLOCATIONS: LazyLock<Mutex<HeapManager>> = LazyLock::new(|| {
     Mutex::new(HeapManager::new())
@@ -13,7 +15,7 @@ pub struct HeapManager {
 impl HeapManager {
     pub fn new() -> Self {
         Self {
-            next_addr: 0x20000000, // Start heap allocations at this address
+            next_addr: HEAP_BASE, // Start heap allocations at this address
             allocations: HashMap::new(),
         }
     }

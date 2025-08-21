@@ -15,10 +15,12 @@ pub fn setup_peb(emu: &mut Unicorn<'static, ()>, image_base: u64) -> Result<(), 
     // Offset 0x10: ImageBaseAddress
     emu.mem_write(PEB_BASE + 0x10, &image_base.to_le_bytes())?;
     
-    // Offset 0x03: BeingDebugged (set to 0 for not being debugged)
+    // Offset 0x02: BeingDebugged (set to 0 for not being debugged)
     emu.mem_write(PEB_BASE + 0x02, &[0u8])?;
     
     // Offset 0x0C: Ldr (we'll leave this null for now)
+    // TODO: ldr
+
     // Offset 0x18: ProcessHeap (point to our heap)
     emu.mem_write(PEB_BASE + 0x18, &HEAP_BASE.to_le_bytes())?;
     
