@@ -18,12 +18,15 @@ pub fn LocalAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     
     // Allocate memory
     let mut heap = heap_manager::HEAP_ALLOCATIONS.lock().unwrap();
-    let addr = heap.allocate(size);
-    
-    // Map the memory in unicorn
-    let aligned_size = ((size + 0xfff) & !0xfff) as usize; // Page align
-    emu.mem_map(addr, aligned_size, unicorn_engine::Permission::READ | unicorn_engine::Permission::WRITE)?;
-    
+    let addr = match heap.allocate(size) {
+        Ok(addr) => addr,
+        Err(e) => {
+            log::error!("kernel32!LocalAlloc: {}", e);
+            emu.reg_write(RegisterX86::RAX, 0)?;
+            return Ok(());
+        }
+    };
+
     // If LMEM_ZEROINIT flag is set (0x40), zero the memory
     if flags & 0x40 != 0 {
         let zeros = vec![0u8; size];
