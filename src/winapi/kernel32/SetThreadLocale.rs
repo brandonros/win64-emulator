@@ -3,7 +3,7 @@ use unicorn_engine::RegisterX86;
 
 pub fn SetThreadLocale(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Get the new locale from RCX register
-    let new_locale = emu.reg_read(RegisterX86::ECX)? as u32;
+    let new_locale = emu.reg_read(RegisterX86::RCX)? as u32;
     
     log::debug!("[SetThreadLocale] Setting thread locale to: 0x{:04x}", new_locale);
     
@@ -14,7 +14,7 @@ pub fn SetThreadLocale(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
     log::debug!("[SetThreadLocale] Returning previous locale: 0x{:04x}", previous_locale);
     
     // Return the previous LCID in EAX
-    emu.reg_write(RegisterX86::EAX, previous_locale as u64)?;
+    emu.reg_write(RegisterX86::RAX, previous_locale as u64)?;
     
     Ok(())
 }

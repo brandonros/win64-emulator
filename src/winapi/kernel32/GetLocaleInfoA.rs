@@ -4,8 +4,8 @@ use crate::{emulation::memory, winapi::{self, locale}};
 
 pub fn GetLocaleInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Get parameters from registers
-    let locale = emu.reg_read(RegisterX86::ECX)? as u32;
-    let lctype = emu.reg_read(RegisterX86::EDX)? as u32;
+    let locale = emu.reg_read(RegisterX86::RCX)? as u32;
+    let lctype = emu.reg_read(RegisterX86::RDX)? as u32;
     let lp_lc_data = emu.reg_read(RegisterX86::R8)?;
     let cch_data = emu.reg_read(RegisterX86::R9)? as u32;
 
@@ -20,7 +20,7 @@ pub fn GetLocaleInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
 
     // If cch_data is 0, return required buffer size
     if cch_data == 0 {
-        emu.reg_write(RegisterX86::EAX, required_size as u64)?;
+        emu.reg_write(RegisterX86::RAX, required_size as u64)?;
         return Ok(());
     }
 
@@ -28,7 +28,7 @@ pub fn GetLocaleInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     if lp_lc_data == 0 {
         log::warn!("[GetLocaleInfoA] Invalid parameter - null buffer");
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::EAX, 0)?;
+        emu.reg_write(RegisterX86::RAX, 0)?;
         return Ok(());
     }
 
@@ -36,7 +36,7 @@ pub fn GetLocaleInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     if cch_data < required_size {
         log::warn!("[GetLocaleInfoA] Buffer too small: {} < {}", cch_data, required_size);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER)?;
-        emu.reg_write(RegisterX86::EAX, 0)?;
+        emu.reg_write(RegisterX86::RAX, 0)?;
         return Ok(());
     }
 
@@ -44,7 +44,7 @@ pub fn GetLocaleInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     memory::write_string_to_memory(emu, lp_lc_data, result)?;
     
     // Return number of characters written (including null terminator)
-    emu.reg_write(RegisterX86::EAX, required_size as u64)?;
+    emu.reg_write(RegisterX86::RAX, required_size as u64)?;
     
     Ok(())
 }

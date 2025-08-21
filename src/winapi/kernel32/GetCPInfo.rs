@@ -6,7 +6,7 @@ use crate::emulation::memory;
 
 pub fn GetCPInfo(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Get parameters from registers (x64 calling convention)
-    let code_page = emu.reg_read(RegisterX86::ECX)? as u32;  // UINT CodePage
+    let code_page = emu.reg_read(RegisterX86::RCX)? as u32;  // UINT CodePage
     let cpinfo_ptr = emu.reg_read(RegisterX86::RDX)?;        // LPCPINFO lpCPInfo
     
     log::info!("[GetCPInfo] CodePage: {}, cpinfo_ptr: 0x{:x}", code_page, cpinfo_ptr);

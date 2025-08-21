@@ -9,7 +9,7 @@ pub fn GetThreadLocale(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
     log::debug!("[GetThreadLocale] Returning locale: 0x{:04X} (en-US)", lcid);
     
     // Return value in EAX
-    emu.reg_write(RegisterX86::EAX, lcid as u64)?;
+    emu.reg_write(RegisterX86::RAX, lcid as u64)?;
     
     Ok(())
 }

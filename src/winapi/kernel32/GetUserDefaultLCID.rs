@@ -9,7 +9,7 @@ pub fn GetUserDefaultLCID(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::u
     log::debug!("[GetUserDefaultLCID] Returning LCID: 0x{:04x}", lcid);
     
     // Return LCID in EAX
-    emu.reg_write(RegisterX86::EAX, lcid as u64)?;
+    emu.reg_write(RegisterX86::RAX, lcid as u64)?;
     
     Ok(())
 }
