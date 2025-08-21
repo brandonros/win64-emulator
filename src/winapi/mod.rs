@@ -30,6 +30,8 @@ pub fn handle_winapi_call<D>(emu: &mut Unicorn<D>, dll_name: &str, function_name
         ("kernel32.dll", "GetConsoleCP") => kernel32::GetConsoleCP(emu_ref),
         ("kernel32.dll", "GetConsoleOutputCP") => kernel32::GetConsoleOutputCP(emu_ref),
         ("kernel32.dll", "GetModuleFileNameA") => kernel32::GetModuleFileNameA(emu_ref),
+        ("kernel32.dll", "GetProcessHeap") => kernel32::GetProcessHeap(emu_ref),
+        ("kernel32.dll", "HeapAlloc") => kernel32::HeapAlloc(emu_ref),
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
         }
