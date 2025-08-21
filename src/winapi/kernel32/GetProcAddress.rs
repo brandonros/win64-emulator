@@ -18,15 +18,16 @@ pub fn GetProcAddress(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     
     let (proc_address, last_error) = match registry.get_loaded_module_by_module_base(module_base) {
         Some(loaded_module) => {
+            let module_name = &loaded_module.name;
             match loaded_module.get_proc_address(&proc_name) {
                 Some(address) => {
-                    log::info!("kernel32!GetProcAddress(0x{:016x}, '{}') -> 0x{:016x}", 
-                              module_base, proc_name, address);
+                    log::info!("kernel32!GetProcAddress({} @ 0x{:016x}, '{}') -> 0x{:016x}", 
+                              module_name, module_base, proc_name, address);
                     (address, 0) // Success - clear last error
                 }
                 None => {
-                    log::warn!("kernel32!GetProcAddress(0x{:016x}, '{}') - function not found in module exports!", 
-                              module_base, proc_name);
+                    log::warn!("kernel32!GetProcAddress({} @ 0x{:016x}, '{}') - function not found in module exports!", 
+                              module_name, module_base, proc_name);
                     (0, 127) // ERROR_PROC_NOT_FOUND
                 }
             }
