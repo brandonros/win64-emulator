@@ -2,8 +2,9 @@ use std::cell::UnsafeCell;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
-use unicorn_engine::{MemType, Unicorn};
+use unicorn_engine::{MemType, RegisterX86, Unicorn};
 
+use crate::emulation::memory::{STACK_BASE, STACK_SIZE};
 use crate::emulation::RegisterState;
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 use super::iat::IAT_FUNCTION_MAP;
@@ -49,14 +50,16 @@ thread_local! {
 }
 
 pub fn memory_read_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, _value: i64) -> bool {
-    #[cfg(feature = "log-mem-read")]
-    log::trace!("📖 Memory read: 0x{:016x} (size: {} bytes)", addr, size);
+    if cfg!(feature = "log-mem-read") {
+        log::trace!("📖 Memory read: 0x{:016x} (size: {} bytes)", addr, size);
+    }
     true
 }
 
 pub fn memory_write_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
-    #[cfg(feature = "log-mem-write")]
-    log::trace!("✏️  Memory write: 0x{:016x} (size: {} bytes, value: 0x{:x})", addr, size, value);
+    if cfg!(feature = "log-mem-write") {
+        log::trace!("✏️  Memory write: 0x{:016x} (size: {} bytes, value: 0x{:x})", addr, size, value);
+    }
     true
 }
 
@@ -69,6 +72,15 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     // Check for NULL pointer execution
     if addr == 0 {
         panic!("❌ Attempted to execute at NULL address (0x0000000000000000)!");
+    }
+
+    // check if stack has an issue
+    let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
+    if (rsp & 0x7) != 0 {
+        panic!("Stack misalignment detected! RSP=0x{:x}", rsp);
+    }
+    if rsp < STACK_BASE || rsp >= STACK_BASE + STACK_SIZE as u64 {
+        panic!("Stack pointer out of bounds! RSP=0x{:x}", rsp);
     }
     
     // get count
