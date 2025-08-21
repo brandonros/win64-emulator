@@ -31,3 +31,4 @@ declare_api!(GetCommandLineA);
 declare_api!(GetCurrentProcessId);
 declare_api!(GetCPInfo);
 declare_api!(GetUserDefaultLCID);
+declare_api!(SetThreadLocale);

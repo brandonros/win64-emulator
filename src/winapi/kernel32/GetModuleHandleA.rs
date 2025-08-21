@@ -1,6 +1,6 @@
 use unicorn_engine::{Unicorn, RegisterX86};
 use crate::emulation::memory;
-use crate::winapi::module_registry::MODULE_REGISTRY;
+use crate::pe::MODULE_REGISTRY;
 
 pub fn GetModuleHandleA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     let module_name_ptr = emu.reg_read(RegisterX86::RCX)?;

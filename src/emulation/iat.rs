@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, RwLock};
 use unicorn_engine::{uc_error, Permission, Unicorn};
-use crate::pe::{LoadedPE, MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
-use crate::winapi::module_registry::MODULE_REGISTRY;
+use crate::pe::{LoadedPE, MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE, MODULE_REGISTRY};
 
 // Global IAT function map for the hook to access
 pub static IAT_FUNCTION_MAP: LazyLock<Arc<RwLock<HashMap<u64, (String, String)>>>> = 

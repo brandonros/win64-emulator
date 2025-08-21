@@ -1,7 +1,7 @@
 use unicorn_engine::{RegisterX86, Unicorn};
 use crate::emulation::memory;
 use crate::winapi;
-use crate::winapi::module_registry::MODULE_REGISTRY;
+use crate::pe::MODULE_REGISTRY;
 
 pub fn GetProcAddress(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // GetProcAddress(HMODULE hModule, LPCSTR lpProcName)

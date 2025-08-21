@@ -1,7 +1,6 @@
 use unicorn_engine::{uc_error, Arch, Mode, RegisterX86, Unicorn};
 use crate::loader_error::LoaderError;
-use crate::pe::{LoadedPE, ImportedFunction};
-use crate::winapi::module_registry::MODULE_REGISTRY;
+use crate::pe::{ImportedFunction, LoadedPE, MODULE_REGISTRY};
 
 pub mod memory;
 mod cpu;

@@ -1,6 +1,7 @@
 use unicorn_engine::Unicorn;
 use unicorn_engine::RegisterX86;
-use crate::winapi::module_registry::MODULE_REGISTRY;
+
+use crate::pe::MODULE_REGISTRY;
 
 pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Get parameters from registers (x64 calling convention)

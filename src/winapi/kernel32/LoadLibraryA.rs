@@ -1,6 +1,6 @@
 use unicorn_engine::{RegisterX86, Unicorn};
 use crate::emulation::memory;
-use crate::winapi::module_registry::MODULE_REGISTRY;
+use crate::pe::MODULE_REGISTRY;
 
 pub fn LoadLibraryA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     let module_name_ptr = emu.reg_read(RegisterX86::RCX)?;
