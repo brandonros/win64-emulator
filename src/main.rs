@@ -9,10 +9,10 @@ mod winapi;
 // Example usage and testing
 fn main() -> Result<(), LoaderError> {
     // console logger
-    fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
+    //fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
 
     // file logger
-    //fast_log::init(fast_log::Config::new().file("/tmp/win64-emulator.log").chan_len(Some(100000))).unwrap();
+    fast_log::init(fast_log::Config::new().file("/tmp/win64-emulator.log").chan_len(Some(100000))).unwrap();
 
     log::info!("🔧 PE64 Loader with IAT Parsing");
     log::info!("=================================\n");

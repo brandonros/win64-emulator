@@ -104,42 +104,41 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 unsafe { (*f.get()).format(&instruction, output) }
             });
             
-            // For indirect jumps/calls, also show the target address
+            // Build log message string
             use iced_x86::{Mnemonic, OpKind};
             let mnemonic = instruction.mnemonic();
+            
+            // Build the base log message
+            let mut log_msg = format!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
+                                     ips, count, addr, output);
+            
+            // For indirect jumps/calls, try to show the target address
             if (mnemonic == Mnemonic::Jmp || mnemonic == Mnemonic::Call) && 
-               instruction.op_count() > 0 {
+               instruction.op_count() > 0 && 
+               instruction.op0_kind() == OpKind::Memory {
                 
-                // Check if this is an indirect jump/call through memory
-                if instruction.op0_kind() == OpKind::Memory {
-                    // Get the memory address being dereferenced
-                    let mem_addr = instruction.memory_displacement64();
+                // Get the memory address being dereferenced
+                let mem_addr = instruction.memory_displacement64();
+                
+                // Try to read the target address from memory
+                let mut target_bytes = [0u8; 8];
+                if emu.mem_read(mem_addr, &mut target_bytes).is_ok() {
+                    let target = u64::from_le_bytes(target_bytes);
                     
-                    // Try to read the target address from memory
-                    let mut target_bytes = [0u8; 8];
-                    if emu.mem_read(mem_addr, &mut target_bytes).is_ok() {
-                        let target = u64::from_le_bytes(target_bytes);
-                        
-                        // Check if we're about to jump to NULL
-                        if target == 0 {
-                            log::error!("❌ Attempted jump to NULL address from 0x{:016x}!", addr);
-                            log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {} -> 0x{:016x}", 
-                                       ips, count, addr, output, target);
-                            emu.emu_stop().unwrap();
-                            return;
-                        }
-                        
-                        log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {} -> 0x{:016x}", 
-                                   ips, count, addr, output, target);
-                    } else {
-                        log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", ips, count, addr, output);
+                    // Check if we're about to jump to NULL
+                    if target == 0 {
+                        log::error!("❌ Attempted jump to NULL address from 0x{:016x}!", addr);
+                        log::debug!("{} -> 0x{:016x}", log_msg, target);
+                        log::logger().flush();
+                        panic!("out");
                     }
-                } else {
-                    log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", ips, count, addr, output);
+                    
+                    // Append target address to log message
+                    log_msg.push_str(&format!(" -> 0x{:016x}", target));
                 }
-            } else {
-                log::debug!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", ips, count, addr, output);
             }
+            
+            log::debug!("{}", log_msg);
         });
     });
 
