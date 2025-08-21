@@ -12,9 +12,9 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     
     // Get stack parameters (5th and 6th parameters)
     let rsp = emu.reg_read(RegisterX86::RSP)?;
-    let lp_multi_byte_str = emu.mem_read_as_vec(rsp + 0x20, 8)?;
+    let lp_multi_byte_str = emu.mem_read_as_vec(rsp + 0x28, 8)?; // TODO: 0x20 or 0x28
     let lp_multi_byte_str = u64::from_le_bytes(lp_multi_byte_str.try_into().unwrap());
-    let cb_multi_byte = emu.mem_read_as_vec(rsp + 0x28, 4)?;
+    let cb_multi_byte = emu.mem_read_as_vec(rsp + 0x30, 4)?; // TODO: 0x28 or 0x30
     let cb_multi_byte = i32::from_le_bytes(cb_multi_byte.try_into().unwrap());
     
     log::info!("[WideCharToMultiByte] CodePage: {}, lpWideCharStr: 0x{:x}, cchWideChar: {}, lpMultiByteStr: 0x{:x}, cbMultiByte: {}", 

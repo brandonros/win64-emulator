@@ -35,3 +35,4 @@ declare_api!(SetThreadLocale);
 declare_api!(GetThreadLocale);
 declare_api!(GetLocaleInfoW);
 declare_api!(WideCharToMultiByte);
+declare_api!(GetLocaleInfoA);

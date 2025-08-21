@@ -2,6 +2,7 @@ use unicorn_engine::Unicorn;
 
 use crate::emulation::memory::{TEB_BASE, TEB_LAST_ERROR_VALUE_OFFSET};
 
+mod locale;
 mod kernel32;
 mod user32;
 
@@ -41,6 +42,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetUserDefaultLCID") => kernel32::GetUserDefaultLCID(emu_ref),
         ("kernel32.dll", "SetThreadLocale") => kernel32::SetThreadLocale(emu_ref),
         ("kernel32.dll", "GetThreadLocale") => kernel32::GetThreadLocale(emu_ref),
+        ("kernel32.dll", "GetLocaleInfoA") => kernel32::GetLocaleInfoA(emu_ref),
         ("kernel32.dll", "GetLocaleInfoW") => kernel32::GetLocaleInfoW(emu_ref),
         ("kernel32.dll", "WideCharToMultiByte") => kernel32::WideCharToMultiByte(emu_ref),
 
