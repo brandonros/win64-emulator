@@ -1,5 +1,7 @@
 use unicorn_engine::Unicorn;
 
+use crate::emulation::memory::{TEB_BASE, TEB_LAST_ERROR_VALUE_OFFSET};
+
 pub mod structures;
 pub mod kernel32;
 pub mod module_registry;
@@ -26,4 +28,10 @@ pub fn handle_winapi_call<D>(emu: &mut Unicorn<D>, dll_name: &str, function_name
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
         }
     }
+}
+
+// Helper function you can add to your module
+pub fn set_last_error(emu: &mut Unicorn<()>, error_code: u32) -> Result<(), unicorn_engine::uc_error> {
+    let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
+    emu.mem_write(error_addr, &error_code.to_le_bytes())
 }

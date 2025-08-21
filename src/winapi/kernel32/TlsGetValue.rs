@@ -1,5 +1,5 @@
 use unicorn_engine::{Unicorn, RegisterX86};
-use crate::emulation::memory::{TEB_BASE, TEB_TLS_SLOTS_OFFSET, TLS_MINIMUM_AVAILABLE};
+use crate::{emulation::memory::{TEB_BASE, TEB_TLS_SLOTS_OFFSET, TLS_MINIMUM_AVAILABLE}, winapi};
 
 pub fn TlsGetValue(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // LPVOID TlsGetValue(DWORD dwTlsIndex)
@@ -13,8 +13,7 @@ pub fn TlsGetValue(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         emu.reg_write(RegisterX86::RAX, 0)?;
         
         // Set LastError to ERROR_INVALID_PARAMETER (87)
-        let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
-        emu.mem_write(error_addr, &87u32.to_le_bytes())?;
+        winapi::set_last_error(emu, 87);
         
         log::warn!("kernel32!TlsGetValue({}) -> NULL (invalid index)", tls_index);
     } else {
@@ -28,8 +27,7 @@ pub fn TlsGetValue(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         emu.reg_write(RegisterX86::RAX, value)?;
         
         // Clear LastError on success
-        let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
-        emu.mem_write(error_addr, &0u32.to_le_bytes())?;
+        winapi::set_last_error(emu, 0);
         
         log::info!("kernel32!TlsGetValue({}) -> 0x{:016x}", tls_index, value);
     }

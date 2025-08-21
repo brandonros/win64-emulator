@@ -32,6 +32,8 @@ pub fn TlsAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
         None => {
             // No free slots, return TLS_OUT_OF_INDEXES
             emu.reg_write(RegisterX86::RAX, TLS_OUT_OF_INDEXES as u64)?;
+
+            // TODO: set last error?
             
             log::warn!("kernel32!TlsAlloc() -> TLS_OUT_OF_INDEXES (no free slots)");
         }

@@ -1,5 +1,6 @@
 use unicorn_engine::{Unicorn, RegisterX86};
-use crate::emulation::memory::{TEB_BASE, TEB_LAST_ERROR_VALUE_OFFSET};
+
+use crate::winapi;
 
 pub fn SetLastError(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // void SetLastError(DWORD dwErrCode)
@@ -9,9 +10,8 @@ pub fn SetLastError(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     let error_code = emu.reg_read(RegisterX86::RCX)? as u32;
     
     // Write error code to TEB
-    let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
-    emu.mem_write(error_addr, &error_code.to_le_bytes())?;
-    
+    winapi::set_last_error(emu, error_code);
+
     // SetLastError returns void, no return value needed
     
     log::info!("kernel32!SetLastError(0x{:x})", error_code);
