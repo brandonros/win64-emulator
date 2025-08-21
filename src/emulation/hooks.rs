@@ -48,21 +48,20 @@ thread_local! {
     static FIRST_INSTRUCTION: UnsafeCell<bool> = UnsafeCell::new(true);
 }
 
-pub fn memory_read_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
-    log::trace!("📖 Memory read: 0x{:016x} (size: {} bytes, value: 0x{:x})", 
-            addr, size, value);
+pub fn memory_read_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, _value: i64) -> bool {
+    #[cfg(feature = "log-mem-read")]
+    log::trace!("📖 Memory read: 0x{:016x} (size: {} bytes)", addr, size);
     true
 }
 
 pub fn memory_write_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
-    log::trace!("✏️  Memory write: 0x{:016x} (size: {} bytes, value: 0x{:x})", 
-            addr, size, value);
+    #[cfg(feature = "log-mem-write")]
+    log::trace!("✏️  Memory write: 0x{:016x} (size: {} bytes, value: 0x{:x})", addr, size, value);
     true
 }
 
 pub fn memory_invalid_hook_callback<D>(_emu: &mut Unicorn<D>, mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
-    log::info!("❌ Invalid memory access: {:?} at 0x{:016x} (size: {}, value: 0x{:x})", 
-            mem_type, addr, size, value);
+    log::info!("❌ Invalid memory access: {:?} at 0x{:016x} (size: {}, value: 0x{:x})", mem_type, addr, size, value);
     false // Don't handle the error, let it propagate
 }
 
@@ -116,6 +115,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 prev_state.diff(&current_regs, diff_buffer);
                 
                 if !diff_buffer.is_empty() {
+                    #[cfg(feature = "log-register-changes")]
                     log::trace!("📝 Register changes: {}", diff_buffer);
                 }
             });
@@ -201,6 +201,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                     }
                 }
                 
+                #[cfg(feature = "log-instruction")]
                 log::debug!("{}", log_msg);
             });
         });
