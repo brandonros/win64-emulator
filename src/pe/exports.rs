@@ -148,13 +148,10 @@ pub fn parse_exports(pe_file: &PeFile64, data: &[u8], base_address: u64) -> Resu
         let ordinal = (ordinal_base + ordinal_index as u32) as u16;
         
         // Check if this is a forwarder RVA (points within the export directory)
-        let is_forwarder = func_rva >= export_table_rva && 
+        let _is_forwarder = func_rva >= export_table_rva && 
                           func_rva < (export_table_rva + export_dir.size.get(LittleEndian));
         
-        if is_forwarder {
-            // Skip forwarders for now
-            continue;
-        }
+        // TODO: handle forwards differently
         
         // Get the name if it exists, otherwise use ordinal
         let name = ordinal_to_name.get(&(ordinal_index as u16))

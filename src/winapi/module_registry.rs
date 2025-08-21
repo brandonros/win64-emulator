@@ -17,7 +17,6 @@ pub struct LoadedModule {
     pub base_address: u64,
     pub size: u64,
     pub exports: HashMap<String, u64>,  // Export name -> address
-
 }
 
 impl LoadedModule {
@@ -137,10 +136,12 @@ impl ModuleRegistry {
     }
 
     // Helper function to load and register a system DLL with mock exports
-    pub fn load_system_dll(&mut self, dll_path: &str, dll_name: &str, size: u64) -> Result<(), String> {
+    pub fn load_system_dll(&mut self, dll_path: &str, dll_name: &str) -> Result<(), String> {
         // Try to load the DLL
         let dll_pe = LoadedPE::from_file(dll_path)
             .map_err(|e| format!("Failed to load {}: {:?}", dll_name, e))?;
+
+        let size = dll_pe.image_size() as u64;
         
         log::info!("📚 Loaded {} with {} exports", dll_name, dll_pe.exports().len());
         
@@ -171,5 +172,58 @@ impl ModuleRegistry {
         log::info!("  Registered {} at base 0x{:x}", dll_name, base_addr);
         
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ole32_exports_coinitializeex() {
+        // Initialize the module registry
+        let mut registry = MODULE_REGISTRY.write().unwrap();
+        
+        // Determine the path to ole32.dll
+        let ole32_path = "./assets/ole32.dll";
+        
+        // Load ole32.dll
+        let result = registry.load_system_dll(ole32_path, "ole32.dll");
+        assert!(result.is_ok(), "Failed to load ole32.dll: {:?}", result.err());
+        
+        // Get the loaded module
+        let module = registry.get_loaded_module_by_module_base(
+            registry.get_module_handle(Some("ole32.dll")).expect("ole32.dll should be loaded")
+        ).expect("Should find ole32.dll module");
+
+        println!("{:?}", module.exports);
+        
+        // Verify that CoInitializeEx is exported
+        assert!(
+            module.exports.contains_key("CoInitializeEx"),
+            "ole32.dll should export CoInitializeEx function"
+        );
+        
+        // Optionally verify the mock address was allocated
+        let coinit_addr = module.get_proc_address("CoInitializeEx");
+        assert!(coinit_addr.is_some(), "Should be able to get CoInitializeEx address");
+        
+        let addr = coinit_addr.unwrap();
+        assert!(
+            addr >= MOCK_FUNCTION_BASE && addr < MOCK_FUNCTION_BASE + 0x1000000,
+            "CoInitializeEx should have a valid mock address: 0x{:x}",
+            addr
+        );
+        
+        // Verify it was registered in the IAT function map
+        let iat_map = IAT_FUNCTION_MAP.read().unwrap();
+        assert!(
+            iat_map.contains_key(&addr),
+            "CoInitializeEx should be registered in IAT function map"
+        );
+        
+        let (dll_name, func_name) = iat_map.get(&addr).unwrap();
+        assert_eq!(dll_name, "ole32.dll");
+        assert_eq!(func_name, "CoInitializeEx");
     }
 }

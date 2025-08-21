@@ -27,25 +27,25 @@ impl Emulator {
         // Load system DLLs
         {
             let mut registry = MODULE_REGISTRY.write().unwrap();
-            registry.load_system_dll("./assets/kernel32.dll", "kernel32.dll", 0x100000)?;
-            registry.load_system_dll("./assets/ntdll.dll", "ntdll.dll", 0x100000)?;
-            registry.load_system_dll("./assets/user32.dll", "user32.dll", 0x100000)?;
-            registry.load_system_dll("./assets/advapi32.dll", "advapi32.dll", 0x100000)?;
-            registry.load_system_dll("./assets/oleaut32.dll", "oleaut32.dll", 0x100000)?;
-            registry.load_system_dll("./assets/gdi32.dll", "gdi32.dll", 0x100000)?;
-            registry.load_system_dll("./assets/shell32.dll", "shell32.dll", 0x100000)?;
-            registry.load_system_dll("./assets/version.dll", "version.dll", 0x100000)?;
-            registry.load_system_dll("./assets/ole32.dll", "ole32.dll", 0x100000)?;
-            registry.load_system_dll("./assets/vcruntime140.dll", "vcruntime140.dll", 0x100000)?;
-            registry.load_system_dll("./assets/shlwapi.dll", "shlwapi.dll", 0x100000)?;            
-            registry.load_system_dll("./assets/comctl32.dll", "comctl32.dll", 0x100000)?;                        
-            registry.load_system_dll("./assets/psapi.dll", "psapi.dll", 0x100000)?;                                    
-            registry.load_system_dll("./assets/api-ms-win-core-synch-l1-2-0.dll", "api-ms-win-core-synch-l1-2-0.dll", 0x100000)?;
-            registry.load_system_dll("./assets/api-ms-win-crt-runtime-l1-1-0.dll", "api-ms-win-crt-runtime-l1-1-0.dll", 0x100000)?;
-            registry.load_system_dll("./assets/api-ms-win-crt-math-l1-1-0.dll", "api-ms-win-crt-math-l1-1-0.dll", 0x100000)?;
-            registry.load_system_dll("./assets/api-ms-win-crt-stdio-l1-1-0.dll", "api-ms-win-crt-stdio-l1-1-0.dll", 0x100000)?;
-            registry.load_system_dll("./assets/api-ms-win-crt-locale-l1-1-0.dll", "api-ms-win-crt-locale-l1-1-0.dll", 0x100000)?;
-            registry.load_system_dll("./assets/api-ms-win-crt-heap-l1-1-0.dll", "api-ms-win-crt-heap-l1-1-0.dll", 0x100000)?;
+            registry.load_system_dll("./assets/kernel32.dll", "kernel32.dll")?;
+            registry.load_system_dll("./assets/ntdll.dll", "ntdll.dll")?;
+            registry.load_system_dll("./assets/user32.dll", "user32.dll")?;
+            registry.load_system_dll("./assets/advapi32.dll", "advapi32.dll")?;
+            registry.load_system_dll("./assets/oleaut32.dll", "oleaut32.dll")?;
+            registry.load_system_dll("./assets/gdi32.dll", "gdi32.dll")?;
+            registry.load_system_dll("./assets/shell32.dll", "shell32.dll")?;
+            registry.load_system_dll("./assets/version.dll", "version.dll")?;
+            registry.load_system_dll("./assets/ole32.dll", "ole32.dll")?;
+            registry.load_system_dll("./assets/vcruntime140.dll", "vcruntime140.dll")?;
+            registry.load_system_dll("./assets/shlwapi.dll", "shlwapi.dll")?;            
+            registry.load_system_dll("./assets/comctl32.dll", "comctl32.dll")?;                        
+            registry.load_system_dll("./assets/psapi.dll", "psapi.dll")?;                                    
+            registry.load_system_dll("./assets/api-ms-win-core-synch-l1-2-0.dll", "api-ms-win-core-synch-l1-2-0.dll")?;
+            registry.load_system_dll("./assets/api-ms-win-crt-runtime-l1-1-0.dll", "api-ms-win-crt-runtime-l1-1-0.dll")?;
+            registry.load_system_dll("./assets/api-ms-win-crt-math-l1-1-0.dll", "api-ms-win-crt-math-l1-1-0.dll")?;
+            registry.load_system_dll("./assets/api-ms-win-crt-stdio-l1-1-0.dll", "api-ms-win-crt-stdio-l1-1-0.dll")?;
+            registry.load_system_dll("./assets/api-ms-win-crt-locale-l1-1-0.dll", "api-ms-win-crt-locale-l1-1-0.dll")?;
+            registry.load_system_dll("./assets/api-ms-win-crt-heap-l1-1-0.dll", "api-ms-win-crt-heap-l1-1-0.dll")?;
         }
 
         let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64)?;
