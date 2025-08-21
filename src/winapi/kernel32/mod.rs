@@ -27,3 +27,4 @@ declare_api!(GetConsoleOutputCP);
 declare_api!(GetModuleFileNameA);
 declare_api!(GetProcessHeap);
 declare_api!(HeapAlloc);
+declare_api!(GetCommandLineA);

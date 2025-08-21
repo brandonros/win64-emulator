@@ -46,6 +46,33 @@ pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<
 
 // Memory write utilities
 
+pub fn write_string_to_memory(emu: &mut Unicorn<()>, addr: u64, s: &str) -> Result<(), uc_error> {
+    // Write the string bytes including null terminator
+    let mut bytes = s.as_bytes().to_vec();
+    bytes.push(0); // Add null terminator
+    
+    emu.mem_write(addr, &bytes)?;
+    
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn write_wide_string_to_memory(emu: &mut Unicorn<()>, addr: u64, s: &str) -> Result<(), uc_error> {
+    // Convert string to UTF-16 and write including null terminator
+    let mut wide_chars: Vec<u16> = s.encode_utf16().collect();
+    wide_chars.push(0); // Add null terminator
+    
+    // Convert to bytes
+    let mut bytes = Vec::new();
+    for wchar in wide_chars {
+        bytes.extend_from_slice(&wchar.to_le_bytes());
+    }
+    
+    emu.mem_write(addr, &bytes)?;
+    
+    Ok(())
+}
+
 #[allow(dead_code)]
 pub fn write_word_le(emu: &mut Unicorn<()>, addr: u64, value: u16) {
     emu.mem_write(addr, &value.to_le_bytes()).unwrap();

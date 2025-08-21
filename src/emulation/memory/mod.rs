@@ -7,7 +7,7 @@ pub mod teb;
 pub mod peb;
 
 pub use constants::*;
-pub use utils::read_string_from_memory;
+pub use utils::*;
 pub use teb::setup_teb;
 pub use peb::setup_peb;
 
