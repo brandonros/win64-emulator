@@ -33,3 +33,4 @@ declare_api!(GetCPInfo);
 declare_api!(GetUserDefaultLCID);
 declare_api!(SetThreadLocale);
 declare_api!(GetThreadLocale);
+declare_api!(GetLocaleInfoW);
