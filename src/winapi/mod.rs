@@ -5,6 +5,7 @@ use crate::emulation::memory::{TEB_BASE, TEB_LAST_ERROR_VALUE_OFFSET};
 mod locale;
 mod kernel32;
 mod user32;
+mod ntdll;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,
@@ -55,6 +56,9 @@ pub fn handle_winapi_call<D>(
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
+
+        // ntdll
+        ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
