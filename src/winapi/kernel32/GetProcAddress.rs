@@ -1,5 +1,6 @@
 use unicorn_engine::{RegisterX86, Unicorn};
 use crate::emulation::memory;
+use crate::emulation::memory::{TEB_BASE, TEB_LAST_ERROR_VALUE_OFFSET};
 use crate::winapi::module_registry::MODULE_REGISTRY;
 
 pub fn GetProcAddress(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
@@ -40,7 +41,7 @@ pub fn GetProcAddress(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     };
     
     // Set LastError in TEB
-    let error_addr = TEB_BASE + TEB_LAST_ERROR_OFFSET;
+    let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
     emu.mem_write(error_addr, &last_error.to_le_bytes())?;
     
     // Return the address in RAX
