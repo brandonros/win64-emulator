@@ -13,7 +13,7 @@ pub fn TlsGetValue(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         emu.reg_write(RegisterX86::RAX, 0)?;
         
         // Set LastError to ERROR_INVALID_PARAMETER (87)
-        let error_addr = TEB_BASE + 0x68; // TEB_LAST_ERROR_VALUE_OFFSET
+        let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
         emu.mem_write(error_addr, &87u32.to_le_bytes())?;
         
         log::warn!("kernel32!TlsGetValue({}) -> NULL (invalid index)", tls_index);
@@ -28,7 +28,7 @@ pub fn TlsGetValue(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         emu.reg_write(RegisterX86::RAX, value)?;
         
         // Clear LastError on success
-        let error_addr = TEB_BASE + 0x68;
+        let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
         emu.mem_write(error_addr, &0u32.to_le_bytes())?;
         
         log::info!("kernel32!TlsGetValue({}) -> 0x{:016x}", tls_index, value);

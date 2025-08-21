@@ -5,7 +5,7 @@ pub fn GetLastError(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     // DWORD GetLastError(void) - no parameters
     // Returns the last error value from TEB
     
-    // Read LastErrorValue from TEB at offset 0x68
+    // Read LastErrorValue from TEB
     let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
     let mut error_bytes = [0u8; 4];
     emu.mem_read(error_addr, &mut error_bytes)?;

@@ -8,7 +8,7 @@ pub fn SetLastError(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     // Get the error code from RCX
     let error_code = emu.reg_read(RegisterX86::RCX)? as u32;
     
-    // Write error code to TEB at offset 0x68
+    // Write error code to TEB
     let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
     emu.mem_write(error_addr, &error_code.to_le_bytes())?;
     
