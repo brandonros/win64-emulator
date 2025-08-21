@@ -1,3 +1,198 @@
+/*use unicorn_engine::{Unicorn, RegisterX86};
+use windows_sys::Win32::Globalization::{CP_ACP, CP_UTF7, CP_UTF8};
+use crate::emulation::memory;
+use crate::winapi;
+
+pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+    // Get parameters from registers (x64 calling convention)
+    let code_page = emu.reg_read(RegisterX86::RCX)? as u32;
+    let dw_flags = emu.reg_read(RegisterX86::RDX)? as u32;
+    let lp_wide_char_str = emu.reg_read(RegisterX86::R8)?;
+    let cch_wide_char = emu.reg_read(RegisterX86::R9)? as i32;
+    
+    // Get stack parameters (5th-8th parameters)
+    // Shadow space (0x20) + actual parameters
+    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let lp_multi_byte_str = {
+        let bytes = emu.mem_read_as_vec(rsp + 0x28, 8)?;
+        u64::from_le_bytes(bytes.try_into().unwrap())
+    };
+    let cb_multi_byte = {
+        let bytes = emu.mem_read_as_vec(rsp + 0x30, 8)?;
+        u64::from_le_bytes(bytes.try_into().unwrap()) as i32
+    };
+    let lp_default_char = {
+        let bytes = emu.mem_read_as_vec(rsp + 0x38, 8)?;
+        u64::from_le_bytes(bytes.try_into().unwrap())
+    };
+    let lp_used_default_char = {
+        let bytes = emu.mem_read_as_vec(rsp + 0x40, 8)?;
+        u64::from_le_bytes(bytes.try_into().unwrap())
+    };
+
+    log::info!("[WideCharToMultiByte] CodePage: {}, dwFlags: {}, lpWideCharStr: 0x{:x}, cchWideChar: {}, lpMultiByteStr: 0x{:x}, cbMultiByte: {}, lpDefaultChar: 0x{:x}, lpUsedDefaultChar: 0x{:x}",
+        code_page, dw_flags, lp_wide_char_str, cch_wide_char, 
+        lp_multi_byte_str, cb_multi_byte, lp_default_char, lp_used_default_char
+    );
+
+    // 1. Input validation
+    if lp_wide_char_str == 0 {
+        log::warn!("[WideCharToMultiByte] Invalid parameter: lpWideCharStr is NULL");
+        winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
+        emu.reg_write(RegisterX86::RAX, 0)?;
+        return Ok(());
+    }
+
+    // 2. Handle special code pages (UTF-7 and UTF-8)
+    if code_page == windows_sys::Win32::Globalization::CP_UTF7 || code_page == windows_sys::Win32::Globalization::CP_UTF8 {
+        if lp_default_char != 0 || lp_used_default_char != 0 {
+            log::warn!("[WideCharToMultiByte] Invalid parameter: UTF-7/UTF-8 cannot use default char");
+            winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
+            emu.reg_write(RegisterX86::RAX, 0)?;
+            return Ok(());
+        }
+    }
+
+    // 3. Read input string and get its length
+    let wide_string = if cch_wide_char == -1 {
+        // Read null-terminated wide string
+        memory::read_wide_string_from_memory(emu, lp_wide_char_str)?
+    } else {
+        // Read specific number of wide chars
+        let mut wide_data = Vec::new();
+        for i in 0..cch_wide_char {
+            let addr = lp_wide_char_str + (i * 2) as u64;
+            let word = emu.mem_read_as_vec(addr, 2)?;
+            let wide_char = u16::from_le_bytes([word[0], word[1]]);
+            wide_data.push(wide_char);
+        }
+        String::from_utf16_lossy(&wide_data)
+    };
+
+    let input_len = wide_string.len();
+
+    // 4. If this is just a size query (cbMultiByte == 0)
+    if cb_multi_byte == 0 {
+        let required_size = if cch_wide_char == -1 {
+            input_len + 1  // Include null terminator
+        } else {
+            input_len
+        };
+        emu.reg_write(RegisterX86::RAX, required_size as u64)?;
+        winapi::set_last_error(emu, 0)?;
+        log::info!("[WideCharToMultiByte] Size query: returning {}", required_size);
+        return Ok(());
+    }
+
+    // 5. Convert string based on code page
+    let (multi_byte_data, used_default) = convert_wide_to_multibyte(
+        &wide_string, 
+        code_page, 
+        lp_default_char
+    )?;
+
+    let bytes_needed = if cch_wide_char == -1 {
+        multi_byte_data.len() + 1  // Include null terminator
+    } else {
+        multi_byte_data.len()
+    };
+
+    // 6. Check output buffer size
+    if cb_multi_byte < bytes_needed as i32 {
+        log::warn!("[WideCharToMultiByte] Buffer too small: need {} bytes, have {}", 
+                  bytes_needed, cb_multi_byte);
+        winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER)?;
+        emu.reg_write(RegisterX86::RAX, 0)?;
+        return Ok(());
+    }
+
+    // 7. Perform the actual conversion
+    if lp_multi_byte_str != 0 && !multi_byte_data.is_empty() {
+        // Write the converted string
+        emu.mem_write(lp_multi_byte_str, &multi_byte_data)?;
+        
+        // Write null terminator if needed
+        if cch_wide_char == -1 {
+            emu.mem_write(lp_multi_byte_str + multi_byte_data.len() as u64, &[0u8])?;
+        }
+
+        // Set used default char flag if requested
+        if lp_used_default_char != 0 {
+            let used_flag: u32 = if used_default { 1 } else { 0 };
+            emu.mem_write(lp_used_default_char, &used_flag.to_le_bytes())?;
+        }
+    }
+
+    // 8. Return number of bytes written
+    emu.reg_write(RegisterX86::RAX, bytes_needed as u64)?;
+    winapi::set_last_error(emu, 0)?;
+
+    // Log the conversion
+    log::info!("[WideCharToMultiByte] Converted \"{}\" ({} chars) to {} bytes",
+              wide_string.escape_debug(), input_len, bytes_needed);
+
+    Ok(())
+}
+
+// Helper function to convert wide string to multibyte based on code page
+fn convert_wide_to_multibyte(
+    wide_string: &str, 
+    code_page: u32,
+    lp_default_char: u64
+) -> Result<(Vec<u8>, bool), unicorn_engine::uc_error> {
+    let mut used_default = false;
+    
+    let multi_byte_data = match code_page {
+        CP_UTF8 => {
+            // UTF-8 conversion
+            wide_string.as_bytes().to_vec()
+        },
+        CP_UTF7 => {
+            // UTF-7 conversion (simplified - real UTF-7 is more complex)
+            // For now, just use ASCII-safe encoding
+            wide_string.chars().map(|c| {
+                if c as u32 <= 127 {
+                    c as u8
+                } else {
+                    used_default = true;
+                    b'?'
+                }
+            }).collect()
+        },
+        CP_ACP | 1252 => {
+            // ANSI/Windows-1252 codepage
+            wide_string.chars().map(|c| {
+                if c as u32 <= 255 {
+                    c as u8
+                } else {
+                    used_default = true;
+                    // Use provided default char or '?'
+                    if lp_default_char != 0 {
+                        // Would need to read the default char from memory
+                        // For simplicity, using '?'
+                        b'?'
+                    } else {
+                        b'?'
+                    }
+                }
+            }).collect()
+        },
+        _ => {
+            // Other code pages - simplified handling
+            wide_string.chars().map(|c| {
+                if c as u32 <= 255 {
+                    c as u8
+                } else {
+                    used_default = true;
+                    b'?'
+                }
+            }).collect()
+        }
+    };
+    
+    Ok((multi_byte_data, used_default))
+}*/
+
 use unicorn_engine::Unicorn;
 use unicorn_engine::RegisterX86;
 
