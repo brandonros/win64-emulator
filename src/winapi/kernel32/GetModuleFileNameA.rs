@@ -1,0 +1,58 @@
+use unicorn_engine::Unicorn;
+use unicorn_engine::RegisterX86;
+use crate::winapi::module_registry::MODULE_REGISTRY;
+
+pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+    // Get parameters from registers (x64 calling convention)
+    let h_module = emu.reg_read(RegisterX86::RCX)?;
+    let lp_filename = emu.reg_read(RegisterX86::RDX)?;
+    let n_size = emu.reg_read(RegisterX86::R8)? as u32;
+    
+    log::info!("[GetModuleFileNameA] hModule: 0x{:x}, lpFilename: 0x{:x}, nSize: {}", 
+              h_module, lp_filename, n_size);
+    
+    // Determine which module to get the filename for
+    let filename = if h_module == 0 {
+        // NULL means get the main executable's path
+        "C:\\Program Files\\Application\\main.exe"
+    } else {
+        // Check if this is a known module
+        let registry = MODULE_REGISTRY.read().unwrap();
+        if let Some(module) = registry.get_loaded_module_by_module_base(h_module) {
+            // Return a mock path based on the module name
+            match module.name.as_str() {
+                "kernel32.dll" | "kernel32" => "C:\\Windows\\System32\\kernel32.dll",
+                "user32.dll" | "user32" => "C:\\Windows\\System32\\user32.dll",
+                "ntdll.dll" | "ntdll" => "C:\\Windows\\System32\\ntdll.dll",
+                "ole32.dll" | "ole32" => "C:\\Windows\\System32\\ole32.dll",
+                _ => {
+                    log::error!("unmapped module.name: {}", module.name);
+                    panic!("TODO");
+                }
+            }
+        } else {
+            panic!("[GetModuleFileNameA] Unknown module handle: 0x{:x}", h_module);
+        }
+    };
+    
+    // Calculate the length to copy (including null terminator)
+    let filename_bytes = filename.as_bytes();
+    let copy_len = std::cmp::min(filename_bytes.len() + 1, n_size as usize);
+    let actual_copied = std::cmp::min(filename_bytes.len(), copy_len - 1);
+    
+    // Write the filename to the buffer
+    if lp_filename > 0 && n_size > 0 {
+        // Write the string
+        emu.mem_write(lp_filename, &filename_bytes[..actual_copied])?;
+        // Write null terminator
+        emu.mem_write(lp_filename + actual_copied as u64, &[0u8])?;
+    }
+    
+    // Return the number of characters copied (not including null terminator)
+    emu.reg_write(RegisterX86::RAX, actual_copied as u64)?;
+    
+    log::info!("[GetModuleFileNameA] Returned path: {} (length: {})", 
+              &filename[..actual_copied], actual_copied);
+    
+    Ok(())
+}
