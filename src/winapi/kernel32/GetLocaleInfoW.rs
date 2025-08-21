@@ -203,6 +203,12 @@ pub fn GetLocaleInfoW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
         LOCALE_IDEFAULTMACCODEPAGE => "10000",
         LOCALE_SSORTNAME => "Default",
         LOCALE_IDIGITSUBSTITUTION => "1",
+        LOCALE_SABBREVLANGNAME => "ENU",
+        LOCALE_SNATIVELANGNAME => "English",
+        LOCALE_SABBREVCTRYNAME => "USA",
+        LOCALE_SNATIVECTRYNAME => "United States",
+        LOCALE_SNATIVEDIGITS => "0123456789",        
+
         _ => {
             log::warn!("[GetLocaleInfoW] Unhandled lctype: 0x{:x}", lctype);
             "."  // Default fallback
