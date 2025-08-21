@@ -2,7 +2,8 @@ use unicorn_engine::Unicorn;
 
 use crate::emulation::memory::{TEB_BASE, TEB_LAST_ERROR_VALUE_OFFSET};
 
-pub mod kernel32;
+mod kernel32;
+mod user32;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,
@@ -14,6 +15,7 @@ pub fn handle_winapi_call<D>(
     let emu_ref = unsafe { &mut *emu_ptr };
 
     match (dll_name.to_lowercase().as_str(), function_name) {
+        // kernel32
         ("kernel32.dll", "GetModuleHandleA") => kernel32::GetModuleHandleA(emu_ref),
         ("kernel32.dll", "LoadLibraryA") => kernel32::LoadLibraryA(emu_ref),
         ("kernel32.dll", "GetProcAddress") => kernel32::GetProcAddress(emu_ref),
@@ -38,6 +40,10 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetCPInfo") => kernel32::GetCPInfo(emu_ref),
         ("kernel32.dll", "GetUserDefaultLCID") => kernel32::GetUserDefaultLCID(emu_ref),
         ("kernel32.dll", "SetThreadLocale") => kernel32::SetThreadLocale(emu_ref),
+
+        // user32
+        ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
+
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
         }
