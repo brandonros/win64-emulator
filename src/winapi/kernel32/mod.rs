@@ -22,3 +22,4 @@ declare_api!(LocalAlloc);
 declare_api!(InitializeCriticalSection);
 declare_api!(GetACP);
 declare_api!(GetStdHandle);
+declare_api!(GetConsoleCP);
