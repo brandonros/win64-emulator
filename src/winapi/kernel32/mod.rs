@@ -20,3 +20,4 @@ declare_api!(GetLastError);
 declare_api!(SetLastError);
 declare_api!(LocalAlloc);
 declare_api!(InitializeCriticalSection);
+declare_api!(GetACP);

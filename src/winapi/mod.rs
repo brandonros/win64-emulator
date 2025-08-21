@@ -25,6 +25,7 @@ pub fn handle_winapi_call<D>(emu: &mut Unicorn<D>, dll_name: &str, function_name
         ("kernel32.dll", "SetLastError") => kernel32::SetLastError(emu_ref),
         ("kernel32.dll", "LocalAlloc") => kernel32::LocalAlloc(emu_ref),
         ("kernel32.dll", "InitializeCriticalSection") => kernel32::InitializeCriticalSection(emu_ref),
+        ("kernel32.dll", "GetACP") => kernel32::GetACP(emu_ref),
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
         }
