@@ -16,7 +16,7 @@ pub fn TlsSetValue(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         emu.reg_write(RegisterX86::RAX, 0)?;
         
         // Set LastError to ERROR_INVALID_PARAMETER (87)
-        winapi::set_last_error(emu, 87);
+        winapi::set_last_error(emu, 87)?;
         
         log::warn!("kernel32!TlsSetValue({}, 0x{:016x}) -> FALSE (invalid index)", tls_index, value);
     } else {
@@ -28,7 +28,7 @@ pub fn TlsSetValue(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         emu.reg_write(RegisterX86::RAX, 1)?;
         
         // Clear LastError on success
-        winapi::set_last_error(emu, 0);
+        winapi::set_last_error(emu, 0)?;
         
         log::info!("kernel32!TlsSetValue({}, 0x{:016x}) -> TRUE", tls_index, value);
     }

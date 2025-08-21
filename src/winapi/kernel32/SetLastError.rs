@@ -10,7 +10,7 @@ pub fn SetLastError(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     let error_code = emu.reg_read(RegisterX86::RCX)? as u32;
     
     // Write error code to TEB
-    winapi::set_last_error(emu, error_code);
+    winapi::set_last_error(emu, error_code)?;
 
     // SetLastError returns void, no return value needed
     
