@@ -29,7 +29,10 @@ thread_local! {
     static CODE_BUFFER: UnsafeCell<[u8; 32]> = UnsafeCell::new([0u8; 32]);
     
     // Reusable string buffer for formatted output
-    static OUTPUT_BUFFER: UnsafeCell<String> = UnsafeCell::new(String::with_capacity(64));
+    static INSTRUCTION_OUTPUT_BUFFER: UnsafeCell<String> = UnsafeCell::new(String::with_capacity(64));
+    
+    // Reusable string buffer for log messages
+    static LOG_MESSAGE_BUFFER: UnsafeCell<String> = UnsafeCell::new(String::with_capacity(128));
 
     // only update IPS periodically
     static LAST_IPS: UnsafeCell<f64> = UnsafeCell::new(0.0);
@@ -96,49 +99,54 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         let instruction = decoder.decode();
         
         // Format the instruction using reusable string buffer and log directly
-        OUTPUT_BUFFER.with(|out| {
-            let output = unsafe { &mut *out.get() };
-            output.clear(); // Clear previous content
+        INSTRUCTION_OUTPUT_BUFFER.with(|instruction_output_buffer| {
+            let instruction_output_buffer = unsafe { &mut *instruction_output_buffer.get() };
+            instruction_output_buffer.clear(); // Clear previous content
             FORMATTER.with(|f| {
                 // Safe: thread_local ensures single-threaded access
-                unsafe { (*f.get()).format(&instruction, output) }
+                unsafe { (*f.get()).format(&instruction, instruction_output_buffer) }
             });
             
             // Build log message string
             use iced_x86::{Mnemonic, OpKind};
             let mnemonic = instruction.mnemonic();
             
-            // Build the base log message
-            let mut log_msg = format!("  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
-                                     ips, count, addr, output);
-            
-            // For indirect jumps/calls, try to show the target address
-            if (mnemonic == Mnemonic::Jmp || mnemonic == Mnemonic::Call) && 
-               instruction.op_count() > 0 && 
-               instruction.op0_kind() == OpKind::Memory {
+            // Build the base log message using the reusable buffer
+            LOG_MESSAGE_BUFFER.with(|log_buffer| {
+                let log_msg = unsafe { &mut *log_buffer.get() };
+                log_msg.clear();
+                use std::fmt::Write;
+                write!(log_msg, "  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
+                       ips, count, addr, instruction_output_buffer).unwrap();
                 
-                // Get the memory address being dereferenced
-                let mem_addr = instruction.memory_displacement64();
-                
-                // Try to read the target address from memory
-                let mut target_bytes = [0u8; 8];
-                if emu.mem_read(mem_addr, &mut target_bytes).is_ok() {
-                    let target = u64::from_le_bytes(target_bytes);
+                // For indirect jumps/calls, try to show the target address
+                if (mnemonic == Mnemonic::Jmp || mnemonic == Mnemonic::Call) && 
+                   instruction.op_count() > 0 && 
+                   instruction.op0_kind() == OpKind::Memory {
                     
-                    // Check if we're about to jump to NULL
-                    if target == 0 {
-                        log::error!("❌ Attempted jump to NULL address from 0x{:016x}!", addr);
-                        log::debug!("{} -> 0x{:016x}", log_msg, target);
-                        log::logger().flush();
-                        panic!("out");
+                    // Get the memory address being dereferenced
+                    let mem_addr = instruction.memory_displacement64();
+                    
+                    // Try to read the target address from memory
+                    let mut target_bytes = [0u8; 8];
+                    if emu.mem_read(mem_addr, &mut target_bytes).is_ok() {
+                        let target = u64::from_le_bytes(target_bytes);
+                        
+                        // Check if we're about to jump to NULL
+                        if target == 0 {
+                            log::error!("❌ Attempted jump to NULL address from 0x{:016x}!", addr);
+                            log::debug!("{} -> 0x{:016x}", log_msg, target);
+                            log::logger().flush();
+                            panic!("out");
+                        }
+                        
+                        // Append target address to log message
+                        write!(log_msg, " -> 0x{:016x}", target).unwrap();
                     }
-                    
-                    // Append target address to log message
-                    log_msg.push_str(&format!(" -> 0x{:016x}", target));
                 }
-            }
-            
-            log::debug!("{}", log_msg);
+                
+                log::debug!("{}", log_msg);
+            });
         });
     });
 
