@@ -45,6 +45,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetLocaleInfoA") => kernel32::GetLocaleInfoA(emu_ref),
         ("kernel32.dll", "GetLocaleInfoW") => kernel32::GetLocaleInfoW(emu_ref),
         ("kernel32.dll", "WideCharToMultiByte") => kernel32::WideCharToMultiByte(emu_ref),
+        ("kernel32.dll", "GetVersionExA") => kernel32::GetVersionExA(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),

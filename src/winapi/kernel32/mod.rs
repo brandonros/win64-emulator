@@ -33,6 +33,7 @@ declare_api!(GetCPInfo);
 declare_api!(GetUserDefaultLCID);
 declare_api!(SetThreadLocale);
 declare_api!(GetThreadLocale);
+declare_api!(GetLocaleInfoA);
 declare_api!(GetLocaleInfoW);
 declare_api!(WideCharToMultiByte);
-declare_api!(GetLocaleInfoA);
+declare_api!(GetVersionExA);
