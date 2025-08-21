@@ -6,9 +6,8 @@ pub mod utils;
 pub mod teb;
 pub mod peb;
 
-// Re-export commonly used items
 pub use constants::*;
-pub use utils::{read_string_from_memory, write_word_le, write_dword_le, write_qword_le};
+pub use utils::read_string_from_memory;
 pub use teb::setup_teb;
 pub use peb::setup_peb;
 
@@ -52,19 +51,6 @@ pub fn setup_memory(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(),
             emu.mem_write(section.virtual_address(), &section.raw_data())?;
             log::info!("  Loaded section '{}' at 0x{:016x}", 
                      section.name(), section.virtual_address());
-        }
-    }
-    
-    // Check if entry point has code - if not, this might be a packed executable
-    let mut entry_code = vec![0u8; 16];
-    if let Ok(()) = emu.mem_read(entry_point, &mut entry_code) {
-        let has_code = entry_code.iter().any(|&b| b != 0);
-        log::info!("  Entry point has code: {} (first bytes: {:02x?})", 
-                 has_code, &entry_code[..8]);
-        
-        if !has_code {
-            log::info!("  ⚠️  Entry point appears to be unmapped - this may be a packed executable");
-            log::info!("      Consider using a different unpacking approach or manual analysis");
         }
     }
     

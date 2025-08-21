@@ -1,3 +1,5 @@
+use std::fs::OpenOptions;
+
 use crate::loader_error::LoaderError;
 use crate::emulation::Emulator;
 
@@ -12,7 +14,13 @@ fn main() -> Result<(), LoaderError> {
     //fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
 
     // file logger
-    fast_log::init(fast_log::Config::new().file("/tmp/win64-emulator.log").chan_len(Some(100000))).unwrap();
+    let log_path = "/tmp/win64-emulator.log";
+    let _ = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(log_path);
+    fast_log::init(fast_log::Config::new().file(log_path).chan_len(Some(100000))).unwrap();
 
     log::info!("🔧 PE64 Loader with IAT Parsing");
     log::info!("=================================\n");

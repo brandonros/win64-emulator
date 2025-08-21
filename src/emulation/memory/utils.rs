@@ -45,6 +45,7 @@ pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<
 }
 
 // Memory write utilities
+
 #[allow(dead_code)]
 pub fn write_word_le(emu: &mut Unicorn<()>, addr: u64, value: u16) {
     emu.mem_write(addr, &value.to_le_bytes()).unwrap();
@@ -55,6 +56,7 @@ pub fn write_word_be(emu: &mut Unicorn<()>, addr: u64, value: u16) {
     emu.mem_write(addr, &value.to_be_bytes()).unwrap();
 }
 
+#[allow(dead_code)]
 pub fn write_dword_le(emu: &mut Unicorn<()>, addr: u64, value: u32) {
     emu.mem_write(addr, &value.to_le_bytes()).unwrap();
 }
