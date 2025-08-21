@@ -38,3 +38,4 @@ declare_api!(GetLocaleInfoW);
 declare_api!(WideCharToMultiByte);
 declare_api!(GetVersionExA);
 declare_api!(GetWindowsDirectoryA);
+declare_api!(HeapCreate);
