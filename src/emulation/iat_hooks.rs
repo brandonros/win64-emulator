@@ -3,24 +3,30 @@ use unicorn_engine::{RegisterX86, Unicorn};
 
 use crate::{emulation::iat::IAT_FUNCTION_MAP, pe::constants::*, winapi};
 
-pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, addr: u64, count: u64) {
+pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, instruction_size: u32, addr: u64, count: u64) {
     let mnemonic = instruction.mnemonic();
     
     // Handle both CALL and JMP instructions
     if (mnemonic == Mnemonic::Call || mnemonic == Mnemonic::Jmp) && instruction.op_count() > 0 {
         let instruction_type = if mnemonic == Mnemonic::Call { "CALL" } else { "JMP" };
-        log::trace!("{} instruction detected at 0x{:x}: {:?}", instruction_type, addr, instruction);
+        //log::trace!("{} instruction detected at 0x{:x}: {:?}", instruction_type, addr, instruction);
         
         // Add detailed logging about the call/jmp type
         match instruction.op0_kind() {
             OpKind::Memory => {
+                log::trace!("=== INSTRUCTION DECODE DEBUG ===");
+                log::trace!("Hook triggered at address: 0x{:x}", addr);
+                log::trace!("Instruction size parameter: {}", instruction_size);
+                log::trace!("Decoded instruction length: {}", instruction.len());
+                log::trace!("Decoded instruction: {}", instruction);
+
                 log::trace!("=== INDIRECT {} ANALYSIS at 0x{:x} ===", instruction_type, addr);
                 log::trace!("Instruction: {}", instruction);
                 log::trace!("Op0 kind: Memory (indirect {})", instruction_type.to_lowercase());
                 
-                if let Some(target_addr) = get_indirect_call_target(&instruction, emu, addr) {
+                if let Some(target_addr) = get_indirect_call_target(&instruction, instruction_size, emu, addr) {
                     log::trace!("Calculated target address: 0x{:x}", target_addr);
-                    handle_potential_iat_call(target_addr, emu, addr, &instruction, count, mnemonic == Mnemonic::Jmp);
+                    handle_potential_iat_call(target_addr, emu, addr, &instruction, instruction_size, count, mnemonic == Mnemonic::Jmp);
                 } else {
                     log::warn!("Failed to calculate target address for indirect {} at 0x{:x}", instruction_type.to_lowercase(), addr);
                 }
@@ -41,12 +47,13 @@ pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, add
 /// Get the target address for an indirect call instruction
 fn get_indirect_call_target<D>(
     instruction: &Instruction,
+    instruction_size: u32,
     emu: &mut Unicorn<D>,
     addr: u64,
 ) -> Option<u64> {
     match instruction.op0_kind() {
         OpKind::Memory => {
-            let target = calculate_effective_address(instruction, emu, addr);
+            let target = calculate_effective_address(instruction, instruction_size, emu, addr);
             log::trace!("Effective address calculated: 0x{:x}", target);
             Some(target)
         }
@@ -60,11 +67,14 @@ fn get_indirect_call_target<D>(
 /// Calculate the effective address for a memory operand
 fn calculate_effective_address<D>(
     instruction: &Instruction,
+    instruction_size: u32,
     emu: &mut Unicorn<D>,
     addr: u64,
 ) -> u64 {
     log::trace!("--- EFFECTIVE ADDRESS CALCULATION ---");
     log::trace!("Instruction: {}", instruction);
+    log::trace!("Instruction bytes/encoding: {:?}", instruction);
+    log::trace!("Instruction len: {}", instruction.len());
     log::trace!("Current address: 0x{:x}", addr);
     log::trace!("Memory base: {:?}", instruction.memory_base());
     log::trace!("Memory index: {:?}", instruction.memory_index());
@@ -260,6 +270,7 @@ fn handle_potential_iat_call<D>(
     emu: &mut Unicorn<D>,
     addr: u64,
     instruction: &Instruction,
+    instruction_size: u32,
     count: u64,
     is_jmp: bool
 ) {
@@ -329,7 +340,7 @@ fn handle_potential_iat_call<D>(
     if let Some((dll_name, func_name)) = lookup_iat_function(func_ptr) {
         let instruction_type = if is_jmp { "JMP" } else { "CALL" };
         log::info!("[{}:{:x}] 🔷 API {}: {}!{}", count, addr, instruction_type, dll_name, func_name);
-        execute_api_call(emu, addr, instruction, &dll_name, &func_name);
+        execute_api_call(emu, addr, instruction, &dll_name, &func_name, is_jmp);
     } else {
         log::error!("✗ Mock function at 0x{:016x} not found in IAT_FUNCTION_MAP", func_ptr);
         log::error!("Available functions in IAT_FUNCTION_MAP:");
@@ -397,6 +408,7 @@ fn execute_api_call<D>(
     instruction: &Instruction,
     dll_name: &str,
     func_name: &str,
+    is_jmp: bool
 ) {
     let return_addr = addr + instruction.len() as u64;
     log::trace!("=== EXECUTING API CALL ===");
@@ -405,7 +417,11 @@ fn execute_api_call<D>(
     log::trace!("Return address: 0x{:x}", return_addr);
     
     // Push return address onto stack (as a real CALL would)
-    push_return_address(emu, return_addr);
+    // Only push return address for CALL instructions
+    // TODO: not sure if this is right
+    if !is_jmp {
+        push_return_address(emu, return_addr);
+    }
     
     // Handle the API call
     match winapi::handle_winapi_call(emu, dll_name, func_name) {

@@ -175,14 +175,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
             *counter
         });
 
-        // try to intercept iat calls?
-        iat_hooks::intercept_iat_call(
-            emu,
-            instruction,
-            addr,
-            count
-        );
-
         // Only calculate IPS every N instructions instead of every instruction
         let ips = 0.0; // TODO
         
@@ -279,7 +271,14 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                     }
                 }
 
-                // check if we are going to a winapi call
+                // try to intercept iat calls?
+                iat_hooks::intercept_iat_call(
+                    emu,
+                    instruction,
+                    size,
+                    addr,
+                    count
+                );
             });
         });
     });    
