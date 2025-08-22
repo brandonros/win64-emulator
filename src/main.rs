@@ -1,5 +1,3 @@
-use std::fs::OpenOptions;
-
 use crate::loader_error::LoaderError;
 use crate::emulation::{tracing, Emulator};
 
@@ -14,17 +12,22 @@ fn main() -> Result<(), LoaderError> {
     tracing::init_tracing("/tmp/win64-emulator-trace.bin")?;
     
     // console logger
-    //fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
+    #[cfg(feature = "console-logger")]
+    fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
 
     // file logger
-    let log_path = "/tmp/win64-emulator.log";
-    let _ = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(log_path);
-    fast_log::init(fast_log::Config::new().file(log_path).chan_len(Some(100000))).unwrap();
+    #[cfg(feature = "file-logger")]
+    {
+        use std::fs::OpenOptions;
+        let log_path = "/tmp/win64-emulator.log";
+        let _ = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(log_path);
+        fast_log::init(fast_log::Config::new().file(log_path).chan_len(Some(100000))).unwrap();
 
+    }
     log::info!("🔧 PE64 Loader with IAT Parsing");
     log::info!("=================================\n");
     
@@ -38,7 +41,7 @@ fn main() -> Result<(), LoaderError> {
     log::info!("\n✅ PE file loaded successfully!");
             
     // Show imported functions
-    let imports = emulator.get_imports();
+    /*let imports = emulator.get_imports();
     if !imports.is_empty() {
         log::info!("\n📚 Imported Functions:");
         let mut current_dll = "";
@@ -49,14 +52,13 @@ fn main() -> Result<(), LoaderError> {
             }
             log::info!("    - {} (IAT: 0x{:016x})", import.function_name(), import.iat_address());
         }
-    }
+    }*/
 
     // Dump memory regions
     for region in emulator.get_emu().mem_regions().unwrap() {
         log::info!("Mapped region: 0x{:016x} - 0x{:016x} (size: 0x{:x})", 
                   region.begin, region.end, region.end - region.begin);
     }
-    
 
     // Look for specific symbols
     if let Some(main_addr) = emulator.find_symbol("main") {

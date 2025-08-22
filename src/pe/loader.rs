@@ -22,6 +22,7 @@ pub struct LoadedPE {
     imports: Vec<ImportedFunction>,
     iat_entries: Vec<IATEntry>,    // Pre-resolved IAT entries
     exports: HashMap<String, ExportedFunction>, // Exported functions indexed by name
+    file_bytes: Vec<u8>
 }
 
 impl LoadedPE {
@@ -128,6 +129,7 @@ impl LoadedPE {
             imports,
             iat_entries,
             exports,
+            file_bytes
         })
     }
     
@@ -141,6 +143,10 @@ impl LoadedPE {
     
     pub fn image_size(&self) -> usize {
         self.image_size
+    }
+
+    pub fn loaded_bytes(&self) -> &[u8] {
+        &self.file_bytes
     }
     
     pub fn sections(&self) -> &[LoadedSection] {

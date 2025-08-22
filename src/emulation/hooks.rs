@@ -104,9 +104,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         *start_ptr
     });
 
-    // trace
-    tracing::trace_instruction(emu, count);
-
     // Capture current register state BEFORE the instruction executes
     let current_regs = RegisterState::capture(emu);
 
@@ -179,6 +176,9 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 // Safe: thread_local ensures single-threaded access
                 unsafe { (*f.get()).format(&instruction, instruction_output_buffer) }
             });
+
+            // trace
+            tracing::trace_instruction(emu, count, instruction_output_buffer);
             
             // Build log message string
             use iced_x86::{Mnemonic, OpKind};

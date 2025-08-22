@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, RwLock};
+use unicorn_engine::{Permission, Unicorn};
+
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE, MOCK_FUNCTION_SPACING, SYSTEM_DLL_BASE};
 use crate::pe::LoadedPE;
 use crate::emulation::iat::IAT_FUNCTION_MAP;
@@ -90,7 +92,7 @@ impl ModuleRegistry {
         }
     }
     
-    pub fn register_main_module(&mut self, base: u64, size: u64) {
+    pub fn register_main_module(&mut self, emu: &mut Unicorn<()>, pe_path: &str, base: u64, size: u64) {
         self.modules.insert(
             "main".to_string(),
             LoadedModule::new(
@@ -99,6 +101,11 @@ impl ModuleRegistry {
                 size,
             )
         );
+
+        // load the module into memory
+        let pe_bytes = std::fs::read(pe_path).unwrap(); // TODO: not unwrap
+        emu.mem_map(base, size as usize, Permission::ALL).unwrap(); // TODO: not unwrap
+        emu.mem_write(base, &pe_bytes).unwrap(); // TODO: not unwrap
     }
     
     pub fn register_module_with_exports(&mut self, name: &str, base: u64, size: u64, exports: HashMap<String, u64>) {
@@ -133,17 +140,24 @@ impl ModuleRegistry {
     }
 
     // Helper function to load and register a system DLL with mock exports
-    pub fn load_system_dll(&mut self, dll_path: &str, dll_name: &str) -> Result<(), String> {
+    pub fn load_system_dll(&mut self, emu: &mut Unicorn<()>, dll_path: &str, dll_name: &str) -> Result<(), String> {
         // Try to load the DLL
         let dll_pe = LoadedPE::from_file(dll_path)
             .map_err(|e| format!("Failed to load {}: {:?}", dll_name, e))?;
-
-        let size = dll_pe.image_size() as u64;
+        let dll_pe_bytes = dll_pe.loaded_bytes();
+        let image_size = dll_pe.image_size() as u64;
+        let file_size = dll_pe_bytes.len() as u64;
+        let actual_size = std::cmp::max(image_size, file_size);
+        let mapped_size = ((actual_size + 0xFFF) & !0xFFF) as usize;
         
         log::info!("📚 Loaded {} with {} exports", dll_name, dll_pe.exports().len());
         
         // Allocate base address for the DLL
-        let base_addr = self.allocate_base_address(size);
+        let base_addr = self.allocate_base_address(mapped_size as u64);
+
+        // Load the DLL into memory
+        emu.mem_map(base_addr, mapped_size, Permission::ALL).unwrap(); // TODO: not unwrap
+        emu.mem_write(base_addr, &dll_pe_bytes).unwrap(); // TODO: not unwrap
         
         // Build export map with mock addresses for hook interception
         let mut dll_exports = HashMap::new();
@@ -165,7 +179,7 @@ impl ModuleRegistry {
         }
         
         // Register the module with its exports
-        self.register_module_with_exports(dll_name, base_addr, size, dll_exports);
+        self.register_module_with_exports(dll_name, base_addr, image_size, dll_exports); // image_size, not mapped_size
         log::info!("  Registered {} at base 0x{:x}", dll_name, base_addr);
         
         Ok(())
@@ -174,10 +188,15 @@ impl ModuleRegistry {
 
 #[cfg(test)]
 mod tests {
+    use unicorn_engine::{Arch, Mode};
+
     use super::*;
 
     #[test]
     fn test_ole32_exports_coinitializeex() {
+        // Create an emulator
+        let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64).unwrap();
+
         // Initialize the module registry
         let mut registry = MODULE_REGISTRY.write().unwrap();
         
@@ -185,7 +204,7 @@ mod tests {
         let ole32_path = "./assets/ole32.dll";
         
         // Load ole32.dll
-        let result = registry.load_system_dll(ole32_path, "ole32.dll");
+        let result = registry.load_system_dll(&mut emu, ole32_path, "ole32.dll");
         assert!(result.is_ok(), "Failed to load ole32.dll: {:?}", result.err());
         
         // Get the loaded module

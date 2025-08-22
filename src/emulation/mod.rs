@@ -18,40 +18,41 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new(pe_path: &str) -> Result<Self, LoaderError> {
+        // Create the emulator
+        let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64)?;
+
         // Load the main PE
         let loaded_pe = LoadedPE::from_file(pe_path)?;
 
         // Register the main module in the module registry
         {
             let mut registry = MODULE_REGISTRY.write().unwrap();
-            registry.register_main_module(loaded_pe.image_base(), loaded_pe.image_size() as u64);
+            registry.register_main_module(&mut emu, pe_path, loaded_pe.image_base(), loaded_pe.image_size() as u64);
         }
 
         // Load system DLLs
         {
             let mut registry = MODULE_REGISTRY.write().unwrap();
-            registry.load_system_dll("./assets/kernel32.dll", "kernel32.dll")?;
-            registry.load_system_dll("./assets/ntdll.dll", "ntdll.dll")?;
-            registry.load_system_dll("./assets/user32.dll", "user32.dll")?;
-            registry.load_system_dll("./assets/advapi32.dll", "advapi32.dll")?;
-            registry.load_system_dll("./assets/oleaut32.dll", "oleaut32.dll")?;
-            registry.load_system_dll("./assets/gdi32.dll", "gdi32.dll")?;
-            registry.load_system_dll("./assets/shell32.dll", "shell32.dll")?;
-            registry.load_system_dll("./assets/version.dll", "version.dll")?;
-            registry.load_system_dll("./assets/ole32.dll", "ole32.dll")?;
-            registry.load_system_dll("./assets/vcruntime140.dll", "vcruntime140.dll")?;
-            registry.load_system_dll("./assets/shlwapi.dll", "shlwapi.dll")?;            
-            registry.load_system_dll("./assets/comctl32.dll", "comctl32.dll")?;                        
-            registry.load_system_dll("./assets/psapi.dll", "psapi.dll")?;                                    
-            registry.load_system_dll("./assets/api-ms-win-core-synch-l1-2-0.dll", "api-ms-win-core-synch-l1-2-0.dll")?;
-            registry.load_system_dll("./assets/api-ms-win-crt-runtime-l1-1-0.dll", "api-ms-win-crt-runtime-l1-1-0.dll")?;
-            registry.load_system_dll("./assets/api-ms-win-crt-math-l1-1-0.dll", "api-ms-win-crt-math-l1-1-0.dll")?;
-            registry.load_system_dll("./assets/api-ms-win-crt-stdio-l1-1-0.dll", "api-ms-win-crt-stdio-l1-1-0.dll")?;
-            registry.load_system_dll("./assets/api-ms-win-crt-locale-l1-1-0.dll", "api-ms-win-crt-locale-l1-1-0.dll")?;
-            registry.load_system_dll("./assets/api-ms-win-crt-heap-l1-1-0.dll", "api-ms-win-crt-heap-l1-1-0.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/kernel32.dll", "kernel32.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/ntdll.dll", "ntdll.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/user32.dll", "user32.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/advapi32.dll", "advapi32.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/oleaut32.dll", "oleaut32.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/gdi32.dll", "gdi32.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/shell32.dll", "shell32.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/version.dll", "version.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/ole32.dll", "ole32.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/vcruntime140.dll", "vcruntime140.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/shlwapi.dll", "shlwapi.dll")?;            
+            registry.load_system_dll(&mut emu, "./assets/comctl32.dll", "comctl32.dll")?;                        
+            registry.load_system_dll(&mut emu, "./assets/psapi.dll", "psapi.dll")?;                                    
+            registry.load_system_dll(&mut emu, "./assets/api-ms-win-core-synch-l1-2-0.dll", "api-ms-win-core-synch-l1-2-0.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/api-ms-win-crt-runtime-l1-1-0.dll", "api-ms-win-crt-runtime-l1-1-0.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/api-ms-win-crt-math-l1-1-0.dll", "api-ms-win-crt-math-l1-1-0.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/api-ms-win-crt-stdio-l1-1-0.dll", "api-ms-win-crt-stdio-l1-1-0.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/api-ms-win-crt-locale-l1-1-0.dll", "api-ms-win-crt-locale-l1-1-0.dll")?;
+            registry.load_system_dll(&mut emu, "./assets/api-ms-win-crt-heap-l1-1-0.dll", "api-ms-win-crt-heap-l1-1-0.dll")?;
         }
-
-        let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64)?;
         
         // Set up memory regions for the PE
         memory::setup_memory(&mut emu, &loaded_pe)?;

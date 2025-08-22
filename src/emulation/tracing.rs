@@ -6,7 +6,6 @@ use std::io::{BufWriter, Write};
 use std::path::Path;
 use unicorn_engine::{RegisterX86, Unicorn};
 
-// Fixed-size trace record: 144 bytes per instruction
 // This covers all general purpose registers + RIP + instruction counter
 #[repr(C, packed)]
 #[derive(Copy, Clone)]
@@ -30,11 +29,16 @@ pub struct TraceRecord {
     pub r13: u64,                 // 8 bytes
     pub r14: u64,                 // 8 bytes
     pub r15: u64,                 // 8 bytes
-    // Total: 152 bytes
+    pub disassembly: [u8; 64]
 }
 
 impl TraceRecord {
-    pub fn capture<D>(emu: &Unicorn<D>, instruction_count: u64) -> Self {
+    pub fn capture<D>(emu: &Unicorn<D>, instruction_count: u64, disassembly: &str) -> Self {
+        // copy disassembly to bytes
+        let mut temp = [0; 64];
+        let bytes = disassembly.as_bytes();
+        let copy_len = std::cmp::min(bytes.len(), 63);
+        temp[..copy_len].copy_from_slice(&bytes[..copy_len]);
         Self {
             instruction_count,
             rip: emu.reg_read(RegisterX86::RIP).unwrap_or(0),
@@ -55,6 +59,7 @@ impl TraceRecord {
             r13: emu.reg_read(RegisterX86::R13).unwrap_or(0),
             r14: emu.reg_read(RegisterX86::R14).unwrap_or(0),
             r15: emu.reg_read(RegisterX86::R15).unwrap_or(0),
+            disassembly: temp
         }
     }
 
@@ -94,14 +99,14 @@ pub fn init_tracing(path: impl AsRef<Path>) -> std::io::Result<()> {
 }
 
 #[inline(always)]
-pub fn trace_instruction<D>(emu: &Unicorn<D>, instruction_count: u64) {
+pub fn trace_instruction<D>(emu: &Unicorn<D>, instruction_count: u64, disassembly: &str) {
     TRACE_WRITER.with(|writer_cell| {
         let writer = unsafe { &mut *writer_cell.get() };
         if let Some(w) = writer {
             // Capture directly into our reusable buffer
             TRACE_RECORD_BUFFER.with(|rec_cell| {
                 let record = unsafe { &mut *rec_cell.get() };
-                *record = TraceRecord::capture(emu, instruction_count);
+                *record = TraceRecord::capture(emu, instruction_count, disassembly);
                 
                 // Write the record
                 if let Err(e) = w.write_all(record.as_bytes()) {
