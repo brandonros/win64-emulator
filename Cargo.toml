@@ -13,9 +13,9 @@ iced-x86 = "1.21.0"
 # logging
 log = "0.4"
 fast_log = { version = "1.7" }
+env_logger = "0.11.8"
 # windows api
 windows-sys = { version = "0.60.2", features = ["Win32_System_Threading", "Win32_System_Kernel", "Win32_Globalization", "Win32_System_SystemInformation"] }
-env_logger = "0.11.8"
 
 [features]
 default = []

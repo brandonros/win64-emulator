@@ -5,10 +5,8 @@ use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::{MemType, RegisterX86, Unicorn};
 
 use crate::emulation::memory::{STACK_BASE, STACK_SIZE};
-use crate::emulation::{memory, RegisterState};
+use crate::emulation::{iat_hooks, memory, RegisterState};
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
-use super::iat::IAT_FUNCTION_MAP;
-use crate::winapi;
 
 // Thread-local state for the code hook - all in one block for efficiency
 // Using UnsafeCell for maximum single-threaded performance (no RefCell overhead)
@@ -92,9 +90,12 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         panic!("Stack pointer out of bounds! RSP=0x{:x}", rsp);
     }
 
-    // check if it is winapi call
+    // check if it is a missed non-intercepted winapi IAT call
     let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
     let is_winapi_call = addr >= MOCK_FUNCTION_BASE && addr < mock_func_end;
+    if is_winapi_call {
+        panic!("reached winapi_call without iat hook/mock");
+    }
 
     // Initialize start time on first call
     let _start_micros = START_TIME_MICROS.with(|s| unsafe {
@@ -154,13 +155,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         let slice = &mut buffer[0..size as usize];
         emu.mem_read(addr, slice).unwrap();
 
-        // get count
-        let count = COUNTER.with(|c| unsafe {
-            let counter = &mut *c.get();
-            *counter += 1;
-            *counter
-        });
-        
         // Disassemble the instruction
         let mut decoder = Decoder::with_ip(64, slice, addr, DecoderOptions::NONE);
         let instruction = decoder.decode();
@@ -173,6 +167,21 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 return;
             }
         }
+
+        // get count
+        let count = COUNTER.with(|c| unsafe {
+            let counter = &mut *c.get();
+            *counter += 1;
+            *counter
+        });
+
+        // try to intercept iat calls?
+        iat_hooks::intercept_iat_call(
+            emu,
+            instruction,
+            addr,
+            count
+        );
 
         // Only calculate IPS every N instructions instead of every instruction
         let ips = 0.0; // TODO
@@ -261,56 +270,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                     log::debug!("{}", log_msg);
                 }
 
-                // Check if we're about to execute in the mock IAT function range
-                if is_winapi_call {
-                    // Look up which function this is - panic if not found
-                    let function_info = IAT_FUNCTION_MAP
-                        .read()
-                        .unwrap()
-                        .get(&addr)
-                        .map(|info| (info.0.clone(), info.1.clone()))
-                        .expect(&format!("Mock function at 0x{:016x} not found in IAT_FUNCTION_MAP! This is a bug.", addr));
-                    
-                    // Handle the API call using the centralized dispatcher
-                    let rip = emu.reg_read(unicorn_engine::RegisterX86::RIP).unwrap();
-                    log::info!("[{}:{:x}] 🔷 API Call: {}!{}", count, rip, function_info.0, function_info.1);
-                    match winapi::handle_winapi_call(emu, &function_info.0, &function_info.1) {
-                        Ok(_) => (),
-                        Err(err) => panic!("handle_win_api_call failed: {err:?}")
-                    }
-                    
-                    // Skip the mock function by advancing RIP to the return address
-                    // Pop return address from stack and jump to it
-                    let rsp = emu.reg_read(unicorn_engine::RegisterX86::RSP).unwrap();
-                    let mut return_addr = [0u8; 8];
-                    emu.mem_read(rsp, &mut return_addr).unwrap();
-                    let return_addr = u64::from_le_bytes(return_addr);
-                    
-                    // Update RSP (pop the return address)
-                    emu.reg_write(unicorn_engine::RegisterX86::RSP, rsp + 8).unwrap();
-                    
-                    // Jump to return address
-                    emu.reg_write(unicorn_engine::RegisterX86::RIP, return_addr).unwrap();
-
-                    // update instruction_output_buffer for tracing
-                    #[cfg(feature = "trace-instructions")]
-                    {
-                        // Read a max-size instruction buffer (x86-64 instructions are max 15 bytes)
-                        let mut temp_buffer = [0u8; 15];
-                        if emu.mem_read(return_addr, &mut temp_buffer).is_ok() {
-                            // Decode to get the actual instruction and its size
-                            let mut decoder = Decoder::with_ip(64, &temp_buffer, return_addr, DecoderOptions::NONE);
-                            let new_instruction = decoder.decode();
-                            
-                            // Now format the new instruction
-                            instruction_output_buffer.clear();
-                            FORMATTER.with(|f| {
-                                unsafe { (*f.get()).format(&new_instruction, instruction_output_buffer) }
-                            });
-                        }
-                    }
-                }
-
                 // trace
                 #[cfg(feature = "trace-instructions")]
                 {
@@ -319,6 +278,8 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                         tracing::trace_instruction(emu, count, instruction_output_buffer);
                     }
                 }
+
+                // check if we are going to a winapi call
             });
         });
     });    

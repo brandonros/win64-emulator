@@ -17,8 +17,8 @@ fn main() -> Result<(), LoaderError> {
     // console logger
     #[cfg(feature = "console-logger")]
     {
-        //env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
-        fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
+        //fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
     }
 
     // file logger
@@ -38,7 +38,7 @@ fn main() -> Result<(), LoaderError> {
     log::info!("=================================\n");
     
     // Example: Load and analyze a PE file
-    let pe_path = "/Users/brandon/Desktop/win64-emulator/assets/enigma_test_protected.exe";
+    let pe_path = "/Users/brandon/Desktop/win64-emulator/assets/enigma_test_unprotected.exe";
     
     log::info!("📁 Loading PE file: {}", pe_path);
     
