@@ -53,6 +53,8 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "WideCharToMultiByte") => kernel32::WideCharToMultiByte(emu_ref),
         ("kernel32.dll", "VirtualAlloc") => kernel32::VirtualAlloc(emu_ref),
         ("kernel32.dll", "VirtualFree") => kernel32::VirtualFree(emu_ref),
+        ("kernel32.dll", "GetCurrentProcess") => kernel32::GetCurrentProcess(emu_ref),
+        ("kernel32.dll", "ReadProcessMemory") => kernel32::ReadProcessMemory(emu_ref),        
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),

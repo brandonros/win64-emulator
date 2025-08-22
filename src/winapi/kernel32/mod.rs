@@ -43,3 +43,5 @@ declare_api!(TlsSetValue);
 declare_api!(WideCharToMultiByte);
 declare_api!(VirtualAlloc);
 declare_api!(VirtualFree);
+declare_api!(GetCurrentProcess);
+declare_api!(ReadProcessMemory);
