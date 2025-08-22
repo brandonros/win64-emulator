@@ -186,8 +186,35 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 let log_msg = unsafe { &mut *log_buffer.get() };
                 log_msg.clear();
                 use std::fmt::Write;
-                write!(log_msg, "  {:.0} ops/sec | [{}] 0x{:016x}: {}", 
-                       ips, count, addr, instruction_output_buffer).unwrap();
+                
+                // Check if instruction uses segment registers (GS/FS for TEB/PEB access)
+                let segment_info = {
+                    // Check for explicit segment prefix
+                    if instruction.segment_prefix() == iced_x86::Register::GS {
+                        " [GS:TEB]"
+                    } else if instruction.segment_prefix() == iced_x86::Register::FS {
+                        " [FS]"
+                    } else {
+                        // Check if any memory operand uses GS or FS
+                        let mut seg_info = "";
+                        for i in 0..instruction.op_count() {
+                            if instruction.op_kind(i) == iced_x86::OpKind::Memory {
+                                let seg = instruction.memory_segment();
+                                if seg == iced_x86::Register::GS {
+                                    seg_info = " [GS:TEB via memory operand]";
+                                    break;
+                                } else if seg == iced_x86::Register::FS {
+                                    seg_info = " [FS via memory operand]";
+                                    break;
+                                }
+                            }
+                        }
+                        seg_info
+                    }
+                };
+                
+                write!(log_msg, "  {:.0} ops/sec | [{}] 0x{:016x}: {}{}", 
+                       ips, count, addr, instruction_output_buffer, segment_info).unwrap();
                 
                 // For indirect jumps/calls, try to show the target address
                 if (mnemonic == Mnemonic::Jmp || mnemonic == Mnemonic::Call) && 

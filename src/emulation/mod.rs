@@ -56,8 +56,8 @@ impl Emulator {
         memory::setup_memory(&mut emu, &loaded_pe)?;
         
         // Set up TEB and PEB structures for Windows compatibility
-        memory::setup_teb(&mut emu)?;
-        memory::setup_peb(&mut emu, loaded_pe.image_base())?;
+        //memory::setup_teb(&mut emu)?;
+        //memory::setup_peb(&mut emu, loaded_pe.image_base())?;
         
         // Populate IAT with mock function addresses
         iat::setup_iat(&mut emu, &loaded_pe)?;
@@ -127,5 +127,9 @@ impl Emulator {
     
     pub fn get_imports(&self) -> &[ImportedFunction] {
         &self.loaded_pe.imports()
+    }
+
+    pub fn get_emu(&self) -> &Unicorn<'static, ()> {
+        &self.emu
     }
 }

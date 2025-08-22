@@ -25,8 +25,8 @@ pub fn setup_cpu_state(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<
     
     // Set up GS base to point to TEB for x64 Windows compatibility
     // GS_BASE register points to TEB
-    emu.reg_write(RegisterX86::GS_BASE, TEB_BASE)?;
-    log::info!("  GS_BASE: 0x{:016x} (TEB)", TEB_BASE);
+    //emu.reg_write(RegisterX86::GS_BASE, TEB_BASE)?;
+    //log::info!("  GS_BASE: 0x{:016x} (TEB)", TEB_BASE);
     
     Ok(())
 }

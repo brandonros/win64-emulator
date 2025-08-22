@@ -48,11 +48,18 @@ fn main() -> Result<(), LoaderError> {
         }
     }
 
+    // Dump memory regions
+    for region in emulator.get_emu().mem_regions().unwrap() {
+        log::info!("Mapped region: 0x{:016x} - 0x{:016x} (size: 0x{:x})", 
+                  region.begin, region.end, region.end - region.begin);
+    }
+    
+
     // Look for specific symbols
     if let Some(main_addr) = emulator.find_symbol("main") {
         log::info!("🎯 Found 'main' symbol at: 0x{:016x}", main_addr);
     }
-    
+
     // Start execution with a limit
     log::info!("\n⚡ Starting emulation...");
     emulator.run(0)?;
