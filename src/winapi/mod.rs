@@ -63,6 +63,8 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "SetFilePointer") => kernel32::SetFilePointer(emu_ref),        
         ("kernel32.dll", "LoadLibraryW") => kernel32::LoadLibraryW(emu_ref),        
         ("kernel32.dll", "FreeLibrary") => kernel32::FreeLibrary(emu_ref),        
+        ("kernel32.dll", "FormatMessageW") => kernel32::FormatMessageW(emu_ref),        
+        ("kernel32.dll", "CreateFileW") => kernel32::CreateFileW(emu_ref),        
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),

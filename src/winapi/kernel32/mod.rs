@@ -53,3 +53,5 @@ declare_api!(CloseHandle);
 declare_api!(SetFilePointer);
 declare_api!(LoadLibraryW);
 declare_api!(FreeLibrary);
+declare_api!(FormatMessageW);
+declare_api!(CreateFileW);
