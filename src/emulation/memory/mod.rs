@@ -71,7 +71,5 @@ pub fn setup_memory(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(),
     emu.mem_map(HEAP_BASE, HEAP_SIZE, Permission::READ | Permission::WRITE | Permission::EXEC)?; // adding EXEC for VirtualAlloc
     log::info!("  Heap: 0x{:016x} - 0x{:016x}", HEAP_BASE, HEAP_BASE + HEAP_SIZE as u64);
 
-    // TODO: setup_teb peb loader
-    
     Ok(())
 }

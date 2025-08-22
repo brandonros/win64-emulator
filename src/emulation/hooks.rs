@@ -5,7 +5,7 @@ use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::{MemType, RegisterX86, Unicorn};
 
 use crate::emulation::memory::{STACK_BASE, STACK_SIZE};
-use crate::emulation::{memory, tracing, RegisterState};
+use crate::emulation::{memory, RegisterState};
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 use super::iat::IAT_FUNCTION_MAP;
 use crate::winapi;
@@ -47,6 +47,13 @@ thread_local! {
     
     // Flag to track if this is the first instruction
     static FIRST_INSTRUCTION: UnsafeCell<bool> = UnsafeCell::new(true);
+}
+
+pub fn get_count() -> u64 {
+    COUNTER.with(|c| unsafe {
+        let counter = &mut *c.get();
+        *counter
+    })
 }
 
 pub fn memory_read_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, _value: i64) -> bool {
@@ -186,12 +193,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 unsafe { (*f.get()).format(&instruction, instruction_output_buffer) }
             });
 
-            // trace
-            #[cfg(feature = "trace-instructions")]
-            {
-                tracing::trace_instruction(emu, count, instruction_output_buffer);
-            }
-            
             // Build log message string
             use iced_x86::{Mnemonic, OpKind};
             let mnemonic = instruction.mnemonic();
@@ -259,39 +260,49 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 
                 #[cfg(feature = "log-instruction")]
                 log::debug!("{}", log_msg);
+
+                // Check if we're about to execute in the mock IAT function range
+                let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
+                if addr >= MOCK_FUNCTION_BASE && addr < mock_func_end {
+                    // Look up which function this is - panic if not found
+                    let function_info = IAT_FUNCTION_MAP
+                        .read()
+                        .unwrap()
+                        .get(&addr)
+                        .map(|info| (info.0.clone(), info.1.clone()))
+                        .expect(&format!("Mock function at 0x{:016x} not found in IAT_FUNCTION_MAP! This is a bug.", addr));
+                    
+                    // Handle the API call using the centralized dispatcher
+                    log::info!("🔷 API Call: {}!{}", function_info.0, function_info.1);
+                    match winapi::handle_winapi_call(emu, &function_info.0, &function_info.1) {
+                        Ok(_) => (),
+                        Err(err) => panic!("handle_win_api_call failed: {err:?}")
+                    }
+                    
+                    // Skip the mock function by advancing RIP to the return address
+                    // Pop return address from stack and jump to it
+                    let rsp = emu.reg_read(unicorn_engine::RegisterX86::RSP).unwrap();
+                    let mut return_addr = [0u8; 8];
+                    emu.mem_read(rsp, &mut return_addr).unwrap();
+                    let return_addr = u64::from_le_bytes(return_addr);
+                    
+                    // Update RSP (pop the return address)
+                    emu.reg_write(unicorn_engine::RegisterX86::RSP, rsp + 8).unwrap();
+                    
+                    // Jump to return address
+                    emu.reg_write(unicorn_engine::RegisterX86::RIP, return_addr).unwrap();
+                }
+
+                // trace
+                #[cfg(feature = "trace-instructions")]
+                {
+                    use crate::tracing;
+                    if count >= 200000000 {
+                        tracing::trace_instruction(emu, count, instruction_output_buffer);
+                    }
+                }
+
             });
         });
-    });
-
-    // Check if we're about to execute in the mock IAT function range
-    let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
-    if addr >= MOCK_FUNCTION_BASE && addr < mock_func_end {
-        // Look up which function this is - panic if not found
-        let function_info = IAT_FUNCTION_MAP
-            .read()
-            .unwrap()
-            .get(&addr)
-            .map(|info| (info.0.clone(), info.1.clone()))
-            .expect(&format!("Mock function at 0x{:016x} not found in IAT_FUNCTION_MAP! This is a bug.", addr));
-        
-        // Handle the API call using the centralized dispatcher
-        log::info!("🔷 API Call: {}!{}", function_info.0, function_info.1);
-        match winapi::handle_winapi_call(emu, &function_info.0, &function_info.1) {
-            Ok(_) => (),
-            Err(err) => panic!("handle_win_api_call failed: {err:?}")
-        }
-        
-        // Skip the mock function by advancing RIP to the return address
-        // Pop return address from stack and jump to it
-        let rsp = emu.reg_read(unicorn_engine::RegisterX86::RSP).unwrap();
-        let mut return_addr = [0u8; 8];
-        emu.mem_read(rsp, &mut return_addr).unwrap();
-        let return_addr = u64::from_le_bytes(return_addr);
-        
-        // Update RSP (pop the return address)
-        emu.reg_write(unicorn_engine::RegisterX86::RSP, rsp + 8).unwrap();
-        
-        // Jump to return address
-        emu.reg_write(unicorn_engine::RegisterX86::RIP, return_addr).unwrap();
-    }
+    });    
 }

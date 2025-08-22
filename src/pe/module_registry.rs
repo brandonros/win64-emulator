@@ -148,7 +148,7 @@ impl ModuleRegistry {
     }
 
     // Helper function to load and register a system DLL with mock exports
-    pub fn load_system_dll(&mut self, emu: &mut Unicorn<()>, dll_path: &str, dll_name: &str) -> Result<(), String> {
+    pub fn load_system_dll(&mut self, emu: &mut Unicorn<()>, dll_path: &str, dll_name: &str, desired_base: Option<u64>) -> Result<(), String> {
         // Try to load the DLL
         let dll_pe = LoadedPE::from_file(dll_path)
             .map_err(|e| format!("Failed to load {}: {:?}", dll_name, e))?;
@@ -161,7 +161,7 @@ impl ModuleRegistry {
         log::info!("📚 Loaded {} with {} exports", dll_name, dll_pe.exports().len());
         
         // Allocate base address for the DLL
-        let base_addr = self.allocate_base_address(mapped_size as u64);
+        let mut base_addr = self.allocate_base_address(mapped_size as u64);
 
         // Load the DLL into memory
         emu.mem_map(base_addr, mapped_size, Permission::ALL).unwrap(); // TODO: not unwrap

@@ -1,6 +1,6 @@
 use unicorn_engine::{uc_error, RegisterX86, Unicorn};
-use crate::pe::LoadedPE;
-use super::memory::{STACK_BASE, STACK_SIZE, TEB_BASE};
+use crate::{emulation::hooks, pe::LoadedPE};
+use super::memory::STACK_BASE;
 
 pub fn setup_cpu_state(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc_error> {
     log::info!("\n🖥️  Setting up CPU state:");
@@ -91,10 +91,11 @@ pub fn dump_cpu_state(emu: &mut Unicorn<'static, ()>) -> Result<(), uc_error> {
     }
     
     // Show some memory around RIP
+    let count = hooks::get_count();
     let rip = emu.reg_read(RegisterX86::RIP)?;
     let mut code = vec![0u8; 16];
     if emu.mem_read(rip, &mut code).is_ok() {
-        log::info!("  Code at RIP: {:02x?}", code);
+        log::info!("  Code at RIP: {:02x?} ({count})", code);
     }
     
     Ok(())
