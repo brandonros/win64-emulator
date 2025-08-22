@@ -221,7 +221,7 @@ mod tests {
         let ole32_path = "./assets/ole32.dll";
         
         // Load ole32.dll
-        let result = registry.load_system_dll(&mut emu, ole32_path, "ole32.dll");
+        let result = registry.load_system_dll(&mut emu, ole32_path, "ole32.dll", None);
         assert!(result.is_ok(), "Failed to load ole32.dll: {:?}", result.err());
         
         // Get the loaded module

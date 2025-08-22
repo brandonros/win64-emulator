@@ -92,6 +92,10 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         panic!("Stack pointer out of bounds! RSP=0x{:x}", rsp);
     }
 
+    // check if it is winapi call
+    let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
+    let is_winapi_call = addr >= MOCK_FUNCTION_BASE && addr < mock_func_end;
+
     // Initialize start time on first call
     let _start_micros = START_TIME_MICROS.with(|s| unsafe {
         let start_ptr = &mut *s.get();
@@ -149,6 +153,13 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         // Read directly into the slice we need
         let slice = &mut buffer[0..size as usize];
         emu.mem_read(addr, slice).unwrap();
+
+        // get count
+        let count = COUNTER.with(|c| unsafe {
+            let counter = &mut *c.get();
+            *counter += 1;
+            *counter
+        });
         
         // Disassemble the instruction
         let mut decoder = Decoder::with_ip(64, slice, addr, DecoderOptions::NONE);
@@ -163,26 +174,8 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
             }
         }
 
-        // increment count
-        let mut count = COUNTER.with(|c| unsafe {
-            let counter = &mut *c.get();
-            *counter += 1;
-            *counter
-        });
-
         // Only calculate IPS every N instructions instead of every instruction
-        let ips = if count % 5000 == 0 {
-            // Calculate and cache new IPS
-            let start_micros = START_TIME_MICROS.with(|s| unsafe { *s.get() });
-            let now_micros = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
-            let elapsed_micros = now_micros.saturating_sub(start_micros).max(1);
-            let new_ips = (count as f64) / (elapsed_micros as f64 / 1_000_000.0);
-            LAST_IPS.with(|i| unsafe { *i.get() = new_ips });
-            new_ips
-        } else {
-            // Use cached IPS
-            LAST_IPS.with(|i| unsafe { *i.get() })
-        };
+        let ips = 0.0; // TODO
         
         // Format the instruction using reusable string buffer and log directly
         INSTRUCTION_OUTPUT_BUFFER.with(|instruction_output_buffer| {
@@ -269,8 +262,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 }
 
                 // Check if we're about to execute in the mock IAT function range
-                let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
-                if addr >= MOCK_FUNCTION_BASE && addr < mock_func_end {
+                if is_winapi_call {
                     // Look up which function this is - panic if not found
                     let function_info = IAT_FUNCTION_MAP
                         .read()
@@ -300,9 +292,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                     // Jump to return address
                     emu.reg_write(unicorn_engine::RegisterX86::RIP, return_addr).unwrap();
 
-                    // Decrement counter to compensate for the extra increment
-                    count -= 1;
-
                     // update instruction_output_buffer for tracing
                     #[cfg(feature = "trace-instructions")]
                     {
@@ -330,7 +319,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                         tracing::trace_instruction(emu, count, instruction_output_buffer);
                     }
                 }
-
             });
         });
     });    
