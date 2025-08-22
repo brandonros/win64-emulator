@@ -34,7 +34,7 @@ impl Emulator {
         {
             let mut registry = MODULE_REGISTRY.write().unwrap();
             registry.load_system_dll(&mut emu, "./assets/ntdll.dll", "ntdll.dll", None)?;
-            registry.load_system_dll(&mut emu, "./assets/kernel32.dll", "kernel32.dll", None)?;
+            registry.load_system_dll(&mut emu, "./assets/kernel32.dll", "kernel32.dll", Some(0x00007ff0001f8000))?;
             registry.load_system_dll(&mut emu, "./assets/kernelbase.dll", "kernelbase.dll", None)?;            
             registry.load_system_dll(&mut emu, "./assets/psapi.dll", "psapi.dll", None)?;
             registry.load_system_dll(&mut emu, "./assets/user32.dll", "user32.dll", None)?;

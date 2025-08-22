@@ -63,7 +63,7 @@ impl ModuleRegistry {
     pub fn allocate_base_address(&mut self, size: u64) -> u64 {
         let base = self.next_dll_base;
         // This could potentially allocate addresses that conflict with MAIN_MODULE_BASE
-        self.next_dll_base += ((size + 0xFFFF) & !0xFFFF) + 0x10000;
+        self.next_dll_base += ((size + 0xFFFF) & !0xFFFF) + 0x100000;
         base
     }
 
@@ -161,7 +161,16 @@ impl ModuleRegistry {
         log::info!("📚 Loaded {} with {} exports", dll_name, dll_pe.exports().len());
         
         // Allocate base address for the DLL
-        let mut base_addr = self.allocate_base_address(mapped_size as u64);
+        let base_addr = match desired_base {
+            Some(addr) => {
+                // Optionally update next_dll_base to avoid conflicts
+                if addr >= self.next_dll_base {
+                    self.next_dll_base = addr + mapped_size as u64 + 0x10000;
+                }
+                addr
+            },
+            None => self.allocate_base_address(mapped_size as u64)
+        };
 
         // Load the DLL into memory
         emu.mem_map(base_addr, mapped_size, Permission::ALL).unwrap(); // TODO: not unwrap

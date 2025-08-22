@@ -233,6 +233,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                        ips, count, addr, instruction_output_buffer, segment_info).unwrap();
                 
                 // For indirect jumps/calls, try to show the target address
+                let mut is_jump_or_call = false;
                 if (mnemonic == Mnemonic::Jmp || mnemonic == Mnemonic::Call) && 
                    instruction.op_count() > 0 && 
                    instruction.op0_kind() == OpKind::Memory {
@@ -256,10 +257,16 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                         // Append target address to log message
                         write!(log_msg, " -> 0x{:016x}", target).unwrap();
                     }
+
+                    is_jump_or_call = true;
                 }
-                
-                #[cfg(feature = "log-instruction")]
-                log::debug!("{}", log_msg);
+
+                if is_jump_or_call {
+                    log::debug!("{}", log_msg);
+                } else {
+                    #[cfg(feature = "log-instruction")]
+                    log::debug!("{}", log_msg);
+                }
 
                 // Check if we're about to execute in the mock IAT function range
                 let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
@@ -273,7 +280,8 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                         .expect(&format!("Mock function at 0x{:016x} not found in IAT_FUNCTION_MAP! This is a bug.", addr));
                     
                     // Handle the API call using the centralized dispatcher
-                    log::info!("🔷 API Call: {}!{}", function_info.0, function_info.1);
+                    let rip = emu.reg_read(unicorn_engine::RegisterX86::RIP).unwrap();
+                    log::info!("[{}:{:x}] 🔷 API Call: {}!{}", count, rip, function_info.0, function_info.1);
                     match winapi::handle_winapi_call(emu, &function_info.0, &function_info.1) {
                         Ok(_) => (),
                         Err(err) => panic!("handle_win_api_call failed: {err:?}")
