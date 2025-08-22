@@ -55,6 +55,8 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "VirtualFree") => kernel32::VirtualFree(emu_ref),
         ("kernel32.dll", "GetCurrentProcess") => kernel32::GetCurrentProcess(emu_ref),
         ("kernel32.dll", "ReadProcessMemory") => kernel32::ReadProcessMemory(emu_ref),        
+        ("kernel32.dll", "GetSystemTimeAsFileTime") => kernel32::GetSystemTimeAsFileTime(emu_ref),        
+        ("kernel32.dll", "QueryPerformanceCounter") => kernel32::QueryPerformanceCounter(emu_ref),                
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),

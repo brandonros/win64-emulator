@@ -8,6 +8,7 @@ mod register_state;
 pub mod iat;
 mod hooks;
 mod iat_hooks;
+#[cfg(feature = "trace-instruction")]
 pub mod tracing;
 
 pub use register_state::RegisterState;
@@ -128,7 +129,7 @@ impl Emulator {
     pub fn find_symbol(&self, name: &str) -> Option<u64> {
         self.loaded_pe.symbols().get(name).copied()
     }
-    
+
     pub fn get_imports(&self) -> &[ImportedFunction] {
         &self.loaded_pe.imports()
     }

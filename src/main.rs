@@ -1,5 +1,7 @@
 use crate::loader_error::LoaderError;
-use crate::emulation::{tracing, Emulator};
+use crate::emulation::Emulator;
+#[cfg(feature = "trace-instruction")]
+use crate::emulation::tracing;
 
 mod pe;
 mod loader_error;
@@ -9,7 +11,7 @@ mod winapi;
 // Example usage and testing
 fn main() -> Result<(), LoaderError> {
     // init tracer
-    #[cfg(feature = "trace-instructions")]
+    #[cfg(feature = "trace-instruction")]
     {
         tracing::init_tracing("/tmp/win64-emulator-trace.bin")?;
     }
@@ -47,7 +49,7 @@ fn main() -> Result<(), LoaderError> {
     log::info!("\n✅ PE file loaded successfully!");
             
     // Show imported functions
-    /*let imports = emulator.get_imports();
+    let imports = emulator.get_imports();
     if !imports.is_empty() {
         log::info!("\n📚 Imported Functions:");
         let mut current_dll = "";
@@ -58,7 +60,7 @@ fn main() -> Result<(), LoaderError> {
             }
             log::info!("    - {} (IAT: 0x{:016x})", import.function_name(), import.iat_address());
         }
-    }*/
+    }
 
     // Dump memory regions
     for region in emulator.get_emu().mem_regions().unwrap() {
@@ -76,7 +78,7 @@ fn main() -> Result<(), LoaderError> {
     emulator.run(0)?;
 
     // flush logger on exit
-    #[cfg(feature = "console-logger")]
+    #[cfg(feature = "trace-instruction")]
     {
         tracing::flush_trace();
     }

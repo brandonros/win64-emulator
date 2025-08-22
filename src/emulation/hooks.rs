@@ -271,9 +271,9 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 }
 
                 // trace
-                #[cfg(feature = "trace-instructions")]
+                #[cfg(feature = "trace-instruction")]
                 {
-                    use crate::tracing;
+                    use crate::emulation::tracing;
                     if count >= 200000000 {
                         tracing::trace_instruction(emu, count, instruction_output_buffer);
                     }

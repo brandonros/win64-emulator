@@ -10,6 +10,9 @@ pub fn setup_teb(emu: &mut Unicorn<'static, ()>) -> Result<(), uc_error> {
     // Initialize TEB with zeros
     let teb_data = vec![0u8; TEB_SIZE];
     emu.mem_write(TEB_BASE, &teb_data)?;
+
+    // Set GS base to point to TEB
+    emu.reg_write(unicorn_engine::RegisterX86::GS_BASE, TEB_BASE)?;
     
     // Write critical TEB fields for x64
     // Offset 0x08: StackBase (top of stack)

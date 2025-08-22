@@ -2,6 +2,7 @@ use unicorn_engine::Unicorn;
 use unicorn_engine::RegisterX86;
 
 use crate::pe::MODULE_REGISTRY;
+use crate::winapi;
 
 pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Get parameters from registers (x64 calling convention)
@@ -32,7 +33,10 @@ pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::u
                 }
             }
         } else {
-            panic!("[GetModuleFileNameA] Unknown module handle: 0x{:x}", h_module);
+            log::warn!("[GetModuleFileNameA] Unknown module handle: 0x{:x}", h_module);
+            winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
+            emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+            return Ok(());
         }
     };
     
