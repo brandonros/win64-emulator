@@ -13,7 +13,10 @@ fn main() -> Result<(), LoaderError> {
     
     // console logger
     #[cfg(feature = "console-logger")]
-    fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
+    {
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+        //fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
+    }
 
     // file logger
     #[cfg(feature = "file-logger")]

@@ -27,7 +27,7 @@ impl Emulator {
         // Register the main module in the module registry
         {
             let mut registry = MODULE_REGISTRY.write().unwrap();
-            registry.register_main_module(&mut emu, pe_path, loaded_pe.image_base(), loaded_pe.image_size() as u64);
+            registry.register_main_module(&mut emu, &loaded_pe, pe_path);
         }
 
         // Load system DLLs

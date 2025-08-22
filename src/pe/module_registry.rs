@@ -92,19 +92,27 @@ impl ModuleRegistry {
         }
     }
     
-    pub fn register_main_module(&mut self, emu: &mut Unicorn<()>, pe_path: &str, base: u64, size: u64) {
+    pub fn register_main_module(&mut self, emu: &mut Unicorn<()>, loaded_pe: &LoadedPE, pe_path: &str) {
+        let base = loaded_pe.image_base();
+        let image_size = loaded_pe.image_size();
+
         self.modules.insert(
             "main".to_string(),
             LoadedModule::new(
                 "main".to_string(),
                 base,
-                size,
+                image_size as u64,
             )
         );
 
         // load the module into memory
         let pe_bytes = std::fs::read(pe_path).unwrap(); // TODO: not unwrap
-        emu.mem_map(base, size as usize, Permission::ALL).unwrap(); // TODO: not unwrap
+        let image_size = loaded_pe.image_size() as u64;
+        let file_size = pe_bytes.len() as u64;
+        let actual_size = std::cmp::max(image_size, file_size);
+        let mapped_size = ((actual_size + 0xFFF) & !0xFFF) as usize;
+
+        emu.mem_map(base, mapped_size as usize, Permission::ALL).unwrap(); // TODO: not unwrap
         emu.mem_write(base, &pe_bytes).unwrap(); // TODO: not unwrap
     }
     
