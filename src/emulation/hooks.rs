@@ -164,7 +164,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         }
 
         // increment count
-        let count = COUNTER.with(|c| unsafe {
+        let mut count = COUNTER.with(|c| unsafe {
             let counter = &mut *c.get();
             *counter += 1;
             *counter
@@ -261,7 +261,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                     is_jump_or_call = true;
                 }
 
-                if is_jump_or_call {
+                if is_jump_or_call || count >= 231106700 {
                     log::debug!("{}", log_msg);
                 } else {
                     #[cfg(feature = "log-instruction")]
@@ -299,6 +299,27 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                     
                     // Jump to return address
                     emu.reg_write(unicorn_engine::RegisterX86::RIP, return_addr).unwrap();
+
+                    // Decrement counter to compensate for the extra increment
+                    count -= 1;
+
+                    // update instruction_output_buffer for tracing
+                    #[cfg(feature = "trace-instructions")]
+                    {
+                        // Read a max-size instruction buffer (x86-64 instructions are max 15 bytes)
+                        let mut temp_buffer = [0u8; 15];
+                        if emu.mem_read(return_addr, &mut temp_buffer).is_ok() {
+                            // Decode to get the actual instruction and its size
+                            let mut decoder = Decoder::with_ip(64, &temp_buffer, return_addr, DecoderOptions::NONE);
+                            let new_instruction = decoder.decode();
+                            
+                            // Now format the new instruction
+                            instruction_output_buffer.clear();
+                            FORMATTER.with(|f| {
+                                unsafe { (*f.get()).format(&new_instruction, instruction_output_buffer) }
+                            });
+                        }
+                    }
                 }
 
                 // trace
