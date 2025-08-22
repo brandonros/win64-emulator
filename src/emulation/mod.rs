@@ -7,6 +7,7 @@ mod cpu;
 mod register_state;
 pub mod iat;
 mod hooks;
+pub mod tracing;
 
 pub use register_state::RegisterState;
 

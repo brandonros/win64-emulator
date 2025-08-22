@@ -5,7 +5,7 @@ use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::{MemType, RegisterX86, Unicorn};
 
 use crate::emulation::memory::{STACK_BASE, STACK_SIZE};
-use crate::emulation::{memory, RegisterState};
+use crate::emulation::{memory, tracing, RegisterState};
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 use super::iat::IAT_FUNCTION_MAP;
 use crate::winapi;
@@ -103,6 +103,9 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         }
         *start_ptr
     });
+
+    // trace
+    tracing::trace_instruction(emu, count);
 
     // Capture current register state BEFORE the instruction executes
     let current_regs = RegisterState::capture(emu);

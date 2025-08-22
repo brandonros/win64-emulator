@@ -10,12 +10,12 @@ pub fn setup_cpu_state(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<
     log::info!("  RIP: 0x{:016x}", pe.entry_point());
     
     // Set stack pointer
-    let stack_pointer = STACK_BASE + (STACK_SIZE as u64 / 2); // Middle of stack
+    let stack_pointer = STACK_BASE + 0x100000 as u64;
     emu.reg_write(RegisterX86::RSP, stack_pointer)?;
     log::info!("  RSP: 0x{:016x}", stack_pointer);
     
     // Set up basic registers (Windows x64 ABI)
-    emu.reg_write(RegisterX86::RBP, stack_pointer)?;
+    emu.reg_write(RegisterX86::RBP, STACK_BASE + 0x100000 as u64 + 0x1000)?;
     
     // Clear other registers
     for &reg in &[RegisterX86::RAX, RegisterX86::RBX, RegisterX86::RCX, 

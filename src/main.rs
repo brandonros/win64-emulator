@@ -1,7 +1,7 @@
 use std::fs::OpenOptions;
 
 use crate::loader_error::LoaderError;
-use crate::emulation::Emulator;
+use crate::emulation::{tracing, Emulator};
 
 mod pe;
 mod loader_error;
@@ -10,6 +10,9 @@ mod winapi;
 
 // Example usage and testing
 fn main() -> Result<(), LoaderError> {
+    // init tracer
+    tracing::init_tracing("/tmp/win64-emulator-trace.bin")?;
+    
     // console logger
     //fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
 
@@ -65,6 +68,7 @@ fn main() -> Result<(), LoaderError> {
     emulator.run(0)?;
 
     // flush logger on exit
+    tracing::flush_trace();
     log::logger().flush();
     
     Ok(())
