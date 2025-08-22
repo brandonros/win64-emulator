@@ -5,31 +5,34 @@ use crate::{emulation::iat::IAT_FUNCTION_MAP, pe::constants::*, winapi};
 
 pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, addr: u64, count: u64) {
     let mnemonic = instruction.mnemonic();
-    if mnemonic == Mnemonic::Call && instruction.op_count() > 0 {
-        log::trace!("Call instruction detected at 0x{:x}: {:?}", addr, instruction);
+    
+    // Handle both CALL and JMP instructions
+    if (mnemonic == Mnemonic::Call || mnemonic == Mnemonic::Jmp) && instruction.op_count() > 0 {
+        let instruction_type = if mnemonic == Mnemonic::Call { "CALL" } else { "JMP" };
+        log::trace!("{} instruction detected at 0x{:x}: {:?}", instruction_type, addr, instruction);
         
-        // Add detailed logging about the call type
+        // Add detailed logging about the call/jmp type
         match instruction.op0_kind() {
             OpKind::Memory => {
-                log::debug!("=== INDIRECT CALL ANALYSIS at 0x{:x} ===", addr);
+                log::debug!("=== INDIRECT {} ANALYSIS at 0x{:x} ===", instruction_type, addr);
                 log::debug!("Instruction: {}", instruction);
-                log::debug!("Op0 kind: Memory (indirect call)");
+                log::debug!("Op0 kind: Memory (indirect {})", instruction_type.to_lowercase());
                 
                 if let Some(target_addr) = get_indirect_call_target(&instruction, emu, addr) {
                     log::debug!("Calculated target address: 0x{:x}", target_addr);
-                    handle_potential_iat_call(target_addr, emu, addr, &instruction, count);
+                    handle_potential_iat_call(target_addr, emu, addr, &instruction, count, mnemonic == Mnemonic::Jmp);
                 } else {
-                    log::warn!("Failed to calculate target address for indirect call at 0x{:x}", addr);
+                    log::warn!("Failed to calculate target address for indirect {} at 0x{:x}", instruction_type.to_lowercase(), addr);
                 }
             }
             OpKind::NearBranch64 => {
-                log::debug!("Direct call to 0x{:x} (not IAT)", instruction.near_branch64());
+                //log::debug!("Direct {} to 0x{:x} (not IAT)", instruction_type.to_lowercase(), instruction.near_branch64());
             }
             OpKind::Register => {
-                log::debug!("Register call (not IAT) - register: {:?}", instruction.op0_register());
+                log::debug!("Register {} (not IAT) - register: {:?}", instruction_type.to_lowercase(), instruction.op0_register());
             }
             _ => {
-                log::debug!("Other call type: {:?}", instruction.op0_kind());
+                log::debug!("Other {} type: {:?}", instruction_type.to_lowercase(), instruction.op0_kind());
             }
         }
     }
@@ -258,8 +261,9 @@ fn handle_potential_iat_call<D>(
     addr: u64,
     instruction: &Instruction,
     count: u64,
+    is_jmp: bool
 ) {
-    log::debug!("=== IAT CALL HANDLER ===");
+    log::debug!("=== IAT {} HANDLER ===", if is_jmp { "JMP" } else { "CALL" });
     log::debug!("Target address to read from: 0x{:x}", target_addr);
     
     // Check if the target address is in valid memory range
@@ -323,7 +327,8 @@ fn handle_potential_iat_call<D>(
     
     // Look up and handle the API function
     if let Some((dll_name, func_name)) = lookup_iat_function(func_ptr) {
-        log::info!("[{}:{:x}] 🔷 API Call: {}!{}", count, addr, dll_name, func_name);
+        let instruction_type = if is_jmp { "JMP" } else { "CALL" };
+        log::info!("[{}:{:x}] 🔷 API {}: {}!{}", count, addr, instruction_type, dll_name, func_name);
         execute_api_call(emu, addr, instruction, &dll_name, &func_name);
     } else {
         log::error!("✗ Mock function at 0x{:016x} not found in IAT_FUNCTION_MAP", func_ptr);

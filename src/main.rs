@@ -38,7 +38,7 @@ fn main() -> Result<(), LoaderError> {
     log::info!("=================================\n");
     
     // Example: Load and analyze a PE file
-    let pe_path = "/Users/brandon/Desktop/win64-emulator/assets/enigma_test_unprotected.exe";
+    let pe_path = "/Users/brandon/Desktop/win64-emulator/assets/enigma_test_protected.exe";
     
     log::info!("📁 Loading PE file: {}", pe_path);
     
