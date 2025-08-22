@@ -57,6 +57,12 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "ReadProcessMemory") => kernel32::ReadProcessMemory(emu_ref),        
         ("kernel32.dll", "GetSystemTimeAsFileTime") => kernel32::GetSystemTimeAsFileTime(emu_ref),        
         ("kernel32.dll", "QueryPerformanceCounter") => kernel32::QueryPerformanceCounter(emu_ref),                
+        ("kernel32.dll", "WriteFile") => kernel32::WriteFile(emu_ref),
+        ("kernel32.dll", "ReadFile") => kernel32::ReadFile(emu_ref),
+        ("kernel32.dll", "CloseHandle") => kernel32::CloseHandle(emu_ref),
+        ("kernel32.dll", "SetFilePointer") => kernel32::SetFilePointer(emu_ref),        
+        ("kernel32.dll", "LoadLibraryW") => kernel32::LoadLibraryW(emu_ref),        
+        ("kernel32.dll", "FreeLibrary") => kernel32::FreeLibrary(emu_ref),        
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),

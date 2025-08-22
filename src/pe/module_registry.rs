@@ -92,6 +92,11 @@ impl ModuleRegistry {
         }
     }
     
+    pub fn get_module_by_handle(&self, handle: u64) -> Option<&LoadedModule> {
+        // Find module by base address (handle)
+        self.modules.values().find(|m| m.base_address == handle)
+    }
+    
     pub fn register_main_module(&mut self, emu: &mut Unicorn<()>, loaded_pe: &LoadedPE, pe_path: &str) {
         let base = loaded_pe.image_base();
         let image_size = loaded_pe.image_size();
