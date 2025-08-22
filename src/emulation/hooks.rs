@@ -84,14 +84,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     if rsp < STACK_BASE || rsp >= STACK_BASE + STACK_SIZE as u64 {
         panic!("Stack pointer out of bounds! RSP=0x{:x}", rsp);
     }
-    
-    // get count
-    let count = COUNTER.with(|c| unsafe {
-        let counter = &mut *c.get();
-        *counter += 1;
-        *counter
-    });
-    
+
     // Initialize start time on first call
     let _start_micros = START_TIME_MICROS.with(|s| unsafe {
         let start_ptr = &mut *s.get();
@@ -141,20 +134,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         *prev.get() = current_regs;
     });
 
-    // Only calculate IPS every N instructions instead of every instruction
-    let ips = if count % 5000 == 0 {
-        // Calculate and cache new IPS
-        let start_micros = START_TIME_MICROS.with(|s| unsafe { *s.get() });
-        let now_micros = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
-        let elapsed_micros = now_micros.saturating_sub(start_micros).max(1);
-        let new_ips = (count as f64) / (elapsed_micros as f64 / 1_000_000.0);
-        LAST_IPS.with(|i| unsafe { *i.get() = new_ips });
-        new_ips
-    } else {
-        // Use cached IPS
-        LAST_IPS.with(|i| unsafe { *i.get() })
-    };
-    
     // Read and decode and log the instruction
     CODE_BUFFER.with(|buf| {
         // Safe: thread_local ensures single-threaded access
@@ -167,6 +146,36 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         // Disassemble the instruction
         let mut decoder = Decoder::with_ip(64, slice, addr, DecoderOptions::NONE);
         let instruction = decoder.decode();
+
+        // Check if this is a REP instruction with RCX == 0 (completed)
+        if instruction.has_rep_prefix() || instruction.has_repe_prefix() || instruction.has_repne_prefix() {
+            let rcx = emu.reg_read(RegisterX86::RCX).unwrap();
+            if rcx == 0 {
+                // REP instruction has completed, don't count or log this
+                return;
+            }
+        }
+
+        // increment count
+        let count = COUNTER.with(|c| unsafe {
+            let counter = &mut *c.get();
+            *counter += 1;
+            *counter
+        });
+
+        // Only calculate IPS every N instructions instead of every instruction
+        let ips = if count % 5000 == 0 {
+            // Calculate and cache new IPS
+            let start_micros = START_TIME_MICROS.with(|s| unsafe { *s.get() });
+            let now_micros = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
+            let elapsed_micros = now_micros.saturating_sub(start_micros).max(1);
+            let new_ips = (count as f64) / (elapsed_micros as f64 / 1_000_000.0);
+            LAST_IPS.with(|i| unsafe { *i.get() = new_ips });
+            new_ips
+        } else {
+            // Use cached IPS
+            LAST_IPS.with(|i| unsafe { *i.get() })
+        };
         
         // Format the instruction using reusable string buffer and log directly
         INSTRUCTION_OUTPUT_BUFFER.with(|instruction_output_buffer| {
@@ -178,7 +187,10 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
             });
 
             // trace
-            tracing::trace_instruction(emu, count, instruction_output_buffer);
+            #[cfg(feature = "trace-instructions")]
+            {
+                tracing::trace_instruction(emu, count, instruction_output_buffer);
+            }
             
             // Build log message string
             use iced_x86::{Mnemonic, OpKind};

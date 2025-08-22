@@ -9,13 +9,16 @@ mod winapi;
 // Example usage and testing
 fn main() -> Result<(), LoaderError> {
     // init tracer
-    tracing::init_tracing("/tmp/win64-emulator-trace.bin")?;
+    #[cfg(feature = "trace-instructions")]
+    {
+        tracing::init_tracing("/tmp/win64-emulator-trace.bin")?;
+    }
     
     // console logger
     #[cfg(feature = "console-logger")]
     {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-        //fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
+        //env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
+        fast_log::init(fast_log::Config::new().console().chan_len(Some(100000))).unwrap();
     }
 
     // file logger
@@ -73,7 +76,10 @@ fn main() -> Result<(), LoaderError> {
     emulator.run(0)?;
 
     // flush logger on exit
-    tracing::flush_trace();
+    #[cfg(feature = "console-logger")]
+    {
+        tracing::flush_trace();
+    }
     log::logger().flush();
     
     Ok(())
