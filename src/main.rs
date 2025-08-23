@@ -40,7 +40,8 @@ fn main() -> Result<(), LoaderError> {
     log::info!("=================================\n");
     
     // Example: Load and analyze a PE file
-    let pe_path = "/Users/brandon/Desktop/win64-emulator/assets/enigma_test_protected.exe";
+    //let pe_path = "/Users/brandon/Desktop/win64-emulator/assets/enigma_test_protected.exe";
+    let pe_path = "/Users/brandon/Desktop/9.04/245ea135cb8d0ac76a52e3b2fe565d3695f69f1bbaab22394412a78c4e909209.dll";
     
     log::info!("📁 Loading PE file: {}", pe_path);
     
@@ -68,9 +69,20 @@ fn main() -> Result<(), LoaderError> {
                   region.begin, region.end, region.end - region.begin);
     }
 
-    // Look for specific symbols
-    if let Some(main_addr) = emulator.find_symbol("main") {
-        log::info!("🎯 Found 'main' symbol at: 0x{:016x}", main_addr);
+    // Look for specific symbols based on PE type
+    if emulator.is_dll() {
+        log::info!("📦 Loaded DLL successfully");
+        if let Some(dllmain_addr) = emulator.find_symbol("DllMain") {
+            log::info!("🎯 Found 'DllMain' symbol at: 0x{:016x}", dllmain_addr);
+        }
+    } else {
+        log::info!("📦 Loaded EXE successfully");
+        if let Some(main_addr) = emulator.find_symbol("main") {
+            log::info!("🎯 Found 'main' symbol at: 0x{:016x}", main_addr);
+        }
+        if let Some(winmain_addr) = emulator.find_symbol("WinMain") {
+            log::info!("🎯 Found 'WinMain' symbol at: 0x{:016x}", winmain_addr);
+        }
     }
 
     // Start execution with a limit

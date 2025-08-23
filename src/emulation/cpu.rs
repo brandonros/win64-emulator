@@ -1,5 +1,5 @@
 use unicorn_engine::{uc_error, RegisterX86, Unicorn};
-use crate::{emulation::hooks, pe::LoadedPE};
+use crate::{emulation::hooks, pe::{LoadedPE, constants}};
 use super::memory::STACK_BASE;
 
 pub fn setup_cpu_state(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc_error> {
@@ -27,6 +27,54 @@ pub fn setup_cpu_state(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<
     // GS_BASE register points to TEB
     //emu.reg_write(RegisterX86::GS_BASE, TEB_BASE)?;
     //log::info!("  GS_BASE: 0x{:016x} (TEB)", TEB_BASE);
+    
+    Ok(())
+}
+
+pub fn setup_dll_cpu_state(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE, reason: u32) -> Result<(), uc_error> {
+    log::info!("\n🖥️  Setting up CPU state for DLL:");
+    
+    // Set entry point (DllMain)
+    emu.reg_write(RegisterX86::RIP, pe.entry_point())?;
+    log::info!("  RIP: 0x{:016x} (DllMain)", pe.entry_point());
+    
+    // Set stack pointer
+    let stack_pointer = STACK_BASE + 0x100000 as u64;
+    emu.reg_write(RegisterX86::RSP, stack_pointer)?;
+    log::info!("  RSP: 0x{:016x}", stack_pointer);
+    
+    // Set up DllMain parameters (Windows x64 ABI)
+    // BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
+    // RCX = hinstDLL (module base)
+    // RDX = fdwReason (DLL_PROCESS_ATTACH, etc.)
+    // R8 = lpReserved (NULL for dynamic load)
+    emu.reg_write(RegisterX86::RCX, pe.image_base())?;  // hinstDLL
+    emu.reg_write(RegisterX86::RDX, reason as u64)?;     // fdwReason
+    emu.reg_write(RegisterX86::R8, 0)?;                  // lpReserved (NULL)
+    
+    log::info!("  RCX (hinstDLL): 0x{:016x}", pe.image_base());
+    log::info!("  RDX (fdwReason): {} ({})", reason, match reason {
+        constants::DLL_PROCESS_ATTACH => "DLL_PROCESS_ATTACH",
+        constants::DLL_THREAD_ATTACH => "DLL_THREAD_ATTACH",
+        constants::DLL_THREAD_DETACH => "DLL_THREAD_DETACH",
+        constants::DLL_PROCESS_DETACH => "DLL_PROCESS_DETACH",
+        _ => "UNKNOWN"
+    });
+    log::info!("  R8 (lpReserved): 0x0000000000000000");
+    
+    // Set up return address on stack (simulate being called)
+    let return_addr = 0x7FF000000000u64; // Fake return address
+    emu.mem_write(stack_pointer - 8, &return_addr.to_le_bytes())?;
+    emu.reg_write(RegisterX86::RSP, stack_pointer - 8)?;
+    
+    // Set up basic registers
+    emu.reg_write(RegisterX86::RBP, STACK_BASE + 0x100000 as u64 + 0x1000)?;
+    
+    // Clear other registers
+    for &reg in &[RegisterX86::RAX, RegisterX86::RBX, 
+                  RegisterX86::RSI, RegisterX86::RDI, RegisterX86::R9] {
+        emu.reg_write(reg, 0)?;
+    }
     
     Ok(())
 }

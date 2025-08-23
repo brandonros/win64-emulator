@@ -16,6 +16,7 @@ pub use register_state::RegisterState;
 pub struct Emulator {
     emu: Unicorn<'static, ()>,
     loaded_pe: LoadedPE,
+    is_dll: bool,
 }
 
 impl Emulator {
@@ -25,6 +26,9 @@ impl Emulator {
 
         // Load the main PE
         let loaded_pe = LoadedPE::from_file(pe_path)?;
+        
+        // Detect if this is a DLL
+        let is_dll = pe_path.to_lowercase().ends_with(".dll");
 
         // Register the main module in the module registry
         {
@@ -67,14 +71,25 @@ impl Emulator {
         // Populate IAT with mock function addresses
         iat::setup_iat(&mut emu, &loaded_pe)?;
         
-        // Set up initial CPU state
-        cpu::setup_cpu_state(&mut emu, &loaded_pe)?;
+        // Set up initial CPU state based on PE type
+        if is_dll {
+            // For DLLs, set up with DLL_PROCESS_ATTACH
+            cpu::setup_dll_cpu_state(&mut emu, &loaded_pe, crate::pe::constants::DLL_PROCESS_ATTACH)?;
+        } else {
+            // For EXEs, use regular setup
+            cpu::setup_cpu_state(&mut emu, &loaded_pe)?;
+        }
         
-        Ok(Emulator { emu, loaded_pe })
+        Ok(Emulator { emu, loaded_pe, is_dll })
     }
     
     pub fn run(&mut self, max_instructions: u64) -> Result<(), LoaderError> {
-        log::info!("\n🚀 Starting execution at 0x{:016x}", self.loaded_pe.entry_point());
+        let entry_type = if self.is_dll { "DllMain" } else { "entry point" };
+        log::info!("\n🚀 Starting execution at 0x{:016x} ({})", self.loaded_pe.entry_point(), entry_type);
+        
+        if self.is_dll {
+            log::info!("📦 Executing DLL with DLL_PROCESS_ATTACH");
+        }
         
         // Set up hooks for debugging
         self.setup_hooks()?;
@@ -88,7 +103,19 @@ impl Emulator {
         );
         
         match result {
-            Ok(_) => log::info!("✅ Execution completed successfully"),
+            Ok(_) => {
+                if self.is_dll {
+                    // Check RAX for DllMain return value
+                    let rax = self.emu.reg_read(RegisterX86::RAX)?;
+                    if rax != 0 {
+                        log::info!("✅ DllMain returned TRUE (0x{:x})", rax);
+                    } else {
+                        log::info!("⚠️  DllMain returned FALSE (0x{:x})", rax);
+                    }
+                } else {
+                    log::info!("✅ Execution completed successfully");
+                }
+            },
             Err(e) => {
                 let rip = self.emu.reg_read(RegisterX86::RIP)?;
                 log::info!("❌ Execution stopped at 0x{:016x}: {:?}", rip, e);
@@ -97,6 +124,10 @@ impl Emulator {
         }
         
         Ok(())
+    }
+    
+    pub fn is_dll(&self) -> bool {
+        self.is_dll
     }
     
     fn setup_hooks(&mut self) -> Result<(), uc_error> {

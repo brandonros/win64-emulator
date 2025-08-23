@@ -41,6 +41,7 @@ declare_api!(LocalAlloc);
 declare_api!(LocalFree);
 declare_api!(SetLastError);
 declare_api!(SetThreadLocale);
+declare_api!(SetThreadPriority);
 declare_api!(Sleep);
 declare_api!(SuspendThread);
 declare_api!(TerminateThread);

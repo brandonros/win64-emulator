@@ -49,6 +49,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "LocalFree") => kernel32::LocalFree(emu_ref),
         ("kernel32.dll", "SetLastError") => kernel32::SetLastError(emu_ref),
         ("kernel32.dll", "SetThreadLocale") => kernel32::SetThreadLocale(emu_ref),
+        ("kernel32.dll", "SetThreadPriority") => kernel32::SetThreadPriority(emu_ref),
         ("kernel32.dll", "Sleep") => kernel32::Sleep(emu_ref),
         ("kernel32.dll", "SuspendThread") => kernel32::SuspendThread(emu_ref),
         ("kernel32.dll", "TerminateThread") => kernel32::TerminateThread(emu_ref),
