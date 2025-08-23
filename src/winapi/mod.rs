@@ -20,7 +20,10 @@ pub fn handle_winapi_call<D>(
         // kernel32
         ("kernel32.dll", "DeleteCriticalSection") => kernel32::DeleteCriticalSection(emu_ref),
         ("kernel32.dll", "EnterCriticalSection") => kernel32::EnterCriticalSection(emu_ref),
+        ("kernel32.dll", "EnumResourceNamesA") => kernel32::EnumResourceNamesA(emu_ref),
+        ("kernel32.dll", "EnumResourceTypesA") => kernel32::EnumResourceTypesA(emu_ref),
         ("kernel32.dll", "ExitThread") => kernel32::ExitThread(emu_ref),
+        ("kernel32.dll", "FindResourceA") => kernel32::FindResourceA(emu_ref),
         ("kernel32.dll", "GetACP") => kernel32::GetACP(emu_ref),
         ("kernel32.dll", "GetCommandLineA") => kernel32::GetCommandLineA(emu_ref),
         ("kernel32.dll", "GetConsoleCP") => kernel32::GetConsoleCP(emu_ref),
