@@ -19,6 +19,7 @@ pub fn handle_winapi_call<D>(
     match (dll_name.to_lowercase().as_str(), function_name) {
         // kernel32
         ("kernel32.dll", "DeleteCriticalSection") => kernel32::DeleteCriticalSection(emu_ref),
+        ("kernel32.dll", "DebugBreak") => kernel32::DebugBreak(emu_ref),
         ("kernel32.dll", "EnterCriticalSection") => kernel32::EnterCriticalSection(emu_ref),
         ("kernel32.dll", "EnumResourceLanguagesA") => kernel32::EnumResourceLanguagesA(emu_ref),
         ("kernel32.dll", "EnumResourceNamesA") => kernel32::EnumResourceNamesA(emu_ref),
@@ -92,6 +93,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "CreateThread") => kernel32::CreateThread(emu_ref),
         ("kernel32.dll", "GetOEMCP") => kernel32::GetOEMCP(emu_ref),
         ("kernel32.dll", "HeapFree") => kernel32::HeapFree(emu_ref),
+        ("kernel32.dll", "HeapDestroy") => kernel32::HeapDestroy(emu_ref),
         ("kernel32.dll", "RtlCaptureContext") => ntdll::RtlCaptureContext(emu_ref), // a forward?
         ("kernel32.dll", "RtlLookupFunctionEntry") => ntdll::RtlLookupFunctionEntry(emu_ref), // forward
         ("kernel32.dll", "RtlVirtualUnwind") => ntdll::RtlVirtualUnwind(emu_ref), // forward
@@ -102,6 +104,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "FreeResource") => kernel32::FreeResource(emu_ref),
         ("kernel32.dll", "CompareStringA") => kernel32::CompareStringA(emu_ref),
         ("kernel32.dll", "EnumCalendarInfoA") => kernel32::EnumCalendarInfoA(emu_ref),
+        ("kernel32.dll", "CompareStringW") => kernel32::CompareStringW(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
