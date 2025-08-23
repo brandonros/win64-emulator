@@ -50,6 +50,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "LoadLibraryA") => kernel32::LoadLibraryA(emu_ref),
         ("kernel32.dll", "LocalAlloc") => kernel32::LocalAlloc(emu_ref),
         ("kernel32.dll", "LocalFree") => kernel32::LocalFree(emu_ref),
+        ("kernel32.dll", "MultiByteToWideChar") => kernel32::MultiByteToWideChar(emu_ref),
         ("kernel32.dll", "OpenThread") => kernel32::OpenThread(emu_ref),
         ("kernel32.dll", "SetLastError") => kernel32::SetLastError(emu_ref),
         ("kernel32.dll", "SetThreadLocale") => kernel32::SetThreadLocale(emu_ref),

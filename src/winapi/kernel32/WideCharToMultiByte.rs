@@ -215,6 +215,19 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     log::info!("[WideCharToMultiByte] CodePage: {}, lpWideCharStr: 0x{:x}, cchWideChar: {}, lpMultiByteStr: 0x{:x}, cbMultiByte: {}", 
               code_page, lp_wide_char_str, cch_wide_char, lp_multi_byte_str, cb_multi_byte);
     
+    // Validate input parameters
+    if lp_wide_char_str == 0 && cch_wide_char != 0 {
+        log::warn!("[WideCharToMultiByte] Invalid parameter: lpWideCharStr is NULL with non-zero cchWideChar");
+        emu.reg_write(RegisterX86::RAX, 0)?;
+        return Ok(());
+    }
+    
+    // Handle NULL input (return 0)
+    if lp_wide_char_str == 0 {
+        emu.reg_write(RegisterX86::RAX, 0)?;
+        return Ok(());
+    }
+    
     // Read the wide string
     let wide_string = if cch_wide_char == -1 {
         // Use the helper function for null-terminated strings

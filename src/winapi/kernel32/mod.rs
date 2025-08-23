@@ -41,6 +41,7 @@ declare_api!(IsDebuggerPresent);
 declare_api!(LoadLibraryA);
 declare_api!(LocalAlloc);
 declare_api!(LocalFree);
+declare_api!(MultiByteToWideChar);
 declare_api!(OpenThread);
 declare_api!(SetLastError);
 declare_api!(SetThreadLocale);
