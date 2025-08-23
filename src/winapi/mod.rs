@@ -65,7 +65,8 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "LoadLibraryW") => kernel32::LoadLibraryW(emu_ref),        
         ("kernel32.dll", "FreeLibrary") => kernel32::FreeLibrary(emu_ref),        
         ("kernel32.dll", "FormatMessageW") => kernel32::FormatMessageW(emu_ref),        
-        ("kernel32.dll", "CreateFileW") => kernel32::CreateFileW(emu_ref),        
+        ("kernel32.dll", "CreateFileW") => kernel32::CreateFileW(emu_ref),
+        ("kernel32.dll", "CreateThread") => kernel32::CreateThread(emu_ref),
         ("kernel32.dll", "GetOEMCP") => kernel32::GetOEMCP(emu_ref),        
         ("kernel32.dll", "HeapFree") => kernel32::HeapFree(emu_ref),                
 

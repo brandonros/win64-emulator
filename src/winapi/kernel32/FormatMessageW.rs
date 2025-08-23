@@ -1,5 +1,4 @@
 use unicorn_engine::{RegisterX86, Unicorn};
-use crate::emulation::memory;
 
 pub fn FormatMessageW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // DWORD FormatMessageW(
