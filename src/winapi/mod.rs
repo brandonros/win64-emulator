@@ -101,6 +101,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "LockResource") => kernel32::LockResource(emu_ref),
         ("kernel32.dll", "FreeResource") => kernel32::FreeResource(emu_ref),
         ("kernel32.dll", "CompareStringA") => kernel32::CompareStringA(emu_ref),
+        ("kernel32.dll", "EnumCalendarInfoA") => kernel32::EnumCalendarInfoA(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),

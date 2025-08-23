@@ -87,3 +87,4 @@ declare_api!(SizeofResource);
 declare_api!(LockResource);
 declare_api!(FreeResource);
 declare_api!(CompareStringA);
+declare_api!(EnumCalendarInfoA);
