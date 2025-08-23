@@ -48,6 +48,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "SetLastError") => kernel32::SetLastError(emu_ref),
         ("kernel32.dll", "SetThreadLocale") => kernel32::SetThreadLocale(emu_ref),
         ("kernel32.dll", "TlsAlloc") => kernel32::TlsAlloc(emu_ref),
+        ("kernel32.dll", "TlsFree") => kernel32::TlsFree(emu_ref),
         ("kernel32.dll", "TlsGetValue") => kernel32::TlsGetValue(emu_ref),
         ("kernel32.dll", "TlsSetValue") => kernel32::TlsSetValue(emu_ref),
         ("kernel32.dll", "WideCharToMultiByte") => kernel32::WideCharToMultiByte(emu_ref),
@@ -65,6 +66,8 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "FreeLibrary") => kernel32::FreeLibrary(emu_ref),        
         ("kernel32.dll", "FormatMessageW") => kernel32::FormatMessageW(emu_ref),        
         ("kernel32.dll", "CreateFileW") => kernel32::CreateFileW(emu_ref),        
+        ("kernel32.dll", "GetOEMCP") => kernel32::GetOEMCP(emu_ref),        
+        ("kernel32.dll", "HeapFree") => kernel32::HeapFree(emu_ref),                
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
