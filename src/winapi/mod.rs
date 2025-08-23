@@ -20,10 +20,12 @@ pub fn handle_winapi_call<D>(
         // kernel32
         ("kernel32.dll", "DeleteCriticalSection") => kernel32::DeleteCriticalSection(emu_ref),
         ("kernel32.dll", "EnterCriticalSection") => kernel32::EnterCriticalSection(emu_ref),
+        ("kernel32.dll", "EnumResourceLanguagesA") => kernel32::EnumResourceLanguagesA(emu_ref),
         ("kernel32.dll", "EnumResourceNamesA") => kernel32::EnumResourceNamesA(emu_ref),
         ("kernel32.dll", "EnumResourceTypesA") => kernel32::EnumResourceTypesA(emu_ref),
         ("kernel32.dll", "ExitThread") => kernel32::ExitThread(emu_ref),
         ("kernel32.dll", "FindResourceA") => kernel32::FindResourceA(emu_ref),
+        ("kernel32.dll", "FindResourceExA") => kernel32::FindResourceExA(emu_ref),
         ("kernel32.dll", "GetACP") => kernel32::GetACP(emu_ref),
         ("kernel32.dll", "GetCommandLineA") => kernel32::GetCommandLineA(emu_ref),
         ("kernel32.dll", "GetConsoleCP") => kernel32::GetConsoleCP(emu_ref),
@@ -94,6 +96,10 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "RtlLookupFunctionEntry") => ntdll::RtlLookupFunctionEntry(emu_ref), // forward
         ("kernel32.dll", "RtlVirtualUnwind") => ntdll::RtlVirtualUnwind(emu_ref), // forward
         ("kernel32.dll", "RtlUnwindEx") => ntdll::RtlUnwindEx(emu_ref), // forward
+        ("kernel32.dll", "LoadResource") => kernel32::LoadResource(emu_ref),
+        ("kernel32.dll", "SizeofResource") => kernel32::SizeofResource(emu_ref),
+        ("kernel32.dll", "LockResource") => kernel32::LockResource(emu_ref),
+        ("kernel32.dll", "FreeResource") => kernel32::FreeResource(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),

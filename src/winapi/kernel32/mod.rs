@@ -9,10 +9,12 @@ macro_rules! declare_api {
 }
 
 declare_api!(EnterCriticalSection);
+declare_api!(EnumResourceLanguagesA);
 declare_api!(EnumResourceNamesA);
 declare_api!(EnumResourceTypesA);
 declare_api!(ExitThread);
 declare_api!(FindResourceA);
+declare_api!(FindResourceExA);
 declare_api!(GetACP);
 declare_api!(GetCommandLineA);
 declare_api!(GetConsoleCP);
@@ -80,3 +82,7 @@ declare_api!(FormatMessageW);
 declare_api!(CreateFileW);
 declare_api!(CreateThread);
 declare_api!(DeleteCriticalSection);
+declare_api!(LoadResource);
+declare_api!(SizeofResource);
+declare_api!(LockResource);
+declare_api!(FreeResource);
