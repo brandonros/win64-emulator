@@ -32,7 +32,7 @@ pub fn FormatMessageW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     let wide_message: Vec<u16> = message.encode_utf16().collect();
     
     if lp_buffer != 0 && n_size > 0 {
-        let bytes_to_write = std::cmp::min(wide_message.len() * 2, (n_size as usize - 2));
+        let bytes_to_write = std::cmp::min(wide_message.len() * 2, n_size as usize - 2);
         let bytes: Vec<u8> = wide_message.iter()
             .take(bytes_to_write / 2)
             .flat_map(|&c| c.to_le_bytes())

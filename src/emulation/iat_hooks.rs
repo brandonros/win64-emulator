@@ -67,7 +67,7 @@ fn get_indirect_call_target<D>(
 /// Calculate the effective address for a memory operand
 fn calculate_effective_address<D>(
     instruction: &Instruction,
-    instruction_size: u32,
+    _instruction_size: u32,
     emu: &mut Unicorn<D>,
     addr: u64,
 ) -> u64 {
@@ -270,7 +270,7 @@ fn handle_potential_iat_call<D>(
     emu: &mut Unicorn<D>,
     addr: u64,
     instruction: &Instruction,
-    instruction_size: u32,
+    _instruction_size: u32,
     count: u64,
     is_jmp: bool
 ) {
