@@ -86,3 +86,4 @@ declare_api!(LoadResource);
 declare_api!(SizeofResource);
 declare_api!(LockResource);
 declare_api!(FreeResource);
+declare_api!(CompareStringA);

@@ -100,6 +100,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "SizeofResource") => kernel32::SizeofResource(emu_ref),
         ("kernel32.dll", "LockResource") => kernel32::LockResource(emu_ref),
         ("kernel32.dll", "FreeResource") => kernel32::FreeResource(emu_ref),
+        ("kernel32.dll", "CompareStringA") => kernel32::CompareStringA(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
