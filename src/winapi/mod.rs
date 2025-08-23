@@ -18,7 +18,8 @@ pub fn handle_winapi_call<D>(
 
     match (dll_name.to_lowercase().as_str(), function_name) {
         // kernel32
-        ("kernel32.dll", "EnterCriticalSection") => kernel32::EnterCriticalSection(emu_ref),        
+        ("kernel32.dll", "EnterCriticalSection") => kernel32::EnterCriticalSection(emu_ref),
+        ("kernel32.dll", "ExitThread") => kernel32::ExitThread(emu_ref),
         ("kernel32.dll", "GetACP") => kernel32::GetACP(emu_ref),
         ("kernel32.dll", "GetCommandLineA") => kernel32::GetCommandLineA(emu_ref),
         ("kernel32.dll", "GetConsoleCP") => kernel32::GetConsoleCP(emu_ref),
@@ -45,8 +46,10 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "InitializeCriticalSection") => kernel32::InitializeCriticalSection(emu_ref),
         ("kernel32.dll", "LoadLibraryA") => kernel32::LoadLibraryA(emu_ref),
         ("kernel32.dll", "LocalAlloc") => kernel32::LocalAlloc(emu_ref),
+        ("kernel32.dll", "LocalFree") => kernel32::LocalFree(emu_ref),
         ("kernel32.dll", "SetLastError") => kernel32::SetLastError(emu_ref),
         ("kernel32.dll", "SetThreadLocale") => kernel32::SetThreadLocale(emu_ref),
+        ("kernel32.dll", "Sleep") => kernel32::Sleep(emu_ref),
         ("kernel32.dll", "TlsAlloc") => kernel32::TlsAlloc(emu_ref),
         ("kernel32.dll", "TlsFree") => kernel32::TlsFree(emu_ref),
         ("kernel32.dll", "TlsGetValue") => kernel32::TlsGetValue(emu_ref),

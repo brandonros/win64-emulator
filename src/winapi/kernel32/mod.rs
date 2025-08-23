@@ -9,6 +9,7 @@ macro_rules! declare_api {
 }
 
 declare_api!(EnterCriticalSection);
+declare_api!(ExitThread);
 declare_api!(GetACP);
 declare_api!(GetCommandLineA);
 declare_api!(GetConsoleCP);
@@ -37,8 +38,10 @@ declare_api!(LeaveCriticalSection);
 declare_api!(InitializeCriticalSection);
 declare_api!(LoadLibraryA);
 declare_api!(LocalAlloc);
+declare_api!(LocalFree);
 declare_api!(SetLastError);
 declare_api!(SetThreadLocale);
+declare_api!(Sleep);
 declare_api!(TlsAlloc);
 declare_api!(TlsFree);
 declare_api!(TlsGetValue);
