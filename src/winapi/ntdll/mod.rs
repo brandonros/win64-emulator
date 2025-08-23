@@ -9,3 +9,7 @@ macro_rules! declare_api {
 }
 
 declare_api!(RtlAddFunctionTable);
+declare_api!(RtlCaptureContext);
+declare_api!(RtlLookupFunctionEntry);
+declare_api!(RtlVirtualUnwind);
+declare_api!(RtlUnwindEx);

@@ -87,12 +87,20 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "CreateThread") => kernel32::CreateThread(emu_ref),
         ("kernel32.dll", "GetOEMCP") => kernel32::GetOEMCP(emu_ref),
         ("kernel32.dll", "HeapFree") => kernel32::HeapFree(emu_ref),
+        ("kernel32.dll", "RtlCaptureContext") => ntdll::RtlCaptureContext(emu_ref), // a forward?
+        ("kernel32.dll", "RtlLookupFunctionEntry") => ntdll::RtlLookupFunctionEntry(emu_ref), // forward
+        ("kernel32.dll", "RtlVirtualUnwind") => ntdll::RtlVirtualUnwind(emu_ref), // forward
+        ("kernel32.dll", "RtlUnwindEx") => ntdll::RtlUnwindEx(emu_ref), // forward
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),
+        ("ntdll.dll", "RtlCaptureContext") => ntdll::RtlCaptureContext(emu_ref),
+        ("ntdll.dll", "RtlLookupFunctionEntry") => ntdll::RtlLookupFunctionEntry(emu_ref),
+        ("ntdll.dll", "RtlVirtualUnwind") => ntdll::RtlVirtualUnwind(emu_ref),
+        ("ntdll.dll", "RtlUnwindEx") => ntdll::RtlUnwindEx(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
