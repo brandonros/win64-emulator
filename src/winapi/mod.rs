@@ -18,6 +18,7 @@ pub fn handle_winapi_call<D>(
 
     match (dll_name.to_lowercase().as_str(), function_name) {
         // kernel32
+        ("kernel32.dll", "DeleteCriticalSection") => kernel32::DeleteCriticalSection(emu_ref),
         ("kernel32.dll", "EnterCriticalSection") => kernel32::EnterCriticalSection(emu_ref),
         ("kernel32.dll", "ExitThread") => kernel32::ExitThread(emu_ref),
         ("kernel32.dll", "GetACP") => kernel32::GetACP(emu_ref),
@@ -60,6 +61,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "TlsFree") => kernel32::TlsFree(emu_ref),
         ("kernel32.dll", "TlsGetValue") => kernel32::TlsGetValue(emu_ref),
         ("kernel32.dll", "TlsSetValue") => kernel32::TlsSetValue(emu_ref),
+        ("kernel32.dll", "TryEnterCriticalSection") => kernel32::TryEnterCriticalSection(emu_ref),
         ("kernel32.dll", "WideCharToMultiByte") => kernel32::WideCharToMultiByte(emu_ref),
         ("kernel32.dll", "VirtualAlloc") => kernel32::VirtualAlloc(emu_ref),
         ("kernel32.dll", "VirtualFree") => kernel32::VirtualFree(emu_ref),

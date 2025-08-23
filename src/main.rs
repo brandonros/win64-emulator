@@ -2,14 +2,31 @@ use crate::loader_error::LoaderError;
 use crate::emulation::Emulator;
 #[cfg(feature = "trace-instruction")]
 use crate::emulation::tracing;
+use std::env;
 
 mod pe;
 mod loader_error;
 mod emulation;
 mod winapi;
 
-// Example usage and testing
+fn print_usage() {
+    println!("Usage: {} <PE_FILE_PATH>", env::args().nth(0).unwrap_or_else(|| "win64-emulator".to_string()));
+    println!("\nExample:");
+    println!("  {} /path/to/program.exe", env::args().nth(0).unwrap_or_else(|| "win64-emulator".to_string()));
+    println!("  {} /path/to/library.dll", env::args().nth(0).unwrap_or_else(|| "win64-emulator".to_string()));
+}
+
 fn main() -> Result<(), LoaderError> {
+    // Parse command line arguments
+    let args: Vec<String> = env::args().collect();
+    
+    if args.len() != 2 {
+        print_usage();
+        std::process::exit(1);
+    }
+    
+    let pe_path = &args[1];
+
     // init tracer
     #[cfg(feature = "trace-instruction")]
     {
@@ -38,10 +55,6 @@ fn main() -> Result<(), LoaderError> {
     }
     log::info!("🔧 PE64 Loader with IAT Parsing");
     log::info!("=================================\n");
-    
-    // Example: Load and analyze a PE file
-    //let pe_path = "/Users/brandon/Desktop/win64-emulator/assets/enigma_test_protected.exe";
-    let pe_path = "/Users/brandon/Desktop/9.04/245ea135cb8d0ac76a52e3b2fe565d3695f69f1bbaab22394412a78c4e909209.dll";
     
     log::info!("📁 Loading PE file: {}", pe_path);
     
