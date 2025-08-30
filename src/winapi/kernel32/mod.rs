@@ -93,3 +93,4 @@ declare_api!(EnumCalendarInfoA);
 declare_api!(CompareStringW);
 declare_api!(GetSystemInfo);
 declare_api!(GetTickCount);
+declare_api!(GetModuleFileNameW);
