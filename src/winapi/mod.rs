@@ -54,6 +54,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetModuleFileNameA") => kernel32::GetModuleFileNameA(emu_ref),
         ("kernel32.dll", "GetModuleHandleA") => kernel32::GetModuleHandleA(emu_ref),
         ("kernel32.dll", "GetOEMCP") => kernel32::GetOEMCP(emu_ref),
+        ("kernel32.dll", "GetComputerNameA") => kernel32::GetComputerNameA(emu_ref),
         ("kernel32.dll", "GetProcAddress") => kernel32::GetProcAddress(emu_ref),
         ("kernel32.dll", "GetProcessHeap") => kernel32::GetProcessHeap(emu_ref),
         ("kernel32.dll", "GetStartupInfoA") => kernel32::GetStartupInfoA(emu_ref),
@@ -130,6 +131,7 @@ pub fn handle_winapi_call<D>(
 
         // advapi32
         ("advapi32.dll", "GetUserNameA") => advapi32::GetUserNameA(emu_ref),
+        ("advapi32.dll", "GetUserNameW") => advapi32::GetUserNameW(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);

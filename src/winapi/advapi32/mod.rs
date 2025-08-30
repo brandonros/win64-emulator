@@ -9,3 +9,4 @@ macro_rules! declare_api {
 }
 
 declare_api!(GetUserNameA);
+declare_api!(GetUserNameW);

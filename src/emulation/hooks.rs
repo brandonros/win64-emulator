@@ -91,7 +91,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     
     // Log interesting transitions
     if executing_from_heap {
-        log::debug!("🔥 Executing from HEAP at 0x{:x}, RSP=0x{:x}", addr, rsp);
+        //log::trace!("🔥 Executing from HEAP at 0x{:x}, RSP=0x{:x}", addr, rsp);
     }
     
     if rsp_in_heap {
