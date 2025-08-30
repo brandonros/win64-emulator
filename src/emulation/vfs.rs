@@ -77,15 +77,24 @@ impl VirtualFileSystem {
     }
     
     pub fn read_mock_file(&self, filename: &str) -> Result<Vec<u8>, std::io::Error> {
-        let normalized_filename = if filename.starts_with("\\??\\") {
-            &filename[4..]
+        let mut normalized_filename = if filename.starts_with("\\??\\") {
+            filename[4..].to_string()
         } else if filename.starts_with("\\") {
-            &filename[1..]
+            filename[1..].to_string()
         } else {
-            filename
+            filename.to_string()
         };
         
-        let file_path = self.mock_files_path.join(normalized_filename);
+        // Replace C: with /c (and other drive letters)
+        if normalized_filename.len() >= 2 && normalized_filename.chars().nth(1) == Some(':') {
+            let drive_letter = normalized_filename.chars().nth(0).unwrap().to_lowercase().to_string();
+            normalized_filename = format!("/{}{}", drive_letter, &normalized_filename[2..]);
+        }
+        
+        // Replace backslashes with forward slashes
+        normalized_filename = normalized_filename.replace("\\", "/");
+        
+        let file_path = self.mock_files_path.join(&normalized_filename);
         
         if file_path.exists() {
             log::info!("[VFS] Reading mock file from: {:?}", file_path);

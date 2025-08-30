@@ -200,7 +200,7 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     };
     
     // Handle ByteOffset parameter
-    let actual_offset = if let Ok(mut byte_offset_bytes) = emu.mem_read_as_vec(rsp + 0x40, 8) {
+    let actual_offset = if let Ok(byte_offset_bytes) = emu.mem_read_as_vec(rsp + 0x40, 8) {
         let byte_offset_ptr = u64::from_le_bytes(byte_offset_bytes.clone().try_into().unwrap());
         if byte_offset_ptr != 0 {
             // Read the actual offset value
