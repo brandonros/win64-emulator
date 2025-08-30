@@ -105,3 +105,4 @@ declare_api!(GetCurrentDirectoryW);
 declare_api!(GetVersion);
 declare_api!(VirtualLock);
 declare_api!(VirtualUnlock);
+declare_api!(FindFirstFileExW);

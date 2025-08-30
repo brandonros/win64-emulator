@@ -128,6 +128,106 @@ impl VirtualFileSystem {
     pub fn is_valid_handle(&self, handle: u64) -> bool {
         self.handles.contains_key(&handle)
     }
+    
+    pub fn find_files(&self, pattern: &str) -> Vec<String> {
+        // Convert Windows pattern to a path for searching
+        let normalized_pattern = if pattern.starts_with("\\??\\") {
+            &pattern[4..]
+        } else {
+            pattern
+        };
+        
+        // Split into directory and file pattern
+        let (dir_path, file_pattern) = if let Some(pos) = normalized_pattern.rfind('\\') {
+            (&normalized_pattern[..pos], &normalized_pattern[pos + 1..])
+        } else {
+            (".", normalized_pattern)
+        };
+        
+        let search_dir = self.normalize_windows_path(dir_path);
+        
+        log::info!("[VFS] Searching for files matching '{}' in {:?}", file_pattern, search_dir);
+        
+        let mut results = Vec::new();
+        
+        // If the directory doesn't exist, return empty results
+        if !search_dir.exists() {
+            log::info!("[VFS] Directory {:?} does not exist", search_dir);
+            return results;
+        }
+        
+        // Convert wildcard pattern to regex
+        let regex_pattern = file_pattern
+            .replace(".", "\\.")
+            .replace("*", ".*")
+            .replace("?", ".");
+        
+        // Try to list files in the directory
+        if let Ok(entries) = std::fs::read_dir(&search_dir) {
+            for entry in entries.flatten() {
+                if let Some(file_name) = entry.file_name().to_str() {
+                    // Simple pattern matching (could use regex crate for more accuracy)
+                    if Self::matches_pattern(file_name, file_pattern) {
+                        results.push(file_name.to_string());
+                        log::info!("[VFS] Found matching file: {}", file_name);
+                    }
+                }
+            }
+        }
+        
+        results
+    }
+    
+    fn matches_pattern(name: &str, pattern: &str) -> bool {
+        // Simple wildcard matching
+        if pattern == "*" || pattern == "*.*" {
+            return true;
+        }
+        
+        let mut name_chars = name.chars().peekable();
+        let mut pattern_chars = pattern.chars().peekable();
+        
+        while pattern_chars.peek().is_some() {
+            match pattern_chars.next() {
+                Some('*') => {
+                    // Match zero or more characters
+                    if pattern_chars.peek().is_none() {
+                        return true; // * at end matches everything
+                    }
+                    // Find next non-wildcard character in pattern
+                    let next_pattern_char = pattern_chars.peek().copied();
+                    if let Some(next_char) = next_pattern_char {
+                        if next_char == '*' || next_char == '?' {
+                            continue; // Handle multiple wildcards
+                        }
+                        // Find this character in the name
+                        while let Some(name_char) = name_chars.peek() {
+                            if *name_char == next_char {
+                                break;
+                            }
+                            name_chars.next();
+                        }
+                    }
+                }
+                Some('?') => {
+                    // Match exactly one character
+                    if name_chars.next().is_none() {
+                        return false;
+                    }
+                }
+                Some(pattern_char) => {
+                    // Match exact character
+                    if name_chars.next() != Some(pattern_char) {
+                        return false;
+                    }
+                }
+                None => break,
+            }
+        }
+        
+        // Check if we've consumed all of the name
+        pattern_chars.peek().is_none() && name_chars.peek().is_none()
+    }
 }
 
 pub static VIRTUAL_FS: LazyLock<RwLock<VirtualFileSystem>> = LazyLock::new(|| {

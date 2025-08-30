@@ -60,6 +60,7 @@ impl Emulator {
             registry.load_system_dll(&mut emu, "./assets/api-ms-win-crt-stdio-l1-1-0.dll", "api-ms-win-crt-stdio-l1-1-0.dll", None)?;
             registry.load_system_dll(&mut emu, "./assets/api-ms-win-crt-locale-l1-1-0.dll", "api-ms-win-crt-locale-l1-1-0.dll", None)?;
             registry.load_system_dll(&mut emu, "./assets/api-ms-win-crt-heap-l1-1-0.dll", "api-ms-win-crt-heap-l1-1-0.dll", None)?;
+            registry.load_system_dll(&mut emu, "./assets/win32u.dll", "win32u.dll", None)?;
         }
         
         // Set up memory regions for the PE
