@@ -107,6 +107,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "WideCharToMultiByte") => kernel32::WideCharToMultiByte(emu_ref),
         ("kernel32.dll", "WriteFile") => kernel32::WriteFile(emu_ref),
         ("kernel32.dll", "GetSystemInfo") => kernel32::GetSystemInfo(emu_ref),
+        ("kernel32.dll", "GetTickCount") => kernel32::GetTickCount(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
@@ -120,6 +121,7 @@ pub fn handle_winapi_call<D>(
 
         // oleaut32
         ("oleaut32.dll", "SysReAllocStringLen") => oleaut32::SysReAllocStringLen(emu_ref),
+        ("oleaut32.dll", "VariantClear") => oleaut32::VariantClear(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
