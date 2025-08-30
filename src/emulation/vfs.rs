@@ -156,8 +156,8 @@ impl VirtualFileSystem {
             return results;
         }
         
-        // Convert wildcard pattern to regex
-        let regex_pattern = file_pattern
+        // Convert wildcard pattern to regex (kept for potential future use)
+        let _regex_pattern = file_pattern
             .replace(".", "\\.")
             .replace("*", ".*")
             .replace("?", ".");
