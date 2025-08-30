@@ -118,6 +118,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetFullPathNameW") => kernel32::GetFullPathNameW(emu_ref),
         ("kernel32.dll", "GetWindowsDirectoryW") => kernel32::GetWindowsDirectoryW(emu_ref),
         ("kernel32.dll", "GetTempPathW") => kernel32::GetTempPathW(emu_ref),
+        ("kernel32.dll", "GetCurrentDirectoryW") => kernel32::GetCurrentDirectoryW(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
