@@ -196,7 +196,7 @@ pub fn RtlDosPathNameToNtPathName_U(emu: &mut Unicorn<()>) -> Result<(), unicorn
 }
 
 // Helper function to normalize paths (remove . and .. components)
-fn normalize_path(path: &str) -> String {
+/*fn normalize_path(path: &str) -> String {
     let mut components = Vec::new();
     let mut result = String::new();
     
@@ -228,4 +228,56 @@ fn normalize_path(path: &str) -> String {
         // No recognized prefix, return as-is
         path.to_string()
     }
+}*/
+
+fn normalize_path(path: &str) -> String {
+    let mut result = String::new();
+    
+    // Keep the prefix (\??\)
+    if path.starts_with("\\??\\") {
+        result.push_str("\\??\\");
+        let remainder = &path[4..];
+        
+        // Handle drive letter
+        let normalized_remainder = if remainder.len() >= 2 && remainder.chars().nth(1) == Some(':') {
+            let mut chars = remainder.chars();
+            let drive = chars.next().unwrap().to_ascii_uppercase();
+            format!("{}{}", drive, chars.collect::<String>())
+        } else {
+            remainder.to_string()
+        };
+        
+        // Split into components and normalize
+        let mut components = Vec::new();
+        for component in normalized_remainder.split('\\') {
+            match component {
+                "" => {
+                    // Keep empty component at the beginning (after drive:)
+                    if components.is_empty() || components.len() == 1 {
+                        components.push(component);
+                    }
+                }
+                "." => {
+                    // Skip current directory references
+                }
+                ".." => {
+                    // Go up one directory if possible (but not past drive root)
+                    if components.len() > 2 {  // Keep drive: and first \
+                        components.pop();
+                    }
+                }
+                _ => {
+                    components.push(component);
+                }
+            }
+        }
+        
+        // Rebuild the path
+        result.push_str(&components.join("\\"));
+        result
+    } else {
+        // No recognized prefix, return as-is
+        path.to_string()
+    }
 }
+
