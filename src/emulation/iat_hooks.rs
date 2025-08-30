@@ -428,7 +428,7 @@ fn execute_api_call<D>(
         Ok(_) => {
             //log::trace!("✓ API call completed successfully");
             // Set RIP to return address and pop stack
-            finalize_api_call(emu, return_addr);
+            finalize_api_call(emu);
         }
         Err(err) => {
             log::error!("✗ API call failed: {:?}", err);
@@ -450,18 +450,26 @@ fn push_return_address<D>(emu: &mut Unicorn<D>, return_addr: u64) {
     emu.mem_write(new_rsp, &return_addr.to_le_bytes()).unwrap();
 }
 
-/// Finalize API call by setting RIP and adjusting stack
-fn finalize_api_call<D>(emu: &mut Unicorn<D>, return_addr: u64) {
-    let rax = emu.reg_read(RegisterX86::RAX).unwrap();
-    //log::trace!("Finalizing API call - RAX return value: 0x{:x}", rax);
-    
-    // Set RIP to the return address
-    emu.reg_write(RegisterX86::RIP, return_addr).unwrap();
-    //log::trace!("Set RIP to return address: 0x{:x}", return_addr);
-    
-    // Pop the return address from stack (as a RET would)
-    let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
-    let new_rsp = rsp + 8;
-    emu.reg_write(RegisterX86::RSP, new_rsp).unwrap();
-    //log::trace!("Popped stack: RSP 0x{:x} -> 0x{:x}", rsp, new_rsp);
+/// Finalize API call by simulating the RET that would have happened
+fn finalize_api_call<D>(emu: &mut Unicorn<D>) {
+      //log::trace!("Finalizing API call - RAX return value: 0x{:x}", rax);
+      
+      // We're simulating what the API function's RET would have done:
+      // 1. Pop address from stack
+      // 2. Jump to that address
+      
+      // Read the return address from stack (what RET would pop)
+      let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
+      let mut ret_addr_bytes = [0u8; 8];
+      emu.mem_read(rsp, &mut ret_addr_bytes).unwrap();
+      let ret_addr_from_stack = u64::from_le_bytes(ret_addr_bytes);
+      
+      // Pop the stack (like RET would)
+      emu.reg_write(RegisterX86::RSP, rsp + 8).unwrap();
+      
+      // Jump to the return address (like RET would)
+      emu.reg_write(RegisterX86::RIP, ret_addr_from_stack).unwrap();
+      
+      //log::trace!("Simulated RET: popped 0x{:x} from stack, RSP 0x{:x} -> 0x{:x}", 
+      //            ret_addr_from_stack, rsp, rsp + 8);
 }
