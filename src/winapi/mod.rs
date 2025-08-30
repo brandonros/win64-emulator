@@ -133,6 +133,7 @@ pub fn handle_winapi_call<D>(
         ("ntdll.dll", "RtlUnwindEx") => ntdll::RtlUnwindEx(emu_ref),
         ("ntdll.dll", "RtlDosPathNameToNtPathName_U") => ntdll::RtlDosPathNameToNtPathName_U(emu_ref),
         ("ntdll.dll", "ZwCreateFile") => ntdll::ZwCreateFile(emu_ref),
+        ("ntdll.dll", "RtlFreeUnicodeString") => ntdll::RtlFreeUnicodeString(emu_ref),
 
         // oleaut32
         ("oleaut32.dll", "SysReAllocStringLen") => oleaut32::SysReAllocStringLen(emu_ref),

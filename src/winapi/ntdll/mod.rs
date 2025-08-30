@@ -15,3 +15,4 @@ declare_api!(RtlVirtualUnwind);
 declare_api!(RtlUnwindEx);
 declare_api!(RtlDosPathNameToNtPathName_U);
 declare_api!(ZwCreateFile);
+declare_api!(RtlFreeUnicodeString);
