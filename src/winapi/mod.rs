@@ -119,6 +119,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetWindowsDirectoryW") => kernel32::GetWindowsDirectoryW(emu_ref),
         ("kernel32.dll", "GetTempPathW") => kernel32::GetTempPathW(emu_ref),
         ("kernel32.dll", "GetCurrentDirectoryW") => kernel32::GetCurrentDirectoryW(emu_ref),
+        ("kernel32.dll", "GetVersion") => kernel32::GetVersion(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
@@ -130,6 +131,8 @@ pub fn handle_winapi_call<D>(
         ("ntdll.dll", "RtlLookupFunctionEntry") => ntdll::RtlLookupFunctionEntry(emu_ref),
         ("ntdll.dll", "RtlVirtualUnwind") => ntdll::RtlVirtualUnwind(emu_ref),
         ("ntdll.dll", "RtlUnwindEx") => ntdll::RtlUnwindEx(emu_ref),
+        ("ntdll.dll", "RtlDosPathNameToNtPathName_U") => ntdll::RtlDosPathNameToNtPathName_U(emu_ref),
+        ("ntdll.dll", "ZwCreateFile") => ntdll::ZwCreateFile(emu_ref),
 
         // oleaut32
         ("oleaut32.dll", "SysReAllocStringLen") => oleaut32::SysReAllocStringLen(emu_ref),

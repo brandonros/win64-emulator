@@ -13,3 +13,5 @@ declare_api!(RtlCaptureContext);
 declare_api!(RtlLookupFunctionEntry);
 declare_api!(RtlVirtualUnwind);
 declare_api!(RtlUnwindEx);
+declare_api!(RtlDosPathNameToNtPathName_U);
+declare_api!(ZwCreateFile);
