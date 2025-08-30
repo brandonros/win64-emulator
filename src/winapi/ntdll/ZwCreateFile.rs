@@ -1,6 +1,6 @@
 use unicorn_engine::{Unicorn, RegisterX86};
 use windows_sys::Win32::Foundation::UNICODE_STRING;
-use crate::emulation::memory;
+use crate::emulation::{memory, vfs::VIRTUAL_FS};
 
 /*
 ZwCreateFile function (wdm.h)
@@ -277,26 +277,6 @@ pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     log::info!("[ZwCreateFile] ObjectAttributes: 0x{:x}", object_attributes);
     log::info!("[ZwCreateFile] IoStatusBlock: 0x{:x}", io_status_block);
     
-    // Try to read the filename from OBJECT_ATTRIBUTES
-    if object_attributes != 0 {
-        // Read ObjectName pointer (offset 0x10 in OBJECT_ATTRIBUTES)
-        let mut object_name_ptr_bytes = [0u8; 8];
-        if emu.mem_read(object_attributes + 0x10, &mut object_name_ptr_bytes).is_ok() {
-            let object_name_ptr = u64::from_le_bytes(object_name_ptr_bytes);
-            
-            if object_name_ptr != 0 {
-                // Read UNICODE_STRING structure
-                if let Ok(unicode_str) = memory::read_struct::<UNICODE_STRING>(emu, object_name_ptr) {
-                    if unicode_str.Buffer as u64 != 0 && unicode_str.Length > 0 {
-                        let filename = memory::read_wide_string_from_memory(emu, unicode_str.Buffer as u64);
-                        if let Ok(filename) = filename {
-                            log::info!("[ZwCreateFile] Filename: '{}'", filename);
-                        }
-                    }
-                }
-            }
-        }
-    }
     
     // NTSTATUS constants
     const STATUS_SUCCESS: u32 = 0x00000000;
@@ -309,11 +289,54 @@ pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
         return Ok(());
     }
     
-    // Create a unique mock file handle
-    static mut NEXT_FILE_HANDLE: u64 = 0x500;
-    let mock_handle = unsafe {
-        NEXT_FILE_HANDLE += 0x10;
-        NEXT_FILE_HANDLE
+    // Extract filename if available
+    let filename = if object_attributes != 0 {
+        // Read ObjectName pointer (offset 0x10 in OBJECT_ATTRIBUTES)
+        let mut object_name_ptr_bytes = [0u8; 8];
+        if emu.mem_read(object_attributes + 0x10, &mut object_name_ptr_bytes).is_ok() {
+            let object_name_ptr = u64::from_le_bytes(object_name_ptr_bytes);
+            
+            if object_name_ptr != 0 {
+                // Read UNICODE_STRING structure
+                if let Ok(unicode_str) = memory::read_struct::<UNICODE_STRING>(emu, object_name_ptr) {
+                    if unicode_str.Buffer as u64 != 0 && unicode_str.Length > 0 {
+                        memory::read_wide_string_from_memory(emu, unicode_str.Buffer as u64).ok()
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    
+    // Read stack parameters for additional file info
+    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let mut share_access_bytes = [0u8; 4];
+    emu.mem_read(rsp + 0x38, &mut share_access_bytes)?;
+    let share_access = u32::from_le_bytes(share_access_bytes);
+    
+    let mut create_options_bytes = [0u8; 4];
+    emu.mem_read(rsp + 0x48, &mut create_options_bytes)?;
+    let create_options = u32::from_le_bytes(create_options_bytes);
+    
+    // Register file in VFS and create handle
+    let mock_handle = {
+        let mut vfs = VIRTUAL_FS.write().unwrap();
+        if let Some(filename) = filename {
+            log::info!("[ZwCreateFile] Registering file '{}' in VFS", filename);
+            vfs.register_file(filename, desired_access, share_access, create_options)
+        } else {
+            log::info!("[ZwCreateFile] Creating handle for unnamed file");
+            vfs.register_file("<unnamed>".to_string(), desired_access, share_access, create_options)
+        }
     };
     
     // Write the handle to the FileHandle pointer
@@ -326,8 +349,7 @@ pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     emu.mem_write(io_status_block, &status.to_le_bytes())?;
     emu.mem_write(io_status_block + 8, &information.to_le_bytes())?;
     
-    log::info!("[ZwCreateFile] Created mock file handle: 0x{:x}", mock_handle);
-    log::warn!("[ZwCreateFile] Mock implementation - always returns success");
+    log::info!("[ZwCreateFile] Created file handle: 0x{:x}", mock_handle);
     
     // Return STATUS_SUCCESS
     emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;

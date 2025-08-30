@@ -8,6 +8,7 @@ mod register_state;
 pub mod iat;
 mod hooks;
 mod iat_hooks;
+pub mod vfs;
 #[cfg(feature = "trace-instruction")]
 pub mod tracing;
 

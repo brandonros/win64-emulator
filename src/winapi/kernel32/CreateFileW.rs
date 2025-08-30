@@ -1,5 +1,5 @@
 use unicorn_engine::{Unicorn, RegisterX86};
-use crate::emulation::memory;
+use crate::emulation::{memory, vfs::VIRTUAL_FS};
 use crate::winapi;
 
 pub fn CreateFileW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
@@ -90,15 +90,13 @@ pub fn CreateFileW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         panic!("[CreateFileW] Overlapped I/O not supported (advanced feature)");
     }
     
-    // Generate a mock file handle
-    // In a real implementation, you'd maintain a handle table
-    static mut NEXT_HANDLE: u64 = 0x100;
-    let handle = unsafe {
-        NEXT_HANDLE += 0x10;
-        NEXT_HANDLE
+    // Register file in VFS
+    let handle = {
+        let mut vfs = VIRTUAL_FS.write().unwrap();
+        vfs.register_file(filename, desired_access, share_mode, flags_and_attributes)
     };
     
-    log::info!("[CreateFileW] Returning mock handle: 0x{:x}", handle);
+    log::info!("[CreateFileW] Created handle: 0x{:x}", handle);
     emu.reg_write(RegisterX86::RAX, handle)?;
     
     Ok(())

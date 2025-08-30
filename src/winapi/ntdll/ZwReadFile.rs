@@ -1,4 +1,5 @@
 use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::vfs::VIRTUAL_FS;
 
 /*
 ZwReadFile function (wdm.h)
@@ -162,22 +163,94 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
         return Ok(());
     }
     
-    // Mock read operation - fill buffer with pattern data
-    let bytes_to_read = std::cmp::min(length as usize, 256); // Cap at 256 bytes for mock
-    let mock_data: Vec<u8> = (0..bytes_to_read).map(|i| (i % 256) as u8).collect();
+    // Check if handle is registered in VFS
+    let (filename, file_data) = {
+        let vfs = VIRTUAL_FS.read().unwrap();
+        if let Some(file_info) = vfs.get_file_info(file_handle) {
+            let filename = file_info.filename.clone();
+            log::info!("[ZwReadFile] Reading from file: '{}'", filename);
+            
+            // Try to read actual file from mock_files
+            let file_data = match vfs.read_mock_file(&filename) {
+                Ok(data) => {
+                    log::info!("[ZwReadFile] Found mock file data for '{}'", filename);
+                    data
+                },
+                Err(_) => {
+                    log::info!("[ZwReadFile] No mock file found for '{}', using pattern data", filename);
+                    // Generate pattern data as fallback
+                    let bytes_to_read = std::cmp::min(length as usize, 256);
+                    (0..bytes_to_read).map(|i| (i % 256) as u8).collect()
+                }
+            };
+            (Some(filename), file_data)
+        } else {
+            log::warn!("[ZwReadFile] Handle 0x{:x} not found in VFS, using pattern data", file_handle);
+            // Generate pattern data for unknown handles
+            let bytes_to_read = std::cmp::min(length as usize, 256);
+            let data = (0..bytes_to_read).map(|i| (i % 256) as u8).collect();
+            (None, data)
+        }
+    };
     
-    // Write mock data to buffer
-    emu.mem_write(buffer, &mock_data)?;
+    // Get current file position
+    let position = {
+        let vfs = VIRTUAL_FS.read().unwrap();
+        vfs.get_file_info(file_handle).map(|fi| fi.position).unwrap_or(0)
+    };
+    
+    // Handle ByteOffset parameter
+    let actual_offset = if let Ok(mut byte_offset_bytes) = emu.mem_read_as_vec(rsp + 0x40, 8) {
+        let byte_offset_ptr = u64::from_le_bytes(byte_offset_bytes.clone().try_into().unwrap());
+        if byte_offset_ptr != 0 {
+            // Read the actual offset value
+            if let Ok(offset_bytes) = emu.mem_read_as_vec(byte_offset_ptr, 8) {
+                let offset = i64::from_le_bytes(offset_bytes.try_into().unwrap());
+                if offset == -1 {
+                    // FILE_USE_FILE_POINTER_POSITION
+                    position
+                } else {
+                    offset as u64
+                }
+            } else {
+                position
+            }
+        } else {
+            position
+        }
+    } else {
+        position
+    };
+    
+    // Read data from the calculated offset
+    let bytes_to_read = std::cmp::min(length as usize, file_data.len().saturating_sub(actual_offset as usize));
+    let data_slice = &file_data[actual_offset as usize..actual_offset as usize + bytes_to_read];
+    
+    // Write data to buffer
+    emu.mem_write(buffer, data_slice)?;
+    
+    // Update file position in VFS
+    {
+        let mut vfs = VIRTUAL_FS.write().unwrap();
+        vfs.update_position(file_handle, actual_offset + bytes_to_read as u64);
+    }
     
     // Set up IO_STATUS_BLOCK (8 bytes Status + 8 bytes Information)
-    let status = STATUS_SUCCESS;
+    let status = if bytes_to_read == 0 && length > 0 {
+        STATUS_END_OF_FILE
+    } else {
+        STATUS_SUCCESS
+    };
     let bytes_read = bytes_to_read as u64;
     
     emu.mem_write(io_status_block, &status.to_le_bytes())?;
     emu.mem_write(io_status_block + 8, &bytes_read.to_le_bytes())?;
     
-    log::info!("[ZwReadFile] Mock read {} bytes", bytes_read);
-    log::warn!("[ZwReadFile] Mock implementation - returned pattern data");
+    if let Some(filename) = filename {
+        log::info!("[ZwReadFile] Read {} bytes from '{}' at offset {}", bytes_read, filename, actual_offset);
+    } else {
+        log::info!("[ZwReadFile] Read {} bytes from handle 0x{:x}", bytes_read, file_handle);
+    }
     
     // Return STATUS_SUCCESS
     emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
