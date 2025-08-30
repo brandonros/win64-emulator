@@ -79,7 +79,7 @@ fn main() -> Result<(), LoaderError> {
     // Dump memory regions
     for region in emulator.get_emu().mem_regions().unwrap() {
         log::info!("Mapped region: 0x{:016x} - 0x{:016x} (size: 0x{:x})", 
-                  region.begin, region.end, region.end - region.begin);
+                  region.begin, region.end, region.end - region.begin + 1);
     }
 
     // Look for specific symbols based on PE type

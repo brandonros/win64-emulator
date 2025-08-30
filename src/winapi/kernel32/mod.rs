@@ -103,3 +103,5 @@ declare_api!(GetWindowsDirectoryW);
 declare_api!(GetTempPathW);
 declare_api!(GetCurrentDirectoryW);
 declare_api!(GetVersion);
+declare_api!(VirtualLock);
+declare_api!(VirtualUnlock);

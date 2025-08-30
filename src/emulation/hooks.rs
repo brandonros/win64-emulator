@@ -276,7 +276,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                     is_jump_or_call = true;
                 }
 
-                if is_jump_or_call || count >= 231106700 {
+                if is_jump_or_call {
                     log::debug!("{}", log_msg);
                 } else {
                     #[cfg(feature = "log-instruction")]

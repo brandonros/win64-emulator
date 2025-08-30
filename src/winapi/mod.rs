@@ -120,6 +120,8 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetTempPathW") => kernel32::GetTempPathW(emu_ref),
         ("kernel32.dll", "GetCurrentDirectoryW") => kernel32::GetCurrentDirectoryW(emu_ref),
         ("kernel32.dll", "GetVersion") => kernel32::GetVersion(emu_ref),
+        ("kernel32.dll", "VirtualLock") => kernel32::VirtualLock(emu_ref),
+        ("kernel32.dll", "VirtualUnlock") => kernel32::VirtualUnlock(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
