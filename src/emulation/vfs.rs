@@ -40,6 +40,32 @@ impl VirtualFileSystem {
         }
     }
     
+    fn normalize_windows_path(&self, filename: &str) -> PathBuf {
+        let mut normalized_filename = if filename.starts_with("\\??\\") {
+            filename[4..].to_string()
+        } else if filename.starts_with("\\") {
+            filename[1..].to_string()
+        } else {
+            filename.to_string()
+        };
+        
+        // Replace C: with /c (and other drive letters)
+        if normalized_filename.len() >= 2 && normalized_filename.chars().nth(1) == Some(':') {
+            let drive_letter = normalized_filename.chars().nth(0).unwrap().to_lowercase().to_string();
+            normalized_filename = format!("/{}{}", drive_letter, &normalized_filename[2..]);
+        }
+        
+        // Replace backslashes with forward slashes
+        normalized_filename = normalized_filename.replace("\\", "/");
+        
+        // Remove leading slash if present to make it a relative path
+        if normalized_filename.starts_with("/") {
+            normalized_filename = normalized_filename[1..].to_string();
+        }
+        
+        self.mock_files_path.join(&normalized_filename)
+    }
+    
     pub fn create_handle(&mut self) -> u64 {
         let handle = self.next_handle;
         self.next_handle += 0x10;
@@ -52,6 +78,11 @@ impl VirtualFileSystem {
         self.handles.insert(handle, file_handle);
         log::debug!("[VFS] Registered handle 0x{:x} for file '{}'", handle, filename);
         handle
+    }
+    
+    pub fn file_exists(&self, filename: &str) -> bool {
+        let file_path = self.normalize_windows_path(filename);
+        file_path.exists()
     }
     
     pub fn get_file_info(&self, handle: u64) -> Option<&FileHandle> {
@@ -77,31 +108,14 @@ impl VirtualFileSystem {
     }
     
     pub fn read_mock_file(&self, filename: &str) -> Result<Vec<u8>, std::io::Error> {
-        let mut normalized_filename = if filename.starts_with("\\??\\") {
-            filename[4..].to_string()
-        } else if filename.starts_with("\\") {
-            filename[1..].to_string()
-        } else {
-            filename.to_string()
-        };
-        
-        // Replace C: with /c (and other drive letters)
-        if normalized_filename.len() >= 2 && normalized_filename.chars().nth(1) == Some(':') {
-            let drive_letter = normalized_filename.chars().nth(0).unwrap().to_lowercase().to_string();
-            normalized_filename = format!("/{}{}", drive_letter, &normalized_filename[2..]);
-        }
-        
-        // Replace backslashes with forward slashes
-        normalized_filename = normalized_filename.replace("\\", "/");
-        
-        let file_path = self.mock_files_path.join(&normalized_filename);
+        let file_path = self.normalize_windows_path(filename);
         
         if file_path.exists() {
             log::info!("[VFS] Reading mock file from: {:?}", file_path);
             std::fs::read(file_path)
         } else {
-            log::debug!("[VFS] Mock file not found: {:?}, will use default mock data", file_path);
-            Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Mock file not found"))
+            panic!("[VFS] Mock file not found: {:?}, will use default mock data", file_path);
+            //Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Mock file not found"))
         }
     }
     

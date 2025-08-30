@@ -323,33 +323,157 @@ pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     emu.mem_read(rsp + 0x38, &mut share_access_bytes)?;
     let share_access = u32::from_le_bytes(share_access_bytes);
     
+    let mut create_disposition_bytes = [0u8; 4];
+    emu.mem_read(rsp + 0x40, &mut create_disposition_bytes)?;
+    let create_disposition = u32::from_le_bytes(create_disposition_bytes);
+    
     let mut create_options_bytes = [0u8; 4];
     emu.mem_read(rsp + 0x48, &mut create_options_bytes)?;
     let create_options = u32::from_le_bytes(create_options_bytes);
     
-    // Register file in VFS and create handle
-    let mock_handle = {
-        let mut vfs = VIRTUAL_FS.write().unwrap();
-        if let Some(filename) = filename {
-            log::info!("[ZwCreateFile] Registering file '{}' in VFS", filename);
-            vfs.register_file(filename, desired_access, share_access, create_options)
-        } else {
-            log::info!("[ZwCreateFile] Creating handle for unnamed file");
-            vfs.register_file("<unnamed>".to_string(), desired_access, share_access, create_options)
+    // CreateDisposition constants
+    const FILE_SUPERSEDE: u32 = 0x00000000;
+    const FILE_CREATE: u32 = 0x00000002;
+    const FILE_OPEN: u32 = 0x00000001;
+    const FILE_OPEN_IF: u32 = 0x00000003;
+    const FILE_OVERWRITE: u32 = 0x00000004;
+    const FILE_OVERWRITE_IF: u32 = 0x00000005;
+    
+    // Information constants for IO_STATUS_BLOCK
+    const FILE_CREATED: u64 = 0x00000002;
+    const FILE_OPENED: u64 = 0x00000001;
+    const FILE_OVERWRITTEN: u64 = 0x00000003;
+    const FILE_SUPERSEDED: u64 = 0x00000000;
+    const FILE_EXISTS: u64 = 0x00000004;
+    const FILE_DOES_NOT_EXIST: u64 = 0x00000005;
+    
+    log::info!("[ZwCreateFile] CreateDisposition: 0x{:x}", create_disposition);
+    
+    // Check if file exists and determine action based on CreateDisposition
+    let (file_exists, filename_str) = if let Some(ref fn_str) = filename {
+        let exists = {
+            let vfs = VIRTUAL_FS.read().unwrap();
+            vfs.file_exists(fn_str)
+        };
+        (exists, fn_str.clone())
+    } else {
+        (false, "<unnamed>".to_string())
+    };
+    
+    // Determine action based on CreateDisposition
+    let (should_proceed, information) = match create_disposition {
+        FILE_SUPERSEDE => {
+            // Replace if exists, create if not
+            if file_exists {
+                log::info!("[ZwCreateFile] FILE_SUPERSEDE: Replacing existing file '{}'" , filename_str);
+                (true, FILE_SUPERSEDED)
+            } else {
+                log::info!("[ZwCreateFile] FILE_SUPERSEDE: Creating new file '{}'", filename_str);
+                (true, FILE_CREATED)
+            }
+        },
+        FILE_CREATE => {
+            // Error if exists, create if not
+            if file_exists {
+                log::warn!("[ZwCreateFile] FILE_CREATE: File '{}' already exists", filename_str);
+                (false, FILE_EXISTS)
+            } else {
+                log::info!("[ZwCreateFile] FILE_CREATE: Creating new file '{}'", filename_str);
+                (true, FILE_CREATED)
+            }
+        },
+        FILE_OPEN => {
+            // Open if exists, error if not
+            if file_exists {
+                log::info!("[ZwCreateFile] FILE_OPEN: Opening existing file '{}'", filename_str);
+                (true, FILE_OPENED)
+            } else {
+                log::warn!("[ZwCreateFile] FILE_OPEN: File '{}' does not exist", filename_str);
+                (false, FILE_DOES_NOT_EXIST)
+            }
+        },
+        FILE_OPEN_IF => {
+            // Open if exists, create if not
+            if file_exists {
+                log::info!("[ZwCreateFile] FILE_OPEN_IF: Opening existing file '{}'", filename_str);
+                (true, FILE_OPENED)
+            } else {
+                log::info!("[ZwCreateFile] FILE_OPEN_IF: Creating new file '{}'", filename_str);
+                (true, FILE_CREATED)
+            }
+        },
+        FILE_OVERWRITE => {
+            // Overwrite if exists, error if not
+            if file_exists {
+                log::info!("[ZwCreateFile] FILE_OVERWRITE: Overwriting existing file '{}'", filename_str);
+                (true, FILE_OVERWRITTEN)
+            } else {
+                log::warn!("[ZwCreateFile] FILE_OVERWRITE: File '{}' does not exist", filename_str);
+                (false, FILE_DOES_NOT_EXIST)
+            }
+        },
+        FILE_OVERWRITE_IF => {
+            // Overwrite if exists, create if not
+            if file_exists {
+                log::info!("[ZwCreateFile] FILE_OVERWRITE_IF: Overwriting existing file '{}'", filename_str);
+                (true, FILE_OVERWRITTEN)
+            } else {
+                log::info!("[ZwCreateFile] FILE_OVERWRITE_IF: Creating new file '{}'", filename_str);
+                (true, FILE_CREATED)
+            }
+        },
+        _ => {
+            log::warn!("[ZwCreateFile] Unknown CreateDisposition: 0x{:x}, defaulting to FILE_OPEN_IF", create_disposition);
+            if file_exists {
+                (true, FILE_OPENED)
+            } else {
+                (true, FILE_CREATED)
+            }
         }
     };
     
-    // Write the handle to the FileHandle pointer
-    emu.mem_write(file_handle, &mock_handle.to_le_bytes())?;
-    
-    // Set up IO_STATUS_BLOCK (8 bytes Status + 8 bytes Information)
-    let status = STATUS_SUCCESS;
-    let information = 1u64; // FILE_OPENED
-    
-    emu.mem_write(io_status_block, &status.to_le_bytes())?;
-    emu.mem_write(io_status_block + 8, &information.to_le_bytes())?;
-    
-    log::info!("[ZwCreateFile] Created file handle: 0x{:x}", mock_handle);
+    // Handle based on whether we should proceed
+    if should_proceed {
+        // Register file in VFS and create handle
+        let mock_handle = {
+            let mut vfs = VIRTUAL_FS.write().unwrap();
+            log::info!("[ZwCreateFile] Registering file '{}' in VFS", filename_str);
+            vfs.register_file(filename_str, desired_access, share_access, create_options)
+        };
+        
+        // Write the handle to the FileHandle pointer
+        emu.mem_write(file_handle, &mock_handle.to_le_bytes())?;
+        
+        // Set up IO_STATUS_BLOCK with success
+        let status = STATUS_SUCCESS;
+        emu.mem_write(io_status_block, &status.to_le_bytes())?;
+        emu.mem_write(io_status_block + 8, &information.to_le_bytes())?;
+        
+        log::info!("[ZwCreateFile] Created file handle: 0x{:x}, Information: {}", mock_handle, information);
+        emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+    } else {
+        // Handle error cases
+        const STATUS_OBJECT_NAME_COLLISION: u32 = 0xC0000035;
+        const STATUS_OBJECT_NAME_NOT_FOUND: u32 = 0xC0000034;
+        const INVALID_HANDLE_VALUE: u64 = 0xFFFFFFFFFFFFFFFF;
+        
+        // Write invalid handle
+        emu.mem_write(file_handle, &INVALID_HANDLE_VALUE.to_le_bytes())?;
+        
+        // Determine error status
+        let error_status = if information == FILE_EXISTS {
+            STATUS_OBJECT_NAME_COLLISION
+        } else {
+            STATUS_OBJECT_NAME_NOT_FOUND
+        };
+        
+        // Set up IO_STATUS_BLOCK with error
+        emu.mem_write(io_status_block, &error_status.to_le_bytes())?;
+        emu.mem_write(io_status_block + 8, &information.to_le_bytes())?;
+        
+        log::info!("[ZwCreateFile] Failed with status: 0x{:x}", error_status);
+        emu.reg_write(RegisterX86::RAX, error_status as u64)?;
+    }
     
     // Return STATUS_SUCCESS
     emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
