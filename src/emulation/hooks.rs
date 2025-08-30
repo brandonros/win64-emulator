@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::{MemType, RegisterX86, Unicorn};
 
-use crate::emulation::memory::{STACK_BASE, STACK_SIZE};
+use crate::emulation::memory::{HEAP_BASE, HEAP_SIZE, STACK_BASE, STACK_SIZE};
 use crate::emulation::{iat_hooks, memory, RegisterState};
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 
@@ -83,11 +83,38 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
 
     // check if stack has an issue
     let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
-    if (rsp & 0x7) != 0 {
-        panic!("Stack misalignment detected! RSP=0x{:x}", rsp);
+    
+    // Check if we're executing from heap (dynamic code)
+    let executing_from_heap = addr >= HEAP_BASE && addr < HEAP_BASE + HEAP_SIZE as u64;
+    let rsp_in_heap = rsp >= HEAP_BASE && rsp < HEAP_BASE + HEAP_SIZE as u64;
+    
+    if executing_from_heap {
+        log::warn!("🔥 Executing code from HEAP at 0x{:x}", addr);
+        
+        if rsp_in_heap {
+            // This is EXPECTED for unpacked/shellcode
+            log::info!("📦 Unpacked code using heap stack: RSP=0x{:x}", rsp);
+            // Allow it - don't panic!
+        }
+    } else {
+        // Only enforce stack bounds for normal code
+        if rsp < STACK_BASE || rsp >= STACK_BASE + STACK_SIZE as u64 {
+            // But if RSP is in heap while executing normal code, that's suspicious
+            if rsp_in_heap {
+                log::error!("⚠️ Regular code with heap RSP! addr=0x{:x}, RSP=0x{:x}", addr, rsp);
+            }
+            panic!("Stack pointer out of bounds! RSP=0x{:x}", rsp);
+        }
     }
-    if rsp < STACK_BASE || rsp >= STACK_BASE + STACK_SIZE as u64 {
-        panic!("Stack pointer out of bounds! RSP=0x{:x}", rsp);
+    
+    // Check stack alignment (but be lenient for shellcode)
+    if (rsp & 0x7) != 0 {
+        if executing_from_heap {
+            log::debug!("Stack misalignment in heap code (common in shellcode): RSP=0x{:x}", rsp);
+            // Don't panic - shellcode often doesn't care about alignment
+        } else {
+            panic!("Stack misalignment detected! RSP=0x{:x}", rsp);
+        }
     }
 
     // check if it is a missed non-intercepted winapi IAT call
