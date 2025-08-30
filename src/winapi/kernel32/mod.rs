@@ -94,3 +94,4 @@ declare_api!(CompareStringW);
 declare_api!(GetSystemInfo);
 declare_api!(GetTickCount);
 declare_api!(GetModuleFileNameW);
+declare_api!(GetCommandLineW);
