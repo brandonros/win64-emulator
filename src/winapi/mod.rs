@@ -55,6 +55,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetModuleHandleA") => kernel32::GetModuleHandleA(emu_ref),
         ("kernel32.dll", "GetOEMCP") => kernel32::GetOEMCP(emu_ref),
         ("kernel32.dll", "GetComputerNameA") => kernel32::GetComputerNameA(emu_ref),
+        ("kernel32.dll", "GetComputerNameW") => kernel32::GetComputerNameW(emu_ref),
         ("kernel32.dll", "GetProcAddress") => kernel32::GetProcAddress(emu_ref),
         ("kernel32.dll", "GetProcessHeap") => kernel32::GetProcessHeap(emu_ref),
         ("kernel32.dll", "GetStartupInfoA") => kernel32::GetStartupInfoA(emu_ref),
@@ -112,9 +113,13 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetTickCount") => kernel32::GetTickCount(emu_ref),
         ("kernel32.dll", "GetModuleFileNameW") => kernel32::GetModuleFileNameW(emu_ref),
         ("kernel32.dll", "GetCommandLineW") => kernel32::GetCommandLineW(emu_ref),
+        ("kernel32.dll", "GetSystemDirectoryW") => kernel32::GetSystemDirectoryW(emu_ref),
+        ("kernel32.dll", "GetFullPathNameW") => kernel32::GetFullPathNameW(emu_ref),
+        ("kernel32.dll", "GetWindowsDirectoryW") => kernel32::GetWindowsDirectoryW(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
+        ("user32.dll", "CharLowerBuffW") => user32::CharLowerBuffW(emu_ref),
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),

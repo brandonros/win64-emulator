@@ -96,3 +96,7 @@ declare_api!(GetTickCount);
 declare_api!(GetModuleFileNameW);
 declare_api!(GetCommandLineW);
 declare_api!(GetComputerNameA);
+declare_api!(GetComputerNameW);
+declare_api!(GetSystemDirectoryW);
+declare_api!(GetFullPathNameW);
+declare_api!(GetWindowsDirectoryW);
