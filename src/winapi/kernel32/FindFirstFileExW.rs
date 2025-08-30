@@ -176,7 +176,6 @@ The fileapi.h header defines FindFirstFileEx as an alias that automatically sele
 */
 
 use unicorn_engine::{Unicorn, RegisterX86};
-use crate::emulation::utils::read_wide_string;
 use crate::emulation::memory;
 use crate::emulation::vfs::VIRTUAL_FS;
 use std::collections::HashMap;
@@ -218,7 +217,7 @@ pub fn FindFirstFileExW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     let additional_flags = u32::from_le_bytes(additional_flags_bytes);
     
     // Read the file name string
-    let file_name = read_wide_string(emu, file_name_ptr);
+    let file_name = memory::read_wide_string_from_memory(emu, file_name_ptr)?;
     
     log::info!(
         "[FindFirstFileExW] lpFileName: \"{}\", fInfoLevelId: 0x{:x}, lpFindFileData: 0x{:x}, fSearchOp: 0x{:x}, lpSearchFilter: 0x{:x}, dwAdditionalFlags: 0x{:x}",
