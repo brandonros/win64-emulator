@@ -7,6 +7,7 @@ mod kernel32;
 mod user32;
 mod ntdll;
 mod oleaut32;
+mod advapi32;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,
@@ -125,6 +126,10 @@ pub fn handle_winapi_call<D>(
         ("oleaut32.dll", "SysReAllocStringLen") => oleaut32::SysReAllocStringLen(emu_ref),
         ("oleaut32.dll", "SysAllocStringLen") => oleaut32::SysAllocStringLen(emu_ref),
         ("oleaut32.dll", "VariantClear") => oleaut32::VariantClear(emu_ref),
+        ("oleaut32.dll", "SysFreeString") => oleaut32::SysFreeString(emu_ref),
+
+        // advapi32
+        ("advapi32.dll", "GetUserNameA") => advapi32::GetUserNameA(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);

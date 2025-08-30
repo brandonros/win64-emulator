@@ -8,7 +8,4 @@ macro_rules! declare_api {
     };
 }
 
-declare_api!(SysReAllocStringLen);
-declare_api!(SysAllocStringLen);
-declare_api!(VariantClear);
-declare_api!(SysFreeString);
+declare_api!(GetUserNameA);
