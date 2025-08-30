@@ -23,10 +23,14 @@ pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::u
         if let Some(module) = registry.get_loaded_module_by_module_base(h_module) {
             // Return a mock path based on the module name
             match module.name.as_str() {
+                "main.exe" | "main" => "C:\\Program Files\\Application\\main.exe",
                 "kernel32.dll" | "kernel32" => "C:\\Windows\\System32\\kernel32.dll",
                 "user32.dll" | "user32" => "C:\\Windows\\System32\\user32.dll",
                 "ntdll.dll" | "ntdll" => "C:\\Windows\\System32\\ntdll.dll",
                 "ole32.dll" | "ole32" => "C:\\Windows\\System32\\ole32.dll",
+                "oleaut32.dll" | "oleaut32" => "C:\\Windows\\System32\\oleaut32.dll",
+                "msvcrt.dll" | "msvcrt" => "C:\\Windows\\System32\\msvcrt.dll",
+                "advapi32.dll" | "advapi32" => "C:\\Windows\\System32\\advapi32.dll",
                 _ => {
                     log::error!("unmapped module.name: {}", module.name);
                     panic!("TODO");

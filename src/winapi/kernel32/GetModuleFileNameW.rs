@@ -23,6 +23,7 @@ pub fn GetModuleFileNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::u
         if let Some(module) = registry.get_loaded_module_by_module_base(h_module) {
             // Return a mock path based on the module name
             match module.name.as_str() {
+                "main.exe" | "main" => "C:\\Program Files\\Application\\main.exe",
                 "kernel32.dll" | "kernel32" => "C:\\Windows\\System32\\kernel32.dll",
                 "user32.dll" | "user32" => "C:\\Windows\\System32\\user32.dll",
                 "ntdll.dll" | "ntdll" => "C:\\Windows\\System32\\ntdll.dll",

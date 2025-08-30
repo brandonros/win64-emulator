@@ -100,3 +100,4 @@ declare_api!(GetComputerNameW);
 declare_api!(GetSystemDirectoryW);
 declare_api!(GetFullPathNameW);
 declare_api!(GetWindowsDirectoryW);
+declare_api!(GetTempPathW);

@@ -8,6 +8,7 @@ mod user32;
 mod ntdll;
 mod oleaut32;
 mod advapi32;
+mod shell32;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,
@@ -116,6 +117,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "GetSystemDirectoryW") => kernel32::GetSystemDirectoryW(emu_ref),
         ("kernel32.dll", "GetFullPathNameW") => kernel32::GetFullPathNameW(emu_ref),
         ("kernel32.dll", "GetWindowsDirectoryW") => kernel32::GetWindowsDirectoryW(emu_ref),
+        ("kernel32.dll", "GetTempPathW") => kernel32::GetTempPathW(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
@@ -137,6 +139,9 @@ pub fn handle_winapi_call<D>(
         // advapi32
         ("advapi32.dll", "GetUserNameA") => advapi32::GetUserNameA(emu_ref),
         ("advapi32.dll", "GetUserNameW") => advapi32::GetUserNameW(emu_ref),
+
+        // shell32
+        ("shell32.dll", "SHGetFolderPathW") => shell32::SHGetFolderPathW(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);

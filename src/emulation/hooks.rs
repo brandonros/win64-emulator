@@ -114,7 +114,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     let mock_func_end = MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64;
     let is_winapi_call = addr >= MOCK_FUNCTION_BASE && addr < mock_func_end;
     if is_winapi_call {
-        panic!("reached winapi_call without iat hook/mock");
+        panic!("reached winapi_call without iat hook/mock at {addr:x}");
     }
 
     // Initialize start time on first call
