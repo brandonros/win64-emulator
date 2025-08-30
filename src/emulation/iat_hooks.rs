@@ -6,10 +6,10 @@ use crate::{emulation::iat::IAT_FUNCTION_MAP, pe::constants::*, winapi};
 pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, instruction_size: u32, addr: u64, count: u64) {
     let mnemonic = instruction.mnemonic();
     
-    // Handle both CALL and JMP instructions
+    // Handle CALL, JMP, and RET instructions
     if (mnemonic == Mnemonic::Call || mnemonic == Mnemonic::Jmp) && instruction.op_count() > 0 {
         let instruction_type = if mnemonic == Mnemonic::Call { "CALL" } else { "JMP" };
-        log::trace!("{} instruction detected at 0x{:x}: {:?}", instruction_type, addr, instruction);
+        //log::trace!("{} instruction detected at 0x{:x}: {:?}", instruction_type, addr, instruction);
         
         // Add detailed logging about the call/jmp type
         match instruction.op0_kind() {
@@ -26,16 +26,53 @@ pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, ins
                 
                 if let Some(target_addr) = get_indirect_call_target(&instruction, instruction_size, emu, addr) {
                     log::trace!("Calculated target address: 0x{:x}", target_addr);
-                    handle_potential_iat_call(target_addr, emu, addr, &instruction, instruction_size, count, mnemonic == Mnemonic::Jmp);
+                    
+                    // Check if the target address is in valid memory range
+                    if !is_valid_memory_address(emu, target_addr) {
+                        log::error!("Target address 0x{:x} is not in valid memory range!", target_addr);
+                        return;
+                    }
+                    
+                    // Read the function pointer from the calculated address
+                    if let Some(func_ptr) = read_function_pointer(emu, target_addr) {
+                        log::trace!("✓ Successfully read function pointer 0x{:x} from [0x{:x}]", func_ptr, target_addr);
+                        
+                        // Check if this points to our mock function area (IAT call)
+                        if is_mock_function_address(func_ptr) {
+                            log::trace!("✓ Detected IAT call through [0x{:016x}] -> 0x{:016x} (in mock range)", target_addr, func_ptr);
+                            handle_iat_function_call(func_ptr, emu, addr, &instruction, count, mnemonic == Mnemonic::Jmp);
+                        } else {
+                            log::trace!("✗ Function pointer 0x{:x} is NOT in mock function range, skipping IAT handling", func_ptr);
+                        }
+                    } else {
+                        log::error!("✗ Failed to read function pointer from [0x{:x}]", target_addr);
+                    }
                 } else {
                     log::warn!("Failed to calculate target address for indirect {} at 0x{:x}", instruction_type.to_lowercase(), addr);
                 }
             }
             OpKind::NearBranch64 => {
-                log::trace!("Direct {} to 0x{:x} (not IAT)", instruction_type.to_lowercase(), instruction.near_branch64());
+                // TODO: how do we know it's not IAT?
+                //log::trace!("Direct {} to 0x{:x} (not IAT)", instruction_type.to_lowercase(), instruction.near_branch64());
             }
             OpKind::Register => {
-                log::trace!("Register {} (not IAT) - register: {:?}", instruction_type.to_lowercase(), instruction.op0_register());
+                log::trace!("Register {} - register: {:?}", instruction_type.to_lowercase(), instruction.op0_register());
+                
+                // Get the value from the register
+                if let Some(unicorn_reg) = map_iced_to_unicorn_register(instruction.op0_register()) {
+                    let register_value = emu.reg_read(unicorn_reg).unwrap();
+                    log::trace!("Register value: 0x{:x}", register_value);
+                    
+                    // Check if this is a call/jump to a mock function address
+                    if is_mock_function_address(register_value) {
+                        log::trace!("✓ Register contains mock function address, handling as IAT call");
+                        handle_iat_function_call(register_value, emu, addr, &instruction, count, mnemonic == Mnemonic::Jmp);
+                    } else {
+                        log::trace!("✗ Register value 0x{:x} is not a mock function address", register_value);
+                    }
+                } else {
+                    log::warn!("Unsupported register for IAT check: {:?}", instruction.op0_register());
+                }
             }
             _ => {
                 log::trace!("Other {} type: {:?}", instruction_type.to_lowercase(), instruction.op0_kind());
@@ -264,77 +301,17 @@ fn map_iced_to_unicorn_register(reg: Register) -> Option<RegisterX86> {
     }
 }
 
-/// Handle a potential IAT call by checking if the target points to mock functions
-fn handle_potential_iat_call<D>(
-    target_addr: u64,
+/// Handle an IAT function call with the given function pointer
+fn handle_iat_function_call<D>(
+    func_ptr: u64,
     emu: &mut Unicorn<D>,
     addr: u64,
     instruction: &Instruction,
-    _instruction_size: u32,
     count: u64,
     is_jmp: bool
 ) {
     log::trace!("=== IAT {} HANDLER ===", if is_jmp { "JMP" } else { "CALL" });
-    log::trace!("Target address to read from: 0x{:x}", target_addr);
-    
-    // Check if the target address is in valid memory range
-    if !is_valid_memory_address(emu, target_addr) {
-        log::error!("Target address 0x{:x} is not in valid memory range!", target_addr);
-        log::error!("Memory regions should be checked here");
-        return;
-    }
-    
-    // Read the function pointer from the calculated address
-    let func_ptr = match read_function_pointer(emu, target_addr) {
-        Some(ptr) => {
-            log::trace!("✓ Successfully read function pointer 0x{:x} from [0x{:x}]", ptr, target_addr);
-            ptr
-        },
-        None => {
-            log::error!("✗ Failed to read function pointer from [0x{:x}]", target_addr);
-            
-            // Additional debugging for memory read failure
-            let mut test_bytes = [0u8; 8];
-            match emu.mem_read(target_addr, &mut test_bytes) {
-                Ok(_) => {
-                    let value = u64::from_le_bytes(test_bytes);
-                    log::error!("  Raw memory read succeeded, got: 0x{:016x}", value);
-                    log::error!("  This suggests the read_function_pointer function has a bug");
-                }
-                Err(e) => {
-                    log::error!("  Raw memory read failed: {:?}", e);
-                    log::error!("  Memory address 0x{:x} is not accessible", target_addr);
-                    
-                    // Try to read nearby addresses to understand the memory layout
-                    for offset in [-16i64, -8, 0, 8, 16] {
-                        let test_addr = (target_addr as i64 + offset) as u64;
-                        let mut nearby_bytes = [0u8; 8];
-                        match emu.mem_read(test_addr, &mut nearby_bytes) {
-                            Ok(_) => {
-                                let nearby_value = u64::from_le_bytes(nearby_bytes);
-                                log::error!("  [0x{:x}] = 0x{:016x} ✓", test_addr, nearby_value);
-                            }
-                            Err(_) => {
-                                log::error!("  [0x{:x}] = <unreadable> ✗", test_addr);
-                            }
-                        }
-                    }
-                }
-            }
-            return;
-        }
-    };
-    
-    // Check if this points to our mock function area (IAT call)
-    log::trace!("Checking if 0x{:x} is in mock function range [0x{:x} - 0x{:x}]", 
-               func_ptr, MOCK_FUNCTION_BASE, MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64);
-    
-    if !is_mock_function_address(func_ptr) {
-        log::trace!("✗ Function pointer 0x{:x} is NOT in mock function range, skipping IAT handling", func_ptr);
-        return;
-    }
-    
-    log::trace!("✓ Detected IAT call through [0x{:016x}] -> 0x{:016x} (in mock range)", target_addr, func_ptr);
+    log::trace!("Function pointer: 0x{:x}", func_ptr);
     
     // Look up and handle the API function
     if let Some((dll_name, func_name)) = lookup_iat_function(func_ptr) {
