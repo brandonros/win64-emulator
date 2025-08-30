@@ -1,3 +1,7 @@
+use unicorn_engine::{Unicorn, RegisterX86};
+use windows_sys::Win32::Foundation::UNICODE_STRING;
+use crate::emulation::memory;
+
 /*
 ZwCreateFile function (wdm.h)
 01/13/2023
@@ -125,8 +129,8 @@ FILE_OPEN_REPARSE_POINT	Open a file with a reparse point and bypass normal repar
 FILE_DELETE_ON_CLOSE	The system deletes the file when the last handle to the file is passed to ZwClose. If this flag is set, the DELETE flag must be set in the DesiredAccess parameter.
 FILE_OPEN_BY_FILE_ID	The file name that is specified by the ObjectAttributes parameter includes a binary 8-byte or 16-byte file reference number or object ID for the file, depending on the file system as shown below. Optionally, a device name followed by a backslash character may proceed these binary values. For example, a device name will have the following format:
 
-??\C:\FileID
-\device\HardDiskVolume1\ObjectID
+??\\C:\\FileID
+\\device\\HardDiskVolume1\\ObjectID
 
 where FileID is 8 bytes and ObjectID is 16 bytes.
 
@@ -247,3 +251,86 @@ For calls from kernel-mode drivers, the NtXxx and ZwXxx versions of a Windows Na
 
 Requirements
 */
+
+pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+    // NTSTATUS ZwCreateFile(
+    //   [out]          PHANDLE            FileHandle,       // RCX
+    //   [in]           ACCESS_MASK        DesiredAccess,    // RDX
+    //   [in]           POBJECT_ATTRIBUTES ObjectAttributes, // R8
+    //   [out]          PIO_STATUS_BLOCK   IoStatusBlock,    // R9
+    //   [in, optional] PLARGE_INTEGER     AllocationSize,   // [RSP+0x28]
+    //   [in]           ULONG              FileAttributes,   // [RSP+0x30]
+    //   [in]           ULONG              ShareAccess,      // [RSP+0x38]
+    //   [in]           ULONG              CreateDisposition,// [RSP+0x40]
+    //   [in]           ULONG              CreateOptions,    // [RSP+0x48]
+    //   [in, optional] PVOID              EaBuffer,         // [RSP+0x50]
+    //   [in]           ULONG              EaLength          // [RSP+0x58]
+    // )
+    
+    let file_handle = emu.reg_read(RegisterX86::RCX)?;
+    let desired_access = emu.reg_read(RegisterX86::RDX)? as u32;
+    let object_attributes = emu.reg_read(RegisterX86::R8)?;
+    let io_status_block = emu.reg_read(RegisterX86::R9)?;
+    
+    log::info!("[ZwCreateFile] FileHandle: 0x{:x}", file_handle);
+    log::info!("[ZwCreateFile] DesiredAccess: 0x{:x}", desired_access);
+    log::info!("[ZwCreateFile] ObjectAttributes: 0x{:x}", object_attributes);
+    log::info!("[ZwCreateFile] IoStatusBlock: 0x{:x}", io_status_block);
+    
+    // Try to read the filename from OBJECT_ATTRIBUTES
+    if object_attributes != 0 {
+        // Read ObjectName pointer (offset 0x10 in OBJECT_ATTRIBUTES)
+        let mut object_name_ptr_bytes = [0u8; 8];
+        if emu.mem_read(object_attributes + 0x10, &mut object_name_ptr_bytes).is_ok() {
+            let object_name_ptr = u64::from_le_bytes(object_name_ptr_bytes);
+            
+            if object_name_ptr != 0 {
+                // Read UNICODE_STRING structure
+                if let Ok(unicode_str) = memory::read_struct::<UNICODE_STRING>(emu, object_name_ptr) {
+                    if unicode_str.Buffer as u64 != 0 && unicode_str.Length > 0 {
+                        let filename = memory::read_wide_string_from_memory(emu, unicode_str.Buffer as u64);
+                        if let Ok(filename) = filename {
+                            log::info!("[ZwCreateFile] Filename: '{}'", filename);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // NTSTATUS constants
+    const STATUS_SUCCESS: u32 = 0x00000000;
+    const STATUS_INVALID_PARAMETER: u32 = 0xC000000D;
+    
+    // Check for required parameters
+    if file_handle == 0 || io_status_block == 0 {
+        log::error!("[ZwCreateFile] NULL pointer in required parameters");
+        emu.reg_write(RegisterX86::RAX, STATUS_INVALID_PARAMETER as u64)?;
+        return Ok(());
+    }
+    
+    // Create a unique mock file handle
+    static mut NEXT_FILE_HANDLE: u64 = 0x500;
+    let mock_handle = unsafe {
+        NEXT_FILE_HANDLE += 0x10;
+        NEXT_FILE_HANDLE
+    };
+    
+    // Write the handle to the FileHandle pointer
+    emu.mem_write(file_handle, &mock_handle.to_le_bytes())?;
+    
+    // Set up IO_STATUS_BLOCK (8 bytes Status + 8 bytes Information)
+    let status = STATUS_SUCCESS;
+    let information = 1u64; // FILE_OPENED
+    
+    emu.mem_write(io_status_block, &status.to_le_bytes())?;
+    emu.mem_write(io_status_block + 8, &information.to_le_bytes())?;
+    
+    log::info!("[ZwCreateFile] Created mock file handle: 0x{:x}", mock_handle);
+    log::warn!("[ZwCreateFile] Mock implementation - always returns success");
+    
+    // Return STATUS_SUCCESS
+    emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+    
+    Ok(())
+}
