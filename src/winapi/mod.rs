@@ -128,12 +128,14 @@ pub fn handle_winapi_call<D>(
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),
         ("ntdll.dll", "RtlCaptureContext") => ntdll::RtlCaptureContext(emu_ref),
-        ("ntdll.dll", "RtlLookupFunctionEntry") => ntdll::RtlLookupFunctionEntry(emu_ref),
-        ("ntdll.dll", "RtlVirtualUnwind") => ntdll::RtlVirtualUnwind(emu_ref),
-        ("ntdll.dll", "RtlUnwindEx") => ntdll::RtlUnwindEx(emu_ref),
         ("ntdll.dll", "RtlDosPathNameToNtPathName_U") => ntdll::RtlDosPathNameToNtPathName_U(emu_ref),
-        ("ntdll.dll", "ZwCreateFile") => ntdll::ZwCreateFile(emu_ref),
         ("ntdll.dll", "RtlFreeUnicodeString") => ntdll::RtlFreeUnicodeString(emu_ref),
+        ("ntdll.dll", "RtlLookupFunctionEntry") => ntdll::RtlLookupFunctionEntry(emu_ref),
+        ("ntdll.dll", "RtlUnwindEx") => ntdll::RtlUnwindEx(emu_ref),
+        ("ntdll.dll", "RtlVirtualUnwind") => ntdll::RtlVirtualUnwind(emu_ref),
+        ("ntdll.dll", "ZwClose") => ntdll::ZwClose(emu_ref),        
+        ("ntdll.dll", "ZwCreateFile") => ntdll::ZwCreateFile(emu_ref),
+        ("ntdll.dll", "ZwReadFile") => ntdll::ZwReadFile(emu_ref),
         ("ntdll.dll", "ZwSetInformationFile") => ntdll::ZwSetInformationFile(emu_ref),
 
         // oleaut32

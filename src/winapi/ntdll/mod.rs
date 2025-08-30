@@ -17,3 +17,5 @@ declare_api!(RtlDosPathNameToNtPathName_U);
 declare_api!(ZwCreateFile);
 declare_api!(RtlFreeUnicodeString);
 declare_api!(ZwSetInformationFile);
+declare_api!(ZwReadFile);
+declare_api!(ZwClose);
