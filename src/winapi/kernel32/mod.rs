@@ -91,3 +91,4 @@ declare_api!(FreeResource);
 declare_api!(CompareStringA);
 declare_api!(EnumCalendarInfoA);
 declare_api!(CompareStringW);
+declare_api!(GetSystemInfo);
