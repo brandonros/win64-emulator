@@ -303,8 +303,9 @@ pub fn ZwQueryInformationFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             }
             
             _ => {
-                log::warn!("[ZwQueryInformationFile] Unsupported FileInformationClass: {}", info_class);
-                (STATUS_INVALID_INFO_CLASS, 0)
+                //log::warn!("[ZwQueryInformationFile] Unsupported FileInformationClass: {}", info_class);
+                //(STATUS_INVALID_INFO_CLASS, 0)
+                panic!("[ZwQueryInformationFile] Unsupported FileInformationClass: {}", info_class);
             }
         }
     } else {
