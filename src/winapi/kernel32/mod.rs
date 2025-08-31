@@ -108,3 +108,4 @@ declare_api!(VirtualUnlock);
 declare_api!(FindFirstFileExW);
 declare_api!(CreateMutexA);
 declare_api!(GetSystemFirmwareTable);
+declare_api!(GlobalAddAtomA);
