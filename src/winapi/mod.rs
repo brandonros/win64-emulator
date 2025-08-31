@@ -13,6 +13,7 @@ mod version;
 mod uxtheme;
 mod ole32;
 mod gdi32;
+mod comctl32;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,
@@ -182,6 +183,10 @@ pub fn handle_winapi_call<D>(
 
         // gdi32
         ("gdi32.dll", "CreateFontIndirectA") => gdi32::CreateFontIndirectA(emu_ref),
+
+        // comctl32
+        ("comctl32.dll", "InitCommonControls") => comctl32::InitCommonControls(emu_ref),
+        ("comctl32.dll", "InitCommonControlsEx") => comctl32::InitCommonControlsEx(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
