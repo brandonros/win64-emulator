@@ -9,6 +9,7 @@ mod ntdll;
 mod oleaut32;
 mod advapi32;
 mod shell32;
+mod version;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,
@@ -157,6 +158,9 @@ pub fn handle_winapi_call<D>(
 
         // shell32
         ("shell32.dll", "SHGetFolderPathW") => shell32::SHGetFolderPathW(emu_ref),
+
+        // version
+        ("version.dll", "GetFileVersionInfoSizeA") => version::GetFileVersionInfoSizeA(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
