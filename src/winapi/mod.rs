@@ -168,6 +168,7 @@ pub fn handle_winapi_call<D>(
 
         // uxtheme
         ("uxtheme.dll", "IsAppThemed") => uxtheme::IsAppThemed(emu_ref),
+        ("uxtheme.dll", "IsThemeActive") => uxtheme::IsThemeActive(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
