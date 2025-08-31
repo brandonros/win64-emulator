@@ -11,3 +11,5 @@ macro_rules! declare_api {
 declare_api!(GetSystemMetrics);
 declare_api!(CharLowerBuffW);
 declare_api!(SystemParametersInfoA);
+declare_api!(LoadIconA);
+declare_api!(LoadCursorA);

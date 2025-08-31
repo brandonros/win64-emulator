@@ -134,6 +134,8 @@ pub fn handle_winapi_call<D>(
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
         ("user32.dll", "CharLowerBuffW") => user32::CharLowerBuffW(emu_ref),
         ("user32.dll", "SystemParametersInfoA") => user32::SystemParametersInfoA(emu_ref),
+        ("user32.dll", "LoadIconA") => user32::LoadIconA(emu_ref),
+        ("user32.dll", "LoadCursorA") => user32::LoadCursorA(emu_ref),
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),
