@@ -143,6 +143,7 @@ pub fn handle_winapi_call<D>(
         ("ntdll.dll", "ZwReadFile") => ntdll::ZwReadFile(emu_ref),
         ("ntdll.dll", "ZwSetInformationFile") => ntdll::ZwSetInformationFile(emu_ref),
         ("ntdll.dll", "NtSetInformationThread") => ntdll::NtSetInformationThread(emu_ref),
+        ("ntdll.dll", "ZwQueryInformationFile") => ntdll::ZwQueryInformationFile(emu_ref),
 
         // oleaut32
         ("oleaut32.dll", "SysReAllocStringLen") => oleaut32::SysReAllocStringLen(emu_ref),

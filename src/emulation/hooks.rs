@@ -277,7 +277,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
                 }
 
                 if is_jump_or_call {
-                    log::debug!("{}", log_msg);
+                    //log::debug!("{}", log_msg);
                 } else {
                     #[cfg(feature = "log-instruction")]
                     log::debug!("{}", log_msg);

@@ -20,3 +20,4 @@ declare_api!(ZwSetInformationFile);
 declare_api!(ZwReadFile);
 declare_api!(ZwClose);
 declare_api!(NtSetInformationThread);
+declare_api!(ZwQueryInformationFile);

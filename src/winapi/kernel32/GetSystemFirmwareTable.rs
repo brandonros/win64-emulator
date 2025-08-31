@@ -127,14 +127,98 @@ struct RawSMBIOSData {
     // SMBIOSTableData follows in memory
 }
 
-pub fn GetSystemFirmwareTable(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
-    // UINT GetSystemFirmwareTable(
-    //   DWORD FirmwareTableProviderSignature,  // RCX
-    //   DWORD FirmwareTableID,                 // RDX
-    //   PVOID pFirmwareTableBuffer,            // R8
-    //   DWORD BufferSize                       // R9
-    // )
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+struct SMBIOSHeader {
+    type_: u8,
+    length: u8,
+    handle: u16,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+struct SystemInfo {
+    header: SMBIOSHeader,
+    manufacturer: u8,      // String index
+    product_name: u8,      // String index
+    version: u8,           // String index
+    serial_number: u8,     // String index
+    uuid: [u8; 16],
+    wake_up_type: u8,
+    sku_number: u8,        // String index
+    family: u8,            // String index
+}
+
+fn create_mock_smbios_table() -> Vec<u8> {
+    let mut table_data = Vec::new();
     
+    // Create System Information structure (Type 1)
+    let sys_info = SystemInfo {
+        header: SMBIOSHeader {
+            type_: 1,  // System Information
+            length: std::mem::size_of::<SystemInfo>() as u8,
+            handle: 0x0001,
+        },
+        manufacturer: 1,     // Index to first string
+        product_name: 2,     // Index to second string
+        version: 3,          // Index to third string
+        serial_number: 4,    // Index to fourth string
+        uuid: [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+               0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+        wake_up_type: 6,     // Power switch
+        sku_number: 5,       // Index to fifth string
+        family: 6,           // Index to sixth string
+    };
+    
+    // Convert struct to bytes
+    let sys_info_bytes = unsafe {
+        std::slice::from_raw_parts(
+            &sys_info as *const SystemInfo as *const u8,
+            std::mem::size_of::<SystemInfo>(),
+        )
+    };
+    table_data.extend_from_slice(sys_info_bytes);
+    
+    // Add string data (null-terminated strings)
+    let strings = [
+        "ACME Corporation\0",      // 1: Manufacturer
+        "Generic Computer\0",      // 2: Product Name
+        "1.0\0",                  // 3: Version
+        "ABC123456789\0",         // 4: Serial Number
+        "Standard\0",             // 5: SKU Number
+        "Desktop\0",              // 6: Family
+    ];
+    
+    for string in &strings {
+        table_data.extend_from_slice(string.as_bytes());
+    }
+    
+    // SMBIOS entries end with double null terminator
+    table_data.push(0x00);
+    
+    // Optionally add more SMBIOS structures here (BIOS Info, etc.)
+    
+    // Add end-of-table marker (Type 127)
+    let end_marker = SMBIOSHeader {
+        type_: 127,  // End-of-Table
+        length: 4,   // Just the header
+        handle: 0xFFFF,
+    };
+    
+    let end_marker_bytes = unsafe {
+        std::slice::from_raw_parts(
+            &end_marker as *const SMBIOSHeader as *const u8,
+            std::mem::size_of::<SMBIOSHeader>(),
+        )
+    };
+    table_data.extend_from_slice(end_marker_bytes);
+    table_data.push(0x00); // Double null terminator for end marker
+    table_data.push(0x00);
+    
+    table_data
+}
+
+pub fn GetSystemFirmwareTable(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     let provider_signature = emu.reg_read(RegisterX86::RCX)? as u32;
     let table_id = emu.reg_read(RegisterX86::RDX)? as u32;
     let buffer_ptr = emu.reg_read(RegisterX86::R8)?;
@@ -142,59 +226,60 @@ pub fn GetSystemFirmwareTable(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
     
     // Convert signature to string for logging
     let provider_bytes = provider_signature.to_le_bytes();
-    let provider_str = std::str::from_utf8(&provider_bytes)
-        .unwrap_or("????");
+    let provider_str = std::str::from_utf8(&provider_bytes).unwrap_or("????");
     let table_bytes = table_id.to_le_bytes();
-    let table_str = std::str::from_utf8(&table_bytes)
-        .unwrap_or("????");
+    let table_str = std::str::from_utf8(&table_bytes).unwrap_or("????");
     
     log::info!(
         "[GetSystemFirmwareTable] Provider: '{}' (0x{:08x}), TableID: '{}' (0x{:08x}), Buffer: 0x{:x}, Size: {}",
         provider_str, provider_signature, table_str, table_id, buffer_ptr, buffer_size
     );
     
-    // Mock SMBIOS data sizes
-    const MOCK_SMBIOS_TABLE_DATA_SIZE: u32 = 32;   // Size of mock SMBIOS table data
-    let header_size = std::mem::size_of::<RawSMBIOSData>() as u32;
-    let total_size = header_size + MOCK_SMBIOS_TABLE_DATA_SIZE;
-    
-    // Check if this is a size query (buffer is NULL)
-    if buffer_ptr == 0 {
-        log::info!("[GetSystemFirmwareTable] Size query - returning {} bytes", total_size);
-        emu.reg_write(RegisterX86::RAX, total_size as u64)?;
-        return Ok(());
-    }
-    
-    // Check if buffer is large enough
-    if buffer_size < total_size {
-        log::warn!("[GetSystemFirmwareTable] Buffer too small: {} < {}", buffer_size, total_size);
-        emu.reg_write(RegisterX86::RAX, total_size as u64)?;
-        return Ok(());
-    }
-    
     // Handle RSMB (Raw SMBIOS) provider
-    if provider_signature == 0x424D5352 {  // 'RSMB' in little endian
+    if provider_signature == 0x52534D42 {  // 'RSMB' in little endian
+        // Create mock SMBIOS table data
+        let mock_table_data = create_mock_smbios_table();
+        let header_size = std::mem::size_of::<RawSMBIOSData>() as u32;
+        let total_size = header_size + mock_table_data.len() as u32;
+        
+        // Check if this is a size query (buffer is NULL)
+        if buffer_ptr == 0 {
+            log::info!("[GetSystemFirmwareTable] Size query - returning {} bytes", total_size);
+            emu.reg_write(RegisterX86::RAX, total_size as u64)?;
+            return Ok(());
+        }
+        
+        // Check if buffer is large enough
+        if buffer_size < total_size {
+            log::warn!("[GetSystemFirmwareTable] Buffer too small: {} < {}", buffer_size, total_size);
+            emu.reg_write(RegisterX86::RAX, total_size as u64)?;
+            return Ok(());
+        }
+        
         // Create and write RawSMBIOSData structure
         let smbios_header = RawSMBIOSData {
             used20_calling_method: 0x00,
             smbios_major_version: 0x03,
-            smbios_minor_version: 0x00,
+            smbios_minor_version: 0x04,
             dmi_revision: 0x00,
-            length: MOCK_SMBIOS_TABLE_DATA_SIZE,
+            length: mock_table_data.len() as u32,
         };
         
-        // Write the header struct using memory::write_struct
+        // Write the header struct
         memory::write_struct(emu, buffer_ptr, &smbios_header)?;
         
-        // Write mock SMBIOS table data after the header
+        // Write the actual SMBIOS table data after the header
         let table_data_offset = buffer_ptr + header_size as u64;
-        let mock_table_data = vec![0u8; MOCK_SMBIOS_TABLE_DATA_SIZE as usize];
         emu.mem_write(table_data_offset, &mock_table_data)?;
         
-        log::info!("[GetSystemFirmwareTable] Wrote {} bytes of mock SMBIOS data", total_size);
+        log::info!(
+            "[GetSystemFirmwareTable] Wrote {} bytes total ({} header + {} table data)",
+            total_size, header_size, mock_table_data.len()
+        );
         emu.reg_write(RegisterX86::RAX, total_size as u64)?;
+        
     } else {
-        // For other providers, return 0 (not supported)
+        // For other providers, panic (not supported)
         panic!("[GetSystemFirmwareTable] Unsupported provider: '{}'", provider_str);
         //emu.reg_write(RegisterX86::RAX, 0)?;
     }
