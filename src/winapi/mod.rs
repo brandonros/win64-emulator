@@ -163,6 +163,7 @@ pub fn handle_winapi_call<D>(
         // version
         ("version.dll", "GetFileVersionInfoSizeA") => version::GetFileVersionInfoSizeA(emu_ref),
         ("version.dll", "GetFileVersionInfoA") => version::GetFileVersionInfoA(emu_ref),
+        ("version.dll", "VerQueryValueA") => version::VerQueryValueA(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);

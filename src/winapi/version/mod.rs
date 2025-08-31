@@ -10,3 +10,4 @@ macro_rules! declare_api {
 
 declare_api!(GetFileVersionInfoSizeA);
 declare_api!(GetFileVersionInfoA);
+declare_api!(VerQueryValueA);

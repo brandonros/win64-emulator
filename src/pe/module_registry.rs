@@ -123,6 +123,12 @@ impl ModuleRegistry {
     
     pub fn register_module_with_exports(&mut self, name: &str, base: u64, size: u64, exports: HashMap<String, u64>) {
         let normalized_name = name.to_lowercase();
+
+        // do not double insert?
+        if self.modules.contains_key(&normalized_name) {
+            panic!("double insert module? {normalized_name}")
+        }
+
         self.modules.insert(
             normalized_name.clone(),
             LoadedModule::with_exports(
