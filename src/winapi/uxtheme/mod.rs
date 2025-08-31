@@ -10,3 +10,4 @@ macro_rules! declare_api {
 
 declare_api!(IsAppThemed);
 declare_api!(IsThemeActive);
+declare_api!(GetThemeAppProperties);
