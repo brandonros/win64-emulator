@@ -139,6 +139,8 @@ pub fn handle_winapi_call<D>(
         ("user32.dll", "LoadIconA") => user32::LoadIconA(emu_ref),
         ("user32.dll", "LoadCursorA") => user32::LoadCursorA(emu_ref),
         ("user32.dll", "RegisterClassW") => user32::RegisterClassW(emu_ref),
+        ("user32.dll", "GetDesktopWindow") => user32::GetDesktopWindow(emu_ref),        
+        ("user32.dll", "GetDC") => user32::GetDC(emu_ref),        
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),

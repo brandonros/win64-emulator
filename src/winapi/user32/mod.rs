@@ -14,3 +14,5 @@ declare_api!(SystemParametersInfoA);
 declare_api!(LoadIconA);
 declare_api!(LoadCursorA);
 declare_api!(RegisterClassW);
+declare_api!(GetDesktopWindow);
+declare_api!(GetDC);
