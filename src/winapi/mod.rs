@@ -11,6 +11,7 @@ mod advapi32;
 mod shell32;
 mod version;
 mod uxtheme;
+mod ole32;
 mod gdi32;
 
 pub fn handle_winapi_call<D>(
@@ -136,6 +137,7 @@ pub fn handle_winapi_call<D>(
         ("user32.dll", "SystemParametersInfoA") => user32::SystemParametersInfoA(emu_ref),
         ("user32.dll", "LoadIconA") => user32::LoadIconA(emu_ref),
         ("user32.dll", "LoadCursorA") => user32::LoadCursorA(emu_ref),
+        ("user32.dll", "RegisterClassW") => user32::RegisterClassW(emu_ref),
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),
@@ -157,6 +159,9 @@ pub fn handle_winapi_call<D>(
         ("oleaut32.dll", "SysAllocStringLen") => oleaut32::SysAllocStringLen(emu_ref),
         ("oleaut32.dll", "VariantClear") => oleaut32::VariantClear(emu_ref),
         ("oleaut32.dll", "SysFreeString") => oleaut32::SysFreeString(emu_ref),
+
+        // ole32
+        ("ole32.dll", "OleInitialize") => ole32::OleInitialize(emu_ref),
 
         // advapi32
         ("advapi32.dll", "GetUserNameA") => advapi32::GetUserNameA(emu_ref),
