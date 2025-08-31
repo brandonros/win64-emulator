@@ -11,6 +11,7 @@ mod advapi32;
 mod shell32;
 mod version;
 mod uxtheme;
+mod gdi32;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,
@@ -132,6 +133,7 @@ pub fn handle_winapi_call<D>(
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
         ("user32.dll", "CharLowerBuffW") => user32::CharLowerBuffW(emu_ref),
+        ("user32.dll", "SystemParametersInfoA") => user32::SystemParametersInfoA(emu_ref),
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),
@@ -170,6 +172,9 @@ pub fn handle_winapi_call<D>(
         ("uxtheme.dll", "IsAppThemed") => uxtheme::IsAppThemed(emu_ref),
         ("uxtheme.dll", "IsThemeActive") => uxtheme::IsThemeActive(emu_ref),
         ("uxtheme.dll", "GetThemeAppProperties") => uxtheme::GetThemeAppProperties(emu_ref),
+
+        // gdi32
+        ("gdi32.dll", "CreateFontIndirectA") => gdi32::CreateFontIndirectA(emu_ref),
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
