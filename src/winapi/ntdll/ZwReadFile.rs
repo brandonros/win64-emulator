@@ -214,34 +214,57 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     };
     
     // Handle ByteOffset parameter
-    let actual_offset = if let Ok(byte_offset_bytes) = emu.mem_read_as_vec(rsp + 0x40, 8) {
-        let byte_offset_ptr = u64::from_le_bytes(byte_offset_bytes.clone().try_into().unwrap());
-        if byte_offset_ptr != 0 {
-            // Read the actual offset value
-            if let Ok(offset_bytes) = emu.mem_read_as_vec(byte_offset_ptr, 8) {
-                let offset = i64::from_le_bytes(offset_bytes.try_into().unwrap());
-                if offset == -1 {
-                    // FILE_USE_FILE_POINTER_POSITION
-                    position
-                } else {
-                    offset as u64
-                }
-            } else {
+    // First, read the ByteOffset pointer from the stack
+    let mut byte_offset_ptr_bytes = [0u8; 8];
+    emu.mem_read(rsp + 0x40, &mut byte_offset_ptr_bytes)?;
+    let byte_offset_ptr = u64::from_le_bytes(byte_offset_ptr_bytes);
+    
+    let actual_offset = if byte_offset_ptr == 0 {
+        // NULL pointer means use current file position
+        log::debug!("[ZwReadFile] NULL ByteOffset, using current file position: {}", position);
+        position
+    } else {
+        // Read the actual LARGE_INTEGER value
+        let mut offset_bytes = [0u8; 8];
+        if emu.mem_read(byte_offset_ptr, &mut offset_bytes).is_ok() {
+            let offset = i64::from_le_bytes(offset_bytes);
+            
+            // Check for FILE_USE_FILE_POINTER_POSITION special value
+            // This is -1 as a LARGE_INTEGER (0xFFFFFFFFFFFFFFFE)
+            const FILE_USE_FILE_POINTER_POSITION: i64 = 0xFFFFFFFFFFFFFFFE_u64 as i64;
+            
+            if offset == FILE_USE_FILE_POINTER_POSITION {
+                log::debug!("[ZwReadFile] FILE_USE_FILE_POINTER_POSITION specified, using position: {}", position);
                 position
+            } else if offset < 0 {
+                // Negative offsets (other than the special value) are invalid
+                log::error!("[ZwReadFile] Invalid negative offset: {}", offset);
+                emu.reg_write(RegisterX86::RAX, STATUS_INVALID_PARAMETER as u64)?;
+                return Ok(());
+            } else {
+                log::debug!("[ZwReadFile] Using explicit ByteOffset: {}", offset);
+                offset as u64
             }
         } else {
-            position
+            log::error!("[ZwReadFile] Failed to read LARGE_INTEGER at ByteOffset pointer 0x{:x}", byte_offset_ptr);
+            emu.reg_write(RegisterX86::RAX, STATUS_INVALID_PARAMETER as u64)?;
+            return Ok(());
         }
-    } else {
-        position
     };
     
     // Read data from the calculated offset
     let bytes_to_read = std::cmp::min(length as usize, file_data.len().saturating_sub(actual_offset as usize));
+    
+    // Log file size for debugging EOF situations
+    if bytes_to_read == 0 && length > 0 {
+        log::info!("[ZwReadFile] [VFS] EOF reached - file size: {}, offset: {}, requested: {}", 
+            file_data.len(), actual_offset, length);
+    } else {
+        log::info!("[ZwReadFile] [VFS] Reading {} bytes from offset {} (requested: {} bytes, file size: {})", 
+            bytes_to_read, actual_offset, length, file_data.len());
+    }
+    
     let data_slice = &file_data[actual_offset as usize..actual_offset as usize + bytes_to_read];
-
-    log::info!("[ZwReadFile] [VFS] Reading {} bytes from offset {} (requested: {} bytes from offset {})", 
-        bytes_to_read, actual_offset, length, actual_offset);
     
     // Write data to buffer
     emu.mem_write(buffer, data_slice)?;
@@ -260,19 +283,24 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     };
     
     // Create and write IO_STATUS_BLOCK
-    // Note: IO_STATUS_BLOCK contains a union for Status/Pointer and Information field
-    // We'll write it manually since the union makes it complex
+    // IO_STATUS_BLOCK structure on x64:
+    // - Union (8 bytes): Contains either Status (NTSTATUS, 4 bytes) or Pointer (PVOID, 8 bytes)
+    // - Information (8 bytes): ULONG_PTR on x64
+    // Total size: 16 bytes
+    
     let status_value = status as i32; // NTSTATUS is i32
     let information_value = bytes_to_read as usize;
     
-    // Write Status (first 8 bytes - union field)
-    emu.mem_write(io_status_block, &status_value.to_le_bytes())?;
-    emu.mem_write(io_status_block + 4, &[0u8; 4])?; // padding for 64-bit alignment
+    // Write the union field (8 bytes total, Status in first 4 bytes)
+    let mut union_bytes = [0u8; 8];
+    union_bytes[0..4].copy_from_slice(&status_value.to_le_bytes());
+    emu.mem_write(io_status_block, &union_bytes)?;
     
-    // Write Information (next 8 bytes)
+    // Write Information field (8 bytes on x64)
     emu.mem_write(io_status_block + 8, &information_value.to_le_bytes())?;
     
-    log::debug!("[ZwReadFile] IO_STATUS_BLOCK: Status=0x{:08x}, Information={}", status, information_value);
+    log::debug!("[ZwReadFile] IO_STATUS_BLOCK @ 0x{:x}: Status=0x{:08x}, Information={} bytes", 
+        io_status_block, status, information_value);
     
     if let Some(filename) = filename {
         log::info!("[ZwReadFile] [VFS] Read {} bytes from '{}' at offset {}", bytes_to_read, filename, actual_offset);
@@ -280,8 +308,10 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
         log::info!("[ZwReadFile] [VFS] Read {} bytes from handle 0x{:x}", bytes_to_read, file_handle);
     }
     
-    // Return STATUS_SUCCESS
-    emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+    // Return the actual status (STATUS_SUCCESS or STATUS_END_OF_FILE)
+    emu.reg_write(RegisterX86::RAX, status as u64)?;
+    
+    log::debug!("[ZwReadFile] Returning NTSTATUS: 0x{:08x}", status);
     
     Ok(())
 }
