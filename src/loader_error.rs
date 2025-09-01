@@ -9,6 +9,7 @@ pub enum LoaderError {
     UnicornError(uc_error),
     IoError(std::io::Error),
     InvalidFormat(String),
+    Other(String),
 }
 
 impl fmt::Display for LoaderError {
@@ -18,6 +19,7 @@ impl fmt::Display for LoaderError {
             LoaderError::UnicornError(e) => write!(f, "Unicorn emulation error: {:?}", e),
             LoaderError::IoError(e) => write!(f, "IO error: {}", e),
             LoaderError::InvalidFormat(msg) => write!(f, "Invalid format: {}", msg),
+            LoaderError::Other(msg) => write!(f, "Error: {}", msg),
         }
     }
 }

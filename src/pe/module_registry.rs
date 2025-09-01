@@ -66,6 +66,24 @@ impl ModuleRegistry {
         }
     }
     
+    pub fn get_all_modules(&self) -> Vec<LoadedModule> {
+        let inner = self.inner.read().unwrap();
+        inner.modules.values().cloned().collect()
+    }
+    
+    pub fn get_allocation_info(&self) -> (u64, u64) {
+        let inner = self.inner.read().unwrap();
+        (inner.next_dll_base, inner.next_mock_addr)
+    }
+    
+    pub fn restore_state(&self, modules: HashMap<String, LoadedModule>, next_dll_base: u64, next_mock_addr: u64) {
+        let mut inner = self.inner.write().unwrap();
+        inner.modules = modules;
+        inner.next_dll_base = next_dll_base;
+        inner.next_mock_addr = next_mock_addr;
+        log::info!("[ModuleRegistry] Restored {} modules", inner.modules.len());
+    }
+    
     pub fn allocate_base_address(&self, size: u64) -> u64 {
         let mut inner = self.inner.write().unwrap();
         let base = inner.next_dll_base;

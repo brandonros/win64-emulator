@@ -21,6 +21,21 @@ impl HeapManager {
         }
     }
     
+    pub fn next_addr(&self) -> u64 {
+        self.next_addr
+    }
+    
+    pub fn get_allocations(&self) -> &HashMap<u64, usize> {
+        &self.allocations
+    }
+    
+    pub fn restore_state(&mut self, next_addr: u64, allocations: HashMap<u64, usize>) {
+        self.next_addr = next_addr;
+        self.allocations = allocations;
+        log::info!("[HeapManager] Restored state: next_addr=0x{:x}, {} allocations", 
+                  next_addr, self.allocations.len());
+    }
+    
     pub fn allocate(&mut self, emu: &mut Unicorn<()>, size: usize) -> Result<u64, String> {
         let addr = self.next_addr;
         

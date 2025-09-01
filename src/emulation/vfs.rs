@@ -41,6 +41,26 @@ impl VirtualFileSystem {
         }
     }
     
+    pub fn get_all_handles(&self) -> HashMap<u64, FileHandle> {
+        self.handles.clone()
+    }
+    
+    pub fn next_handle(&self) -> u64 {
+        self.next_handle
+    }
+    
+    pub fn clear_handles(&mut self) {
+        self.handles.clear();
+    }
+    
+    pub fn restore_handle(&mut self, handle: u64, file_handle: FileHandle) {
+        self.handles.insert(handle, file_handle);
+    }
+    
+    pub fn set_next_handle(&mut self, next_handle: u64) {
+        self.next_handle = next_handle;
+    }
+    
     fn normalize_windows_path(&self, filename: &str) -> PathBuf {
         let mut normalized_filename = if filename.starts_with("\\??\\") {
             filename[4..].to_string()

@@ -12,9 +12,6 @@ thread_local! {
     // Instruction counter
     static COUNTER: UnsafeCell<u64> = UnsafeCell::new(0);
     
-    // Start time in microseconds since UNIX epoch
-    static START_TIME_MICROS: UnsafeCell<u64> = UnsafeCell::new(0);
-    
     // Intel formatter for disassembly output (only used when needed)
     static FORMATTER: UnsafeCell<IntelFormatter> = UnsafeCell::new({
         let mut formatter = IntelFormatter::new();
@@ -85,17 +82,17 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
 
         // Format the instruction using reusable string buffer
         INSTRUCTION_OUTPUT_BUFFER.with(|instruction_output_buffer| {
-            let instruction_output_buffer = unsafe { &mut *instruction_output_buffer.get() };
-            instruction_output_buffer.clear(); // Clear previous content
-            FORMATTER.with(|f| {
-                // Safe: thread_local ensures single-threaded access
-                unsafe { (*f.get()).format(&instruction, instruction_output_buffer) }
-            });
-
             // Handle logging if enabled
             let should_log = cfg!(feature = "log-instruction");
             if should_log {
                 use std::fmt::Write;
+
+                let instruction_output_buffer = unsafe { &mut *instruction_output_buffer.get() };
+                instruction_output_buffer.clear(); // Clear previous content
+                FORMATTER.with(|f| {
+                    // Safe: thread_local ensures single-threaded access
+                    unsafe { (*f.get()).format(&instruction, instruction_output_buffer) }
+                });
 
                 LOG_MESSAGE_BUFFER.with(|log_buffer| {
                     let log_msg = unsafe { &mut *log_buffer.get() };

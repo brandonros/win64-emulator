@@ -6,7 +6,7 @@ mod loader;
 mod imports;
 mod exports;
 mod utils;
-mod module_registry;
+pub mod module_registry;
 
 // Re-export the public API
 pub use types::ImportedFunction;

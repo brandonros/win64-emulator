@@ -9,6 +9,7 @@ mod memory_hooks;
 mod code_hooks;
 mod iat_hooks;
 pub mod vfs;
+pub mod snapshot;
 #[cfg(feature = "trace-instruction")]
 pub mod tracing;
 
@@ -174,5 +175,30 @@ impl Emulator {
 
     pub fn get_emu(&self) -> &Unicorn<'static, ()> {
         &self.emu
+    }
+    
+    pub fn get_emu_mut(&mut self) -> &mut Unicorn<'static, ()> {
+        &mut self.emu
+    }
+    
+    // Snapshot functionality
+    pub fn create_snapshot(&mut self, name: String, instruction_count: u64) -> Result<(snapshot::EmulatorSnapshot, unicorn_engine::Context), LoaderError> {
+        log::info!("📸 Creating snapshot '{}'...", name);
+        snapshot::EmulatorSnapshot::capture(&mut self.emu, name, instruction_count)
+    }
+    
+    pub fn restore_snapshot(&mut self, snapshot: &snapshot::EmulatorSnapshot, context: &unicorn_engine::Context) -> Result<(), LoaderError> {
+        log::info!("🔄 Restoring snapshot '{}'...", snapshot.get_name());
+        snapshot.restore(&mut self.emu, context)
+    }
+    
+    pub fn save_snapshot_to_disk(&mut self, name: String, instruction_count: u64, path: &std::path::Path) -> Result<(), LoaderError> {
+        let (snapshot, context) = self.create_snapshot(name, instruction_count)?;
+        snapshot.save_to_disk(&context, path)
+    }
+    
+    pub fn load_snapshot_from_disk(&mut self, path: &std::path::Path) -> Result<(), LoaderError> {
+        let (snapshot, context) = snapshot::EmulatorSnapshot::load_from_disk(&mut self.emu, path)?;
+        self.restore_snapshot(&snapshot, &context)
     }
 }
