@@ -141,6 +141,7 @@ pub fn handle_winapi_call<D>(
         ("user32.dll", "RegisterClassW") => user32::RegisterClassW(emu_ref),
         ("user32.dll", "GetDesktopWindow") => user32::GetDesktopWindow(emu_ref),        
         ("user32.dll", "GetDC") => user32::GetDC(emu_ref),        
+        ("user32.dll", "ReleaseDC") => user32::ReleaseDC(emu_ref),        
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),
@@ -172,6 +173,7 @@ pub fn handle_winapi_call<D>(
 
         // shell32
         ("shell32.dll", "SHGetFolderPathW") => shell32::SHGetFolderPathW(emu_ref),
+        ("shfolder.dll", "SHGetFolderPathW") => shell32::SHGetFolderPathW(emu_ref), // forward
 
         // version
         ("version.dll", "GetFileVersionInfoSizeA") => version::GetFileVersionInfoSizeA(emu_ref),
@@ -185,6 +187,7 @@ pub fn handle_winapi_call<D>(
 
         // gdi32
         ("gdi32.dll", "CreateFontIndirectA") => gdi32::CreateFontIndirectA(emu_ref),
+        ("gdi32.dll", "GetDeviceCaps") => gdi32::GetDeviceCaps(emu_ref),
 
         // comctl32
         ("comctl32.dll", "InitCommonControls") => comctl32::InitCommonControls(emu_ref),

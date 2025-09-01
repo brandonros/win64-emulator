@@ -16,3 +16,4 @@ declare_api!(LoadCursorA);
 declare_api!(RegisterClassW);
 declare_api!(GetDesktopWindow);
 declare_api!(GetDC);
+declare_api!(ReleaseDC);
