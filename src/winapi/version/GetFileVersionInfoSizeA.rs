@@ -94,8 +94,8 @@ pub fn GetFileVersionInfoSizeA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engi
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_FILE_NOT_FOUND)?;
         emu.reg_write(RegisterX86::RAX, 0)?;
     } else {
-        log::info!("[GetFileVersionInfoSizeA] File exists in VFS, returning version info size: {} bytes (VS_FIXEDFILEINFO: {} + strings: {})", 
-            mock_version_info_size, fixed_file_info_size, VERSION_STRINGS_SIZE);
+        log::info!("[GetFileVersionInfoSizeA] File \"{}\" exists in VFS, returning version info size: {} bytes (VS_FIXEDFILEINFO: {} + strings: {})", 
+            filename, mock_version_info_size, fixed_file_info_size, VERSION_STRINGS_SIZE);
         emu.reg_write(RegisterX86::RAX, mock_version_info_size as u64)?;
     }
     

@@ -41,26 +41,6 @@ impl VirtualFileSystem {
         }
     }
     
-    pub fn get_all_handles(&self) -> HashMap<u64, FileHandle> {
-        self.handles.clone()
-    }
-    
-    pub fn next_handle(&self) -> u64 {
-        self.next_handle
-    }
-    
-    pub fn clear_handles(&mut self) {
-        self.handles.clear();
-    }
-    
-    pub fn restore_handle(&mut self, handle: u64, file_handle: FileHandle) {
-        self.handles.insert(handle, file_handle);
-    }
-    
-    pub fn set_next_handle(&mut self, next_handle: u64) {
-        self.next_handle = next_handle;
-    }
-    
     fn normalize_windows_path(&self, filename: &str) -> PathBuf {
         let mut normalized_filename = if filename.starts_with("\\??\\") {
             filename[4..].to_string()
@@ -103,10 +83,13 @@ impl VirtualFileSystem {
     
     pub fn file_exists(&self, filename: &str) -> bool {
         let file_path = self.normalize_windows_path(filename);
-        file_path.exists()
+        let result = file_path.exists();
+        log::debug!("[VFS] {} exists {}", filename, result);
+        result
     }
     
     pub fn get_file_info(&self, handle: u64) -> Option<&FileHandle> {
+        log::debug!("[VFS] get_file_info handle = {:x}", handle);
         self.handles.get(&handle)
     }
     
@@ -133,6 +116,7 @@ impl VirtualFileSystem {
     }
     
     pub fn update_position(&mut self, handle: u64, new_position: u64) {
+        log::debug!("[VFS] update_position handle 0x{:x} new_position: {:x}", handle, new_position);
         if let Some(file_handle) = self.handles.get_mut(&handle) {
             file_handle.position = new_position;
         }

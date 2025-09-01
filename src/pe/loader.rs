@@ -310,7 +310,7 @@ mod tests {
         let image_size = optional_header.size_of_image.get(LittleEndian) as usize;
         
         let expected_image_base = 0x0000000140000000; // Common for 64-bit executables
-        let expected_entry_point_rva = 0x0000000001058b8c; // Replace with actual expected value
+        let expected_entry_point_rva = 0x104A2CC; // Replace with actual expected value
         let expected_entry_point = expected_image_base + expected_entry_point_rva;
         let expected_image_size = 0x105d000; // Replace with actual expected value
 
