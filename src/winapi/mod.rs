@@ -173,9 +173,12 @@ pub fn handle_winapi_call<D>(
         ("ntdll.dll", "RtlLookupFunctionEntry") => ntdll::RtlLookupFunctionEntry(emu_ref),
         ("ntdll.dll", "RtlUnwindEx") => ntdll::RtlUnwindEx(emu_ref),
         ("ntdll.dll", "RtlVirtualUnwind") => ntdll::RtlVirtualUnwind(emu_ref),
-        ("ntdll.dll", "ZwClose") => ntdll::ZwClose(emu_ref),        
+        ("ntdll.dll", "ZwClose") => ntdll::ZwClose(emu_ref),  
+        ("ntdll.dll", "NtClose") => ntdll::ZwClose(emu_ref), // forward
         ("ntdll.dll", "ZwCreateFile") => ntdll::ZwCreateFile(emu_ref),
         ("ntdll.dll", "ZwReadFile") => ntdll::ZwReadFile(emu_ref),
+        ("ntdll.dll", "NtCreateFile") => ntdll::ZwCreateFile(emu_ref), // forward
+        ("ntdll.dll", "NtReadFile") => ntdll::ZwReadFile(emu_ref), // forward
         ("ntdll.dll", "ZwSetInformationFile") => ntdll::ZwSetInformationFile(emu_ref),
         ("ntdll.dll", "NtSetInformationThread") => ntdll::NtSetInformationThread(emu_ref),
         ("ntdll.dll", "ZwQueryInformationFile") => ntdll::ZwQueryInformationFile(emu_ref),
