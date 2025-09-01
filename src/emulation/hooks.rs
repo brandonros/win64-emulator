@@ -115,7 +115,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
             });
 
             // Handle logging if enabled
-            let should_log = cfg!(feature = "log-instruction") || count >= 239_159_000;
+            let should_log = cfg!(feature = "log-instruction");
             if should_log {
                 use std::fmt::Write;
 

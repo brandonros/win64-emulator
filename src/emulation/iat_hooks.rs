@@ -3,6 +3,32 @@ use unicorn_engine::{RegisterX86, Unicorn};
 
 use crate::{emulation::iat::IAT_FUNCTION_MAP, pe::constants::*, winapi};
 
+#[derive(Debug, Clone, Copy)]
+enum CallType {
+    Call,       // CALL instruction - needs return address pushed
+    Jump,       // JMP instruction - no return address
+    RetTrampoline, // RET used as trampoline - no return address
+}
+
+impl CallType {
+    fn should_push_return_address(&self) -> bool {
+        matches!(self, CallType::Call)
+    }
+    
+    fn should_pop_return_address(&self) -> bool {
+        // Only pop if we pushed (CALL instructions)
+        matches!(self, CallType::Call)
+    }
+    
+    fn as_str(&self) -> &str {
+        match self {
+            CallType::Call => "CALL",
+            CallType::Jump => "JMP",
+            CallType::RetTrampoline => "RET->",
+        }
+    }
+}
+
 pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, instruction_size: u32, addr: u64, count: u64) {
     let mnemonic = instruction.mnemonic();
     
@@ -40,7 +66,8 @@ pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, ins
                         // Check if this points to our mock function area (IAT call)
                         if is_mock_function_address(func_ptr) {
                             //log:trace!("✓ Detected IAT call through [0x{:016x}] -> 0x{:016x} (in mock range)", target_addr, func_ptr);
-                            handle_iat_function_call(func_ptr, emu, addr, &instruction, count, mnemonic == Mnemonic::Jmp);
+                            let call_type = if mnemonic == Mnemonic::Call { CallType::Call } else { CallType::Jump };
+                            handle_iat_function_call(func_ptr, emu, addr, &instruction, count, call_type);
                         } else {
                             //log:trace!("✗ Function pointer 0x{:x} is NOT in mock function range, skipping IAT handling", func_ptr);
                         }
@@ -66,7 +93,8 @@ pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, ins
                     // Check if this is a call/jump to a mock function address
                     if is_mock_function_address(register_value) {
                         //log:trace!("✓ Register contains mock function address, handling as IAT call");
-                        handle_iat_function_call(register_value, emu, addr, &instruction, count, mnemonic == Mnemonic::Jmp);
+                        let call_type = if mnemonic == Mnemonic::Call { CallType::Call } else { CallType::Jump };
+                        handle_iat_function_call(register_value, emu, addr, &instruction, count, call_type);
                     } else {
                         //log:trace!("✗ Register value 0x{:x} is not a mock function address", register_value);
                     }
@@ -96,7 +124,8 @@ pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, ins
                 // Pop the return address from stack (simulate the RET)
                 emu.reg_write(RegisterX86::RSP, rsp + 8).unwrap();
                 
-                handle_iat_function_call(return_addr, emu, addr, &instruction, count, false);
+                // RET to IAT function acts as a trampoline (no return address to push)
+                handle_iat_function_call(return_addr, emu, addr, &instruction, count, CallType::RetTrampoline);
             } else {
                 //log:trace!("✗ RET return address 0x{:x} is not a mock function address", return_addr);
             }
@@ -332,16 +361,15 @@ fn handle_iat_function_call<D>(
     addr: u64,
     instruction: &Instruction,
     count: u64,
-    is_jmp: bool
+    call_type: CallType
 ) {
-    //log:trace!("=== IAT {} HANDLER ===", if is_jmp { "JMP" } else { "CALL" });
+    //log:trace!("=== IAT {} HANDLER ===", call_type.as_str());
     //log:trace!("Function pointer: 0x{:x}", func_ptr);
     
     // Look up and handle the API function
     if let Some((dll_name, func_name)) = lookup_iat_function(func_ptr) {
-        let instruction_type = if is_jmp { "JMP" } else { "CALL" };
-        log::info!("[{}:{:x}] 🔷 API {}: {}!{}", count, addr, instruction_type, dll_name, func_name);
-        execute_api_call(emu, addr, instruction, &dll_name, &func_name, is_jmp);
+        log::info!("[{}:{:x}] 🔷 API {}: {}!{}", count, addr, call_type.as_str(), dll_name, func_name);
+        execute_api_call(emu, addr, instruction, &dll_name, &func_name, call_type);
     } else {
         log::error!("✗ Mock function at 0x{:016x} not found in IAT_FUNCTION_MAP", func_ptr);
         log::error!("Available functions in IAT_FUNCTION_MAP:");
@@ -408,18 +436,17 @@ fn execute_api_call<D>(
     instruction: &Instruction,
     dll_name: &str,
     func_name: &str,
-    is_jmp: bool
+    call_type: CallType
 ) {
-    let return_addr = addr + instruction.len() as u64;
     //log:trace!("=== EXECUTING API CALL ===");
     //log:trace!("Function: {}!{}", dll_name, func_name);
+    //log:trace!("Call type: {:?}", call_type);
     //log:trace!("Call address: 0x{:x}", addr);
-    //log:trace!("Return address: 0x{:x}", return_addr);
     
-    // Push return address onto stack (as a real CALL would)
     // Only push return address for CALL instructions
-    // TODO: not sure if this is right
-    if !is_jmp {
+    if call_type.should_push_return_address() {
+        let return_addr = addr + instruction.len() as u64;
+        //log:trace!("Pushing return address: 0x{:x}", return_addr);
         push_return_address(emu, return_addr);
     }
     
@@ -427,7 +454,6 @@ fn execute_api_call<D>(
     match winapi::handle_winapi_call(emu, dll_name, func_name) {
         Ok(_) => {
             //log:trace!("✓ API call completed successfully");
-            // Set RIP to return address and pop stack
             finalize_api_call(emu);
         }
         Err(err) => {
@@ -451,12 +477,12 @@ fn push_return_address<D>(emu: &mut Unicorn<D>, return_addr: u64) {
 
 /// Finalize API call by simulating the RET that would have happened
 fn finalize_api_call<D>(emu: &mut Unicorn<D>) {
-    let rax = emu.reg_read(RegisterX86::RAX).unwrap();
+    //let rax = emu.reg_read(RegisterX86::RAX).unwrap();
     //log:trace!("Finalizing API call - RAX return value: 0x{:x}", rax);
+    //log:trace!("Call type: {:?}", call_type);
     
-    // We're simulating what the API function's RET would have done:
-    // 1. Pop address from stack
-    // 2. Jump to that address
+    // ALWAYS simulate the API function's RET instruction
+    // Real Windows API functions always end with RET
     
     // Read the return address from stack (what RET would pop)
     let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
@@ -470,5 +496,6 @@ fn finalize_api_call<D>(emu: &mut Unicorn<D>) {
     // Jump to the return address (like RET would)
     emu.reg_write(RegisterX86::RIP, ret_addr_from_stack).unwrap();
     
-    //log:trace!("Simulated RET: popped 0x{:x} from stack, RSP 0x{:x} -> 0x{:x}", ret_addr_from_stack, rsp, rsp + 8);
+    //log:trace!("Simulated API RET: popped 0x{:x} from stack, RSP 0x{:x} -> 0x{:x}", 
+    //    ret_addr_from_stack, rsp, rsp + 8);
 }
