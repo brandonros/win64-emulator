@@ -143,15 +143,21 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "SetThreadDescription") => kernel32::SetThreadDescription(emu_ref),        
 
         // user32
-        ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
         ("user32.dll", "CharLowerBuffW") => user32::CharLowerBuffW(emu_ref),
-        ("user32.dll", "SystemParametersInfoA") => user32::SystemParametersInfoA(emu_ref),
-        ("user32.dll", "LoadIconA") => user32::LoadIconA(emu_ref),
-        ("user32.dll", "LoadCursorA") => user32::LoadCursorA(emu_ref),
-        ("user32.dll", "RegisterClassW") => user32::RegisterClassW(emu_ref),
-        ("user32.dll", "GetDesktopWindow") => user32::GetDesktopWindow(emu_ref),        
+        ("user32.dll", "EnumDisplayDevicesA") => user32::EnumDisplayDevicesA(emu_ref),                                               
+        ("user32.dll", "EnumDisplayMonitors") => user32::EnumDisplayMonitors(emu_ref),                       
         ("user32.dll", "GetDC") => user32::GetDC(emu_ref),        
+        ("user32.dll", "GetDesktopWindow") => user32::GetDesktopWindow(emu_ref),        
+        ("user32.dll", "GetMonitorInfoA") => user32::GetMonitorInfoA(emu_ref),                                       
+        ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
+        ("user32.dll", "LoadCursorA") => user32::LoadCursorA(emu_ref),
+        ("user32.dll", "LoadIconA") => user32::LoadIconA(emu_ref),
+        ("user32.dll", "MonitorFromPoint") => user32::MonitorFromPoint(emu_ref),       
+        ("user32.dll", "MonitorFromRect") => user32::MonitorFromRect(emu_ref),                       
+        ("user32.dll", "MonitorFromWindow") => user32::MonitorFromWindow(emu_ref),               
+        ("user32.dll", "RegisterClassW") => user32::RegisterClassW(emu_ref),
         ("user32.dll", "ReleaseDC") => user32::ReleaseDC(emu_ref),        
+        ("user32.dll", "SystemParametersInfoA") => user32::SystemParametersInfoA(emu_ref),
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),
