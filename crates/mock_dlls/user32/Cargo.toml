@@ -1,0 +1,12 @@
+[package]
+name = "user32"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+common = { path = "../common" }
+log = { workspace = true }
+windows-sys = { workspace = true }

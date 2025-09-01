@@ -1,0 +1,27 @@
+[package]
+name = "win64-emulator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# emulation
+unicorn-engine = { workspace = true }
+# pe64
+object = { workspace = true }
+# disassembly
+iced-x86 = { workspace = true }
+# logging
+log = { workspace = true }
+fast_log = { workspace = true }
+env_logger = { workspace = true }
+# windows
+windows-sys = { workspace = true }
+
+[features]
+default = []
+file-logger = []
+console-logger = []
+log-mem-read = []
+log-mem-write = []
+log-instruction = []
+trace-instruction = []
