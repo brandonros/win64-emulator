@@ -112,3 +112,5 @@ declare_api!(GlobalAddAtomA);
 declare_api!(FileTimeToLocalFileTime);
 declare_api!(FileTimeToDosDateTime);
 declare_api!(FindClose);
+declare_api!(CreateFileA);
+declare_api!(DeviceIoControl);
