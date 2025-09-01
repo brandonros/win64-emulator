@@ -3,6 +3,7 @@ use std::sync::{LazyLock, RwLock};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct FileHandle {
     pub handle: u64,
     pub filename: String,
@@ -89,14 +90,6 @@ impl VirtualFileSystem {
         self.handles.get(&handle)
     }
     
-    pub fn get_file_info_mut(&mut self, handle: u64) -> Option<&mut FileHandle> {
-        self.handles.get_mut(&handle)
-    }
-    
-    pub fn get_filename(&self, handle: u64) -> Option<String> {
-        self.handles.get(&handle).map(|fh| fh.filename.clone())
-    }
-    
     pub fn close_handle(&mut self, handle: u64) -> bool {
         if let Some(file_handle) = self.handles.remove(&handle) {
             log::debug!("[VFS] Closed handle 0x{:x} for file '{}'", handle, file_handle.filename);
@@ -123,10 +116,6 @@ impl VirtualFileSystem {
         if let Some(file_handle) = self.handles.get_mut(&handle) {
             file_handle.position = new_position;
         }
-    }
-    
-    pub fn is_valid_handle(&self, handle: u64) -> bool {
-        self.handles.contains_key(&handle)
     }
     
     pub fn find_files(&self, pattern: &str) -> Vec<String> {

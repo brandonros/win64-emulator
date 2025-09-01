@@ -5,7 +5,8 @@ use crate::pe::{ImportedFunction, LoadedPE, MODULE_REGISTRY};
 pub mod memory;
 mod cpu;
 pub mod iat;
-mod hooks;
+mod memory_hooks;
+mod code_hooks;
 mod iat_hooks;
 pub mod vfs;
 #[cfg(feature = "trace-instruction")]
@@ -89,7 +90,8 @@ impl Emulator {
         }
         
         // Set up hooks for debugging
-        self.setup_hooks()?;
+        self.setup_code_hooks()?;
+        self.setup_memory_hooks()?;        
         
         // Execute with instruction limit
         let result = self.emu.emu_start(
@@ -127,28 +129,36 @@ impl Emulator {
         self.is_dll
     }
     
-    fn setup_hooks(&mut self) -> Result<(), uc_error> {
+    fn setup_code_hooks(&mut self) -> Result<(), uc_error> {
         // Add instruction hook for debugging
-        let _code_hook = self.emu.add_code_hook(0, u64::MAX, self::hooks::code_hook_callback)?;
+        let _code_hook = self.emu.add_code_hook(0, u64::MAX, self::code_hooks::code_hook_callback)?;
+        Ok(())
+    }
 
-        // Add memory access hook for debugging
-        let _mem_read_hook = self.emu.add_mem_hook(
-            unicorn_engine::unicorn_const::HookType::MEM_READ_AFTER,
-            0,
-            u64::MAX,
-            self::hooks::memory_read_hook_callback
-        )?;
-        let _mem_write_hook = self.emu.add_mem_hook(
-            unicorn_engine::unicorn_const::HookType::MEM_WRITE,
-            0,
-            u64::MAX,
-            self::hooks::memory_write_hook_callback
-        )?;
+    fn setup_memory_hooks(&mut self) -> Result<(), uc_error> {
+        if cfg!(feature = "log-mem-read") {
+            let _mem_read_hook = self.emu.add_mem_hook(
+                unicorn_engine::unicorn_const::HookType::MEM_READ_AFTER,
+                0,
+                u64::MAX,
+                self::memory_hooks::memory_read_hook_callback
+            )?;
+        }
+
+        if cfg!(feature = "log-mem-write") {
+            let _mem_write_hook = self.emu.add_mem_hook(
+                unicorn_engine::unicorn_const::HookType::MEM_WRITE,
+                0,
+                u64::MAX,
+                self::memory_hooks::memory_write_hook_callback
+            )?;
+        }
+        
         let _mem_invalid_hook = self.emu.add_mem_hook(
             unicorn_engine::unicorn_const::HookType::MEM_INVALID,
             0,
             u64::MAX,
-            self::hooks::memory_invalid_hook_callback
+            self::memory_hooks::memory_invalid_hook_callback
         )?;
         
         Ok(())

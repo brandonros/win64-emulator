@@ -1,9 +1,8 @@
 use std::cell::UnsafeCell;
 
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
-use unicorn_engine::{MemType, Unicorn};
+use unicorn_engine::Unicorn;
 
-use crate::emulation::memory;
 use crate::emulation::iat_hooks;
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 
@@ -39,27 +38,6 @@ pub fn get_count() -> u64 {
         let counter = &mut *c.get();
         *counter
     })
-}
-
-pub fn memory_read_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, _value: i64) -> bool {
-    if cfg!(feature = "log-mem-read") {
-        let region = memory::determine_memory_region(addr);
-        log::trace!("📖 Memory read [{:?}]: 0x{:016x} (size: {} bytes)", region, addr, size);
-    }
-    true
-}
-
-pub fn memory_write_hook_callback<D>(_emu: &mut Unicorn<D>, _mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
-    if cfg!(feature = "log-mem-write") {
-        let region = memory::determine_memory_region(addr);
-        log::trace!("✏️  Memory write [{:?}]: 0x{:016x} (size: {} bytes, value: 0x{:x})", region, addr, size, value);
-    }
-    true
-}
-
-pub fn memory_invalid_hook_callback<D>(_emu: &mut Unicorn<D>, mem_type: MemType, addr: u64, size: usize, value: i64) -> bool {
-    log::info!("❌ Invalid memory access: {:?} at 0x{:016x} (size: {}, value: 0x{:x})", mem_type, addr, size, value);
-    false // Don't handle the error, let it propagate
 }
 
 pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {

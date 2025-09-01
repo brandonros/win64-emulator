@@ -210,6 +210,7 @@ pub fn set_last_error(
     emu: &mut Unicorn<()>,
     error_code: u32,
 ) -> Result<(), unicorn_engine::uc_error> {
+    log::warn!("set_last_error: error_code = {:x}", error_code);
     let error_addr = TEB_BASE + TEB_LAST_ERROR_VALUE_OFFSET;
     emu.mem_write(error_addr, &error_code.to_le_bytes())
 }

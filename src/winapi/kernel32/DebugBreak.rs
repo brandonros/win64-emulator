@@ -1,6 +1,6 @@
 use unicorn_engine::Unicorn;
 
-pub fn DebugBreak(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn DebugBreak(_emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // void DebugBreak()
     // No parameters
     

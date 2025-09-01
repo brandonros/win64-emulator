@@ -15,11 +15,6 @@ impl CallType {
         matches!(self, CallType::Call)
     }
     
-    fn should_pop_return_address(&self) -> bool {
-        // Only pop if we pushed (CALL instructions)
-        matches!(self, CallType::Call)
-    }
-    
     fn as_str(&self) -> &str {
         match self {
             CallType::Call => "CALL",
@@ -418,7 +413,7 @@ fn lookup_iat_function(func_ptr: u64) -> Option<(String, String)> {
         .map(|info| (info.0.clone(), info.1.clone()));
     
     match &result {
-        Some((dll, func)) => {
+        Some((_dll, _func)) => {
             //log:trace!("✓ Found IAT function: 0x{:x} -> {}!{}", func_ptr, dll, func);
         }
         None => {

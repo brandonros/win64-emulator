@@ -22,7 +22,6 @@ If the function fails, the return value is NULL.
 */
 
 use unicorn_engine::{Unicorn, RegisterX86};
-use crate::emulation::memory;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // LOGFONTA structure
