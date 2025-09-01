@@ -1,5 +1,6 @@
 use unicorn_engine::{Unicorn, RegisterX86};
-use crate::emulation::vfs::VIRTUAL_FS;
+use crate::emulation::{vfs::VIRTUAL_FS, memory};
+use windows_sys::Win32::{System::IO::IO_STATUS_BLOCK, Foundation::NTSTATUS};
 
 /*
 ZwReadFile function (wdm.h)
@@ -109,6 +110,19 @@ Callers of ZwReadFile must be running at IRQL = PASSIVE_LEVEL and with special k
 If the call to this function occurs in user mode, you should use the name "NtReadFile" instead of "ZwReadFile".
 */
 
+/*
+#[repr(C)]
+pub struct IO_STATUS_BLOCK {
+    pub Anonymous: IO_STATUS_BLOCK_0,
+    pub Information: usize,
+}
+
+#[repr(C)]
+pub union IO_STATUS_BLOCK_0 {
+    pub Status: NTSTATUS,
+    pub Pointer: *mut c_void,
+}
+*/
 pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // NTSTATUS ZwReadFile(
     //   [in]           HANDLE           FileHandle,     // RCX
@@ -168,16 +182,16 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
         let vfs = VIRTUAL_FS.read().unwrap();
         if let Some(file_info) = vfs.get_file_info(file_handle) {
             let filename = file_info.filename.clone();
-            log::info!("[ZwReadFile] Reading from file: '{}'", filename);
+            log::info!("[ZwReadFile] [VFS] Reading from file: '{}'", filename);
             
             // Try to read actual file from mock_files
             let file_data = match vfs.read_mock_file(&filename) {
                 Ok(data) => {
-                    log::info!("[ZwReadFile] Found mock file data for '{}'", filename);
+                    log::info!("[ZwReadFile] [VFS] Found mock file data for '{}'", filename);
                     data
                 },
                 Err(_) => {
-                    log::info!("[ZwReadFile] No mock file found for '{}', using pattern data", filename);
+                    log::info!("[ZwReadFile] [VFS] No mock file found for '{}', using pattern data", filename);
                     // Generate pattern data as fallback
                     let bytes_to_read = std::cmp::min(length as usize, 256);
                     (0..bytes_to_read).map(|i| (i % 256) as u8).collect()
@@ -185,7 +199,7 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
             };
             (Some(filename), file_data)
         } else {
-            log::warn!("[ZwReadFile] Handle 0x{:x} not found in VFS, using pattern data", file_handle);
+            log::warn!("[ZwReadFile] [VFS] Handle 0x{:x} not found in VFS, using pattern data", file_handle);
             // Generate pattern data for unknown handles
             let bytes_to_read = std::cmp::min(length as usize, 256);
             let data = (0..bytes_to_read).map(|i| (i % 256) as u8).collect();
@@ -225,6 +239,9 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     // Read data from the calculated offset
     let bytes_to_read = std::cmp::min(length as usize, file_data.len().saturating_sub(actual_offset as usize));
     let data_slice = &file_data[actual_offset as usize..actual_offset as usize + bytes_to_read];
+
+    log::info!("[ZwReadFile] [VFS] Reading {} bytes from offset {} (requested: {} bytes from offset {})", 
+        bytes_to_read, actual_offset, length, actual_offset);
     
     // Write data to buffer
     emu.mem_write(buffer, data_slice)?;
@@ -235,21 +252,32 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
         vfs.update_position(file_handle, actual_offset + bytes_to_read as u64);
     }
     
-    // Set up IO_STATUS_BLOCK (8 bytes Status + 8 bytes Information)
+    // Set up IO_STATUS_BLOCK using proper struct
     let status = if bytes_to_read == 0 && length > 0 {
         STATUS_END_OF_FILE
     } else {
         STATUS_SUCCESS
     };
-    let bytes_read = bytes_to_read as u64;
     
-    emu.mem_write(io_status_block, &status.to_le_bytes())?;
-    emu.mem_write(io_status_block + 8, &bytes_read.to_le_bytes())?;
+    // Create and write IO_STATUS_BLOCK
+    // Note: IO_STATUS_BLOCK contains a union for Status/Pointer and Information field
+    // We'll write it manually since the union makes it complex
+    let status_value = status as i32; // NTSTATUS is i32
+    let information_value = bytes_to_read as usize;
+    
+    // Write Status (first 8 bytes - union field)
+    emu.mem_write(io_status_block, &status_value.to_le_bytes())?;
+    emu.mem_write(io_status_block + 4, &[0u8; 4])?; // padding for 64-bit alignment
+    
+    // Write Information (next 8 bytes)
+    emu.mem_write(io_status_block + 8, &information_value.to_le_bytes())?;
+    
+    log::debug!("[ZwReadFile] IO_STATUS_BLOCK: Status=0x{:08x}, Information={}", status, information_value);
     
     if let Some(filename) = filename {
-        log::info!("[ZwReadFile] Read {} bytes from '{}' at offset {}", bytes_read, filename, actual_offset);
+        log::info!("[ZwReadFile] [VFS] Read {} bytes from '{}' at offset {}", bytes_to_read, filename, actual_offset);
     } else {
-        log::info!("[ZwReadFile] Read {} bytes from handle 0x{:x}", bytes_read, file_handle);
+        log::info!("[ZwReadFile] [VFS] Read {} bytes from handle 0x{:x}", bytes_to_read, file_handle);
     }
     
     // Return STATUS_SUCCESS
