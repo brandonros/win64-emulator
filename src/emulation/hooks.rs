@@ -83,12 +83,6 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         *counter
     });
 
-    // Early return if no features that require instruction decoding are enabled
-    const NEEDS_DECODING: bool = cfg!(feature = "log-instruction") || cfg!(feature = "trace-instruction");
-    if !NEEDS_DECODING {
-        return;
-    }
-
     // Only do expensive work if logging/tracing is enabled
     CODE_BUFFER.with(|buf| {
         // Safe: thread_local ensures single-threaded access
