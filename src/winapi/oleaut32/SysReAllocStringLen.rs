@@ -88,7 +88,7 @@ pub fn SysReAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     // Allocate new memory for the BSTR
     let alloc_addr = {
         let mut heap = HEAP_ALLOCATIONS.lock().unwrap();
-        match heap.allocate(total_size) {
+        match heap.allocate(emu, total_size) {
             Ok(addr) => addr,
             Err(e) => {
                 log::error!("[SysReAllocStringLen] Failed to allocate memory: {}", e);

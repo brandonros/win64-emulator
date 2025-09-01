@@ -21,7 +21,7 @@ pub fn GetCommandLineA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
         
         // Allocate from heap
         let addr = HEAP_ALLOCATIONS.lock().unwrap()
-            .allocate(size)
+            .allocate(emu, size)
             .map_err(|e| {
                 log::error!("[GetCommandLineA] {}", e);
                 unicorn_engine::uc_error::NOMEM

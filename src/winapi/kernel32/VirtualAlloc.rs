@@ -17,7 +17,7 @@ pub fn VirtualAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     // For simplicity, ignore the address hint and protection flags
     // Just allocate memory using the heap manager
     let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-    match heap_mgr.allocate(size as usize) {
+    match heap_mgr.allocate(emu, size as usize) {
         Ok(addr) => {
             emu.reg_write(RegisterX86::RAX, addr)?;
             log::info!("[VirtualAlloc] Allocated {} bytes at 0x{:x}", size, addr);

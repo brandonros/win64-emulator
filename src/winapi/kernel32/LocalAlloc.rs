@@ -18,7 +18,7 @@ pub fn LocalAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     
     // Allocate memory
     let mut heap = HEAP_ALLOCATIONS.lock().unwrap();
-    let addr = match heap.allocate(size) {
+    let addr = match heap.allocate(emu, size) {
         Ok(addr) => addr,
         Err(e) => {
             log::error!("kernel32!LocalAlloc: {}", e);

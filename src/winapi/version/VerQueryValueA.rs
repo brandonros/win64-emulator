@@ -167,7 +167,7 @@ pub fn VerQueryValueA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
         // Allocate space for translation array
         let translation_addr = {
             let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-            match heap_mgr.allocate(4) {
+            match heap_mgr.allocate(emu, 4) {
                 Ok(addr) => addr,
                 Err(e) => {
                     log::error!("[VerQueryValueA] Failed to allocate memory: {}", e);
@@ -218,7 +218,7 @@ pub fn VerQueryValueA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
             // Allocate and write the string
             let string_addr = {
                 let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-                match heap_mgr.allocate(string_value.len() + 1) {
+                match heap_mgr.allocate(emu, string_value.len() + 1) {
                     Ok(addr) => addr,
                     Err(e) => {
                         log::error!("[VerQueryValueA] Failed to allocate memory: {}", e);

@@ -11,7 +11,7 @@ pub fn HeapAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> 
     
     if heap_handle == HEAP_BASE {  // It's the process heap
         let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-        match heap_mgr.allocate(size as usize) {
+        match heap_mgr.allocate(emu, size as usize) {
             Ok(addr) => {
                 emu.reg_write(RegisterX86::RAX, addr)?;
                 log::info!("[HeapAlloc] Allocated {} bytes at 0x{:x}", size, addr);

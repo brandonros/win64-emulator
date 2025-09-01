@@ -452,23 +452,23 @@ fn push_return_address<D>(emu: &mut Unicorn<D>, return_addr: u64) {
 /// Finalize API call by simulating the RET that would have happened
 fn finalize_api_call<D>(emu: &mut Unicorn<D>) {
     let rax = emu.reg_read(RegisterX86::RAX).unwrap();
-      //log:trace!("Finalizing API call - RAX return value: 0x{:x}", rax);
-      
-      // We're simulating what the API function's RET would have done:
-      // 1. Pop address from stack
-      // 2. Jump to that address
-      
-      // Read the return address from stack (what RET would pop)
-      let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
-      let mut ret_addr_bytes = [0u8; 8];
-      emu.mem_read(rsp, &mut ret_addr_bytes).unwrap();
-      let ret_addr_from_stack = u64::from_le_bytes(ret_addr_bytes);
-      
-      // Pop the stack (like RET would)
-      emu.reg_write(RegisterX86::RSP, rsp + 8).unwrap();
-      
-      // Jump to the return address (like RET would)
-      emu.reg_write(RegisterX86::RIP, ret_addr_from_stack).unwrap();
-      
-      //log:trace!("Simulated RET: popped 0x{:x} from stack, RSP 0x{:x} -> 0x{:x}", ret_addr_from_stack, rsp, rsp + 8);
+    //log:trace!("Finalizing API call - RAX return value: 0x{:x}", rax);
+    
+    // We're simulating what the API function's RET would have done:
+    // 1. Pop address from stack
+    // 2. Jump to that address
+    
+    // Read the return address from stack (what RET would pop)
+    let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
+    let mut ret_addr_bytes = [0u8; 8];
+    emu.mem_read(rsp, &mut ret_addr_bytes).unwrap();
+    let ret_addr_from_stack = u64::from_le_bytes(ret_addr_bytes);
+    
+    // Pop the stack (like RET would)
+    emu.reg_write(RegisterX86::RSP, rsp + 8).unwrap();
+    
+    // Jump to the return address (like RET would)
+    emu.reg_write(RegisterX86::RIP, ret_addr_from_stack).unwrap();
+    
+    //log:trace!("Simulated RET: popped 0x{:x} from stack, RSP 0x{:x} -> 0x{:x}", ret_addr_from_stack, rsp, rsp + 8);
 }

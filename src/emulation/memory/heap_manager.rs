@@ -21,12 +21,12 @@ impl HeapManager {
         }
     }
     
-    pub fn allocate(&mut self, size: usize) -> Result<u64, String> {
+    pub fn allocate(&mut self, emu: &mut Unicorn<()>, size: usize) -> Result<u64, String> {
         let addr = self.next_addr;
         
         // Align to 16 bytes for next allocation
-        let aligned_size = ((size + 15) & !15) as u64;
-        let new_next = self.next_addr + aligned_size;
+        let aligned_size = (size + 15) & !15;
+        let new_next = self.next_addr + aligned_size as u64;
         
         // Check if we're about to overflow the heap
         if new_next > HEAP_BASE + HEAP_SIZE as u64 {
@@ -34,8 +34,13 @@ impl HeapManager {
                    size, addr, HEAP_BASE + HEAP_SIZE as u64));
         }
         
-        self.allocations.insert(addr, size);
+        self.allocations.insert(addr, aligned_size as usize);
         self.next_addr = new_next;
+
+        // zero the memory as a test
+        let zeros = vec![0u8; size];
+        emu.mem_write(addr, &zeros).unwrap(); // TODO: no unwrap
+        
         Ok(addr)
     }
 
@@ -44,9 +49,7 @@ impl HeapManager {
         if let Some(size) = self.allocations.remove(&addr) {
             // Zero out the freed memory to prevent use-after-free
             let zeros = vec![0u8; size];
-            if let Err(e) = emu.mem_write(addr, &zeros) {
-                log::warn!("[HeapManager] Failed to zero freed memory at 0x{:x}: {:?}", addr, e);
-            }
+            emu.mem_write(addr, &zeros).unwrap(); // TODO: no unwrap
             log::info!("[HeapManager] Freed {} bytes at 0x{:x} (zeroed)", size, addr);
             Ok(())
         } else {
