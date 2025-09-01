@@ -144,6 +144,7 @@ pub fn handle_winapi_call<D>(
 
         // user32
         ("user32.dll", "CharLowerBuffW") => user32::CharLowerBuffW(emu_ref),
+        ("user32.dll", "CharUpperBuffW") => user32::CharUpperBuffW(emu_ref),
         ("user32.dll", "EnumDisplayDevicesA") => user32::EnumDisplayDevicesA(emu_ref),                                               
         ("user32.dll", "EnumDisplayMonitors") => user32::EnumDisplayMonitors(emu_ref),                       
         ("user32.dll", "GetDC") => user32::GetDC(emu_ref),        
@@ -159,6 +160,7 @@ pub fn handle_winapi_call<D>(
         ("user32.dll", "ReleaseDC") => user32::ReleaseDC(emu_ref),        
         ("user32.dll", "SystemParametersInfoA") => user32::SystemParametersInfoA(emu_ref),
         ("user32.dll", "GetPropA") => user32::GetPropA(emu_ref),
+        ("user32.dll", "DefWindowProcW") => user32::DefWindowProcW(emu_ref),
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),

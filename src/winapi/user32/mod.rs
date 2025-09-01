@@ -24,3 +24,5 @@ declare_api!(EnumDisplayMonitors);
 declare_api!(MonitorFromWindow);
 declare_api!(MonitorFromRect);
 declare_api!(GetPropA);
+declare_api!(DefWindowProcW);
+declare_api!(CharUpperBuffW);
