@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use unicorn_engine::{uc_error, Arch, Mode, RegisterX86, Unicorn};
 use crate::loader_error::LoaderError;
 use crate::pe::{ImportedFunction, LoadedPE, MODULE_REGISTRY};
@@ -9,6 +11,7 @@ mod memory_hooks;
 mod code_hooks;
 mod iat_hooks;
 pub mod vfs;
+pub mod dump;
 #[cfg(feature = "trace-instruction")]
 pub mod tracing;
 
@@ -119,6 +122,9 @@ impl Emulator {
                 let rip = self.emu.reg_read(RegisterX86::RIP)?;
                 log::info!("❌ Execution stopped at 0x{:016x}: {:?}", rip, e);
                 cpu::dump_cpu_state(&mut self.emu)?;
+
+                // dump
+                dump::dump_memory(&mut self.emu, Path::new("/tmp/dump"))?;
             }
         }
         
@@ -180,3 +186,5 @@ impl Emulator {
         &mut self.emu
     }
 }
+
+
