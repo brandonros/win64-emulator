@@ -110,3 +110,5 @@ declare_api!(CreateMutexA);
 declare_api!(GetSystemFirmwareTable);
 declare_api!(GlobalAddAtomA);
 declare_api!(FileTimeToLocalFileTime);
+declare_api!(FileTimeToDosDateTime);
+declare_api!(FindClose);
