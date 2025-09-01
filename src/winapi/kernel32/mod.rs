@@ -119,3 +119,5 @@ declare_api!(AddVectoredExceptionHandler);
 declare_api!(SetThreadStackGuarantee);
 declare_api!(SetThreadDescription);
 declare_api!(WriteConsoleA);
+declare_api!(CheckRemoteDebuggerPresent);
+declare_api!(CreateToolhelp32Snapshot);

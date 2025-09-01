@@ -143,6 +143,8 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "SetThreadStackGuarantee") => kernel32::SetThreadStackGuarantee(emu_ref),        
         ("kernel32.dll", "SetThreadDescription") => kernel32::SetThreadDescription(emu_ref),        
         ("kernel32.dll", "WriteConsoleA") => kernel32::WriteConsoleA(emu_ref),        
+        ("kernel32.dll", "CheckRemoteDebuggerPresent") => kernel32::CheckRemoteDebuggerPresent(emu_ref),        
+        ("kernel32.dll", "CreateToolhelp32Snapshot") => kernel32::CreateToolhelp32Snapshot(emu_ref),        
 
         // user32
         ("user32.dll", "CharLowerBuffW") => user32::CharLowerBuffW(emu_ref),

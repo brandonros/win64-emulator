@@ -14,7 +14,7 @@ pub fn GetCommandLineW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
         addr
     } else {
         // First call - allocate and initialize
-        let command_line = "C:\\Windows\\System32\\main.exe";
+        let command_line = "C:\\Program Files\\Application\\enigma_test_protected.exe";
         
         // Convert to UTF-16 wide string
         let wide_chars: Vec<u16> = command_line.encode_utf16().collect();

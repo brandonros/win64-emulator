@@ -16,13 +16,13 @@ pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::u
     // Determine which module to get the filename for
     let filename = if h_module == 0 {
         // NULL means get the main executable's path
-        "C:\\Program Files\\Application\\main.exe"
+        "C:\\Program Files\\Application\\enigma_test_protected.exe"
     } else {
         // Check if this is a known module
         if let Some(module) = MODULE_REGISTRY.get_loaded_module_by_module_base(h_module) {
             // Return a mock path based on the module name
             match module.name.as_str() {
-                "main.exe" | "main" => "C:\\Program Files\\Application\\main.exe",
+                "enigma_test_protected.exe" | "enigma_test_protected" => "C:\\Program Files\\Application\\enigma_test_protected.exe",
                 "kernel32.dll" | "kernel32" => "C:\\Windows\\System32\\kernel32.dll",
                 "user32.dll" | "user32" => "C:\\Windows\\System32\\user32.dll",
                 "ntdll.dll" | "ntdll" => "C:\\Windows\\System32\\ntdll.dll",

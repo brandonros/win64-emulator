@@ -108,7 +108,7 @@ impl ModuleRegistry {
         match name {
             None => {
                 // NULL means main module - look it up from registered modules
-                inner.modules.get("main")
+                inner.modules.get("enigma_test_protected")
                     .map(|m| m.base_address)
             },
             Some(module_name) => {
@@ -131,9 +131,9 @@ impl ModuleRegistry {
         let image_size = loaded_pe.image_size();
 
         inner.modules.insert(
-            "main".to_string(),
+            "enigma_test_protected".to_string(),
             LoadedModule::new(
-                "main".to_string(),
+                "enigma_test_protected".to_string(),
                 base,
                 image_size as u64,
             )

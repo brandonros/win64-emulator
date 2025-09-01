@@ -14,7 +14,7 @@ pub fn GetCommandLineA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
         addr
     } else {
         // First call - allocate and initialize
-        let command_line = "C:\\Windows\\System32\\main.exe";
+        let command_line = "C:\\Program Files\\Application\\enigma_test_protected.exe";
         
         // Calculate size needed (including null terminator)
         let size = command_line.len() + 1;
