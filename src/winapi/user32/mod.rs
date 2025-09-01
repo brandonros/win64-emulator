@@ -27,3 +27,4 @@ declare_api!(GetPropA);
 declare_api!(DefWindowProcW);
 declare_api!(CharUpperBuffW);
 declare_api!(RegisterClipboardFormatA);
+declare_api!(CharLowerA);

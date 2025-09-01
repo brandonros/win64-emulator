@@ -37,9 +37,16 @@ To compile an application that uses this function, define the _WIN32_WINNT macro
 
 use unicorn_engine::{Unicorn, RegisterX86};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::collections::HashSet;
+use std::sync::{LazyLock, RwLock};
 
 // Simple counter for generating unique handler handles
 static HANDLER_COUNTER: AtomicU64 = AtomicU64::new(0x1000);
+
+// Shared tracking of registered exception handler handles
+pub static REGISTERED_HANDLERS: LazyLock<RwLock<HashSet<u64>>> = LazyLock::new(|| {
+    RwLock::new(HashSet::new())
+});
 
 pub fn AddVectoredExceptionHandler(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // PVOID AddVectoredExceptionHandler(
@@ -64,6 +71,13 @@ pub fn AddVectoredExceptionHandler(emu: &mut Unicorn<()>) -> Result<(), unicorn_
     } else {
         // Generate a unique handle for this handler
         let handle = HANDLER_COUNTER.fetch_add(1, Ordering::SeqCst);
+        
+        // Add the handle to the shared tracking set
+        {
+            let mut handlers = REGISTERED_HANDLERS.write().unwrap();
+            handlers.insert(handle);
+        }
+        
         log::info!("[AddVectoredExceptionHandler] Registered handler 0x{:x} with handle 0x{:x}", 
                   handler, handle);
         emu.reg_write(RegisterX86::RAX, handle)?;

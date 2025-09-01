@@ -37,6 +37,8 @@ features = [
     "Win32_System_Variant",
     "Win32_UI_Controls",
     "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Diagnostics",
+    "Win32_System_Diagnostics_ToolHelp",
     "Win32_UI",
 ]
 

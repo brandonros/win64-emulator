@@ -121,3 +121,6 @@ declare_api!(SetThreadDescription);
 declare_api!(WriteConsoleA);
 declare_api!(CheckRemoteDebuggerPresent);
 declare_api!(CreateToolhelp32Snapshot);
+declare_api!(Module32First);
+declare_api!(Module32Next);
+declare_api!(RemoveVectoredExceptionHandler);

@@ -145,6 +145,9 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "WriteConsoleA") => kernel32::WriteConsoleA(emu_ref),        
         ("kernel32.dll", "CheckRemoteDebuggerPresent") => kernel32::CheckRemoteDebuggerPresent(emu_ref),        
         ("kernel32.dll", "CreateToolhelp32Snapshot") => kernel32::CreateToolhelp32Snapshot(emu_ref),        
+        ("kernel32.dll", "Module32First") => kernel32::Module32First(emu_ref),        
+        ("kernel32.dll", "Module32Next") => kernel32::Module32Next(emu_ref),        
+        ("kernel32.dll", "RemoveVectoredExceptionHandler") => kernel32::RemoveVectoredExceptionHandler(emu_ref),        
 
         // user32
         ("user32.dll", "CharLowerBuffW") => user32::CharLowerBuffW(emu_ref),
@@ -166,6 +169,7 @@ pub fn handle_winapi_call<D>(
         ("user32.dll", "GetPropA") => user32::GetPropA(emu_ref),
         ("user32.dll", "DefWindowProcW") => user32::DefWindowProcW(emu_ref),
         ("user32.dll", "RegisterClipboardFormatA") => user32::RegisterClipboardFormatA(emu_ref),
+        ("user32.dll", "CharLowerA") => user32::CharLowerA(emu_ref),
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),
