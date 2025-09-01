@@ -1,4 +1,5 @@
 use std::{collections::HashMap, sync::{LazyLock, Mutex}};
+use unicorn_engine::Unicorn;
 
 use crate::emulation::memory::{HEAP_BASE, HEAP_SIZE};
 
@@ -38,10 +39,15 @@ impl HeapManager {
         Ok(addr)
     }
 
-    pub fn free(&mut self, addr: u64) -> Result<(), String> {
+    pub fn free(&mut self, addr: u64, emu: &mut Unicorn<()>) -> Result<(), String> {
         // Check if this address was actually allocated
         if let Some(size) = self.allocations.remove(&addr) {
-            log::info!("[HeapManager] Freed {} bytes at 0x{:x}", size, addr);
+            // Zero out the freed memory to prevent use-after-free
+            let zeros = vec![0u8; size];
+            if let Err(e) = emu.mem_write(addr, &zeros) {
+                log::warn!("[HeapManager] Failed to zero freed memory at 0x{:x}: {:?}", addr, e);
+            }
+            log::info!("[HeapManager] Freed {} bytes at 0x{:x} (zeroed)", size, addr);
             Ok(())
         } else {
             Err(format!("Attempted to free unallocated address: 0x{:x}", addr))

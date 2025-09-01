@@ -25,7 +25,7 @@ pub fn HeapFree(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     
     if heap_handle == HEAP_BASE {  // It's the process heap
         let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-        match heap_mgr.free(mem_ptr) {
+        match heap_mgr.free(mem_ptr, emu) {
             Ok(()) => {
                 log::info!("[HeapFree] Successfully freed memory at 0x{:x}", mem_ptr);
                 emu.reg_write(RegisterX86::RAX, 1)?; // Return TRUE for success

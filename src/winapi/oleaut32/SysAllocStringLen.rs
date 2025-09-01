@@ -51,7 +51,7 @@ pub fn SysAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     // Calculate allocation size
     // ui characters * 2 bytes per OLECHAR (wide char) + 4 byte length prefix + 2 byte null terminator
     let string_data_size = (ui as usize) * 2;
-    let total_size = 4 + string_data_size + 2;
+    let total_size = 4 + string_data_size + 2; // TODO: add 16 for some padding as a guess/workaround?
     
     // Allocate memory for the BSTR
     let alloc_addr = {

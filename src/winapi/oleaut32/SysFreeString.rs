@@ -51,7 +51,7 @@ pub fn SysFreeString(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     // Free the memory starting from the allocation address (including length prefix)
     {
         let mut heap = HEAP_ALLOCATIONS.lock().unwrap();
-        match heap.free(allocation_start) {
+        match heap.free(allocation_start, emu) {
             Ok(_) => {
                 log::info!("[SysFreeString] Successfully freed BSTR allocation at 0x{:x}", allocation_start);
             }

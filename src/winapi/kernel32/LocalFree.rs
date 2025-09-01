@@ -19,7 +19,7 @@ pub fn LocalFree(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> 
     
     // Free the memory using the heap manager
     let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-    match heap_mgr.free(mem_handle) {
+    match heap_mgr.free(mem_handle, emu) {
         Ok(()) => {
             log::info!("[LocalFree] Successfully freed memory at 0x{:x}", mem_handle);
             emu.reg_write(RegisterX86::RAX, 0)?; // Return NULL on success

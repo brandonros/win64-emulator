@@ -83,7 +83,7 @@ pub fn SysReAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     // Calculate new allocation size
     // len characters * 2 bytes per OLECHAR (wide char) + 4 byte length prefix + 2 byte null terminator
     let string_data_size = (len as usize) * 2;
-    let total_size = 4 + string_data_size + 2;
+    let total_size = 4 + string_data_size + 2; // TODO add 16 padding as a workaround?
     
     // Allocate new memory for the BSTR
     let alloc_addr = {
@@ -132,10 +132,22 @@ pub fn SysReAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     let null_terminator = [0u8, 0u8];
     emu.mem_write(new_bstr + string_data_size as u64, &null_terminator)?;
     
-    // Free the old BSTR if it exists (just log for now, as we don't track BSTR allocations separately)
+    // Free the old BSTR if it exists
     if current_bstr != 0 {
-        log::info!("[SysReAllocStringLen] Would free old BSTR at 0x{:x}", current_bstr);
-        // In a real implementation, we would free the old BSTR memory here
+        // BSTR pointer points to string data, actual allocation starts 4 bytes before
+        let old_alloc_start = current_bstr - 4;
+        {
+            let mut heap = HEAP_ALLOCATIONS.lock().unwrap();
+            match heap.free(old_alloc_start, emu) {
+                Ok(_) => {
+                    log::info!("[SysReAllocStringLen] Freed old BSTR allocation at 0x{:x}", old_alloc_start);
+                }
+                Err(e) => {
+                    log::warn!("[SysReAllocStringLen] Failed to free old BSTR: {}", e);
+                    // Continue anyway - we've already allocated the new BSTR
+                }
+            }
+        }
     }
     
     // Update the BSTR pointer at pbstr

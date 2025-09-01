@@ -52,7 +52,7 @@ impl Emulator {
         MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/api-ms-win-crt-stdio-l1-1-0.dll", "api-ms-win-crt-stdio-l1-1-0.dll", None)?;
         MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/api-ms-win-crt-locale-l1-1-0.dll", "api-ms-win-crt-locale-l1-1-0.dll", None)?;
         MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/api-ms-win-crt-heap-l1-1-0.dll", "api-ms-win-crt-heap-l1-1-0.dll", None)?;
-        MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/shfolder.dll", "shfolder.dll", None)?;
+        //MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/shfolder.dll", "shfolder.dll", None)?;
         //MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/msimg32.dll", "msimg32.dll", None)?;
         //MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/dwmapi.dll", "dwmapi.dll", None)?;
         //MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/uxtheme.dll", "uxtheme.dll", None)?;

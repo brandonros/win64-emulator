@@ -15,7 +15,7 @@ pub fn VirtualFree(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     
     // For simplicity, just free the memory
     let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-    match heap_mgr.free(address) {
+    match heap_mgr.free(address, emu) {
         Ok(_) => {
             emu.reg_write(RegisterX86::RAX, 1)?;  // TRUE on success
             log::info!("[VirtualFree] Freed memory at 0x{:x}", address);
