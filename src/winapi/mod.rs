@@ -161,6 +161,7 @@ pub fn handle_winapi_call<D>(
         ("user32.dll", "SystemParametersInfoA") => user32::SystemParametersInfoA(emu_ref),
         ("user32.dll", "GetPropA") => user32::GetPropA(emu_ref),
         ("user32.dll", "DefWindowProcW") => user32::DefWindowProcW(emu_ref),
+        ("user32.dll", "RegisterClipboardFormatA") => user32::RegisterClipboardFormatA(emu_ref),
 
         // ntdll
         ("ntdll.dll", "RtlAddFunctionTable") => ntdll::RtlAddFunctionTable(emu_ref),

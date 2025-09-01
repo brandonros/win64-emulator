@@ -26,3 +26,4 @@ declare_api!(MonitorFromRect);
 declare_api!(GetPropA);
 declare_api!(DefWindowProcW);
 declare_api!(CharUpperBuffW);
+declare_api!(RegisterClipboardFormatA);
