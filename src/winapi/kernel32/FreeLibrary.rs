@@ -20,7 +20,7 @@ pub fn FreeLibrary(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     }
     
     // Check if the module handle exists in registry
-    let module_exists = MODULE_REGISTRY.read().unwrap()
+    let module_exists = MODULE_REGISTRY
         .get_module_by_handle(h_lib_module)
         .is_some();
     

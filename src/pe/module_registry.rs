@@ -40,11 +40,15 @@ impl LoadedModule {
 }
 
 // Global module registry
-pub static MODULE_REGISTRY: LazyLock<RwLock<ModuleRegistry>> = LazyLock::new(|| {
-    RwLock::new(ModuleRegistry::new())
+pub static MODULE_REGISTRY: LazyLock<ModuleRegistry> = LazyLock::new(|| {
+    ModuleRegistry::new()
 });
 
 pub struct ModuleRegistry {
+    inner: RwLock<ModuleRegistryInner>,
+}
+
+struct ModuleRegistryInner {
     modules: HashMap<String, LoadedModule>,
     next_dll_base: u64,  // For dynamic allocation of DLL base addresses
     next_mock_addr: u64, // For dynamic allocation of mock function addresses
@@ -54,23 +58,27 @@ impl ModuleRegistry {
     fn new() -> Self {
         // Start with an empty registry - modules will be registered when actually loaded
         ModuleRegistry {
-            modules: HashMap::new(),
-            next_dll_base: SYSTEM_DLL_BASE,
-            next_mock_addr: MOCK_FUNCTION_BASE + 0x1000, // Leave some space at the beginning
+            inner: RwLock::new(ModuleRegistryInner {
+                modules: HashMap::new(),
+                next_dll_base: SYSTEM_DLL_BASE,
+                next_mock_addr: MOCK_FUNCTION_BASE + 0x1000, // Leave some space at the beginning
+            }),
         }
     }
     
-    pub fn allocate_base_address(&mut self, size: u64) -> u64 {
-        let base = self.next_dll_base;
+    pub fn allocate_base_address(&self, size: u64) -> u64 {
+        let mut inner = self.inner.write().unwrap();
+        let base = inner.next_dll_base;
         // This could potentially allocate addresses that conflict with MAIN_MODULE_BASE
-        self.next_dll_base += ((size + 0xFFFF) & !0xFFFF) + 0x100000;
+        inner.next_dll_base += ((size + 0xFFFF) & !0xFFFF) + 0x100000;
         base
     }
 
     // Allocate a mock function address for hook interception
-    pub fn allocate_mock_address(&mut self) -> u64 {
-        let addr = self.next_mock_addr;
-        self.next_mock_addr += MOCK_FUNCTION_SPACING;
+    pub fn allocate_mock_address(&self) -> u64 {
+        let mut inner = self.inner.write().unwrap();
+        let addr = inner.next_mock_addr;
+        inner.next_mock_addr += MOCK_FUNCTION_SPACING;
         if addr >= MOCK_FUNCTION_BASE + MOCK_FUNCTION_SIZE as u64 {
             panic!("Mock function address space exhausted! Need to map more memory.");
         }
@@ -78,30 +86,33 @@ impl ModuleRegistry {
     }
     
     pub fn get_module_handle(&self, name: Option<&str>) -> Option<u64> {
+        let inner = self.inner.read().unwrap();
         match name {
             None => {
                 // NULL means main module - look it up from registered modules
-                self.modules.get("main")
+                inner.modules.get("main")
                     .map(|m| m.base_address)
             },
             Some(module_name) => {
                 let normalized = module_name.to_lowercase();
-                self.modules.get(&normalized)
+                inner.modules.get(&normalized)
                     .map(|m| m.base_address)
             }
         }
     }
     
-    pub fn get_module_by_handle(&self, handle: u64) -> Option<&LoadedModule> {
+    pub fn get_module_by_handle(&self, handle: u64) -> Option<LoadedModule> {
+        let inner = self.inner.read().unwrap();
         // Find module by base address (handle)
-        self.modules.values().find(|m| m.base_address == handle)
+        inner.modules.values().find(|m| m.base_address == handle).cloned()
     }
     
-    pub fn register_main_module(&mut self, emu: &mut Unicorn<()>, loaded_pe: &LoadedPE, pe_path: &str) {
+    pub fn register_main_module(&self, emu: &mut Unicorn<()>, loaded_pe: &LoadedPE, pe_path: &str) {
+        let mut inner = self.inner.write().unwrap();
         let base = loaded_pe.image_base();
         let image_size = loaded_pe.image_size();
 
-        self.modules.insert(
+        inner.modules.insert(
             "main".to_string(),
             LoadedModule::new(
                 "main".to_string(),
@@ -121,15 +132,16 @@ impl ModuleRegistry {
         emu.mem_write(base, &pe_bytes).unwrap(); // TODO: not unwrap
     }
     
-    pub fn register_module_with_exports(&mut self, name: &str, base: u64, size: u64, exports: HashMap<String, u64>) {
+    pub fn register_module_with_exports(&self, name: &str, base: u64, size: u64, exports: HashMap<String, u64>) {
+        let mut inner = self.inner.write().unwrap();
         let normalized_name = name.to_lowercase();
 
         // do not double insert?
-        if self.modules.contains_key(&normalized_name) {
+        if inner.modules.contains_key(&normalized_name) {
             panic!("double insert module? {normalized_name}")
         }
 
-        self.modules.insert(
+        inner.modules.insert(
             normalized_name.clone(),
             LoadedModule::with_exports(
                 normalized_name.clone(),
@@ -143,23 +155,25 @@ impl ModuleRegistry {
         if normalized_name.ends_with(".dll") {
             let without_ext = normalized_name.trim_end_matches(".dll");
             // Clone the module with same exports
-            let module = self.modules.get(&normalized_name).unwrap().clone();
-            self.modules.insert(without_ext.to_string(), module);
+            let module = inner.modules.get(&normalized_name).unwrap().clone();
+            inner.modules.insert(without_ext.to_string(), module);
         }
     }
     
-    pub fn get_loaded_module_by_module_base(&self, module_base: u64) -> Option<&LoadedModule> {
+    pub fn get_loaded_module_by_module_base(&self, module_base: u64) -> Option<LoadedModule> {
+        let inner = self.inner.read().unwrap();
         // Find module by base address
-        for module in self.modules.values() {
+        for module in inner.modules.values() {
             if module.base_address == module_base {
-                return Some(module);
+                return Some(module.clone());
             }
         }
         None
     }
 
     // Helper function to load and register a system DLL with mock exports
-    pub fn load_system_dll(&mut self, emu: &mut Unicorn<()>, dll_path: &str, dll_name: &str, desired_base: Option<u64>) -> Result<(), String> {
+    pub fn load_system_dll(&self, emu: &mut Unicorn<()>, dll_path: &str, dll_name: &str, desired_base: Option<u64>) -> Result<(), String> {
+
         // Try to load the DLL
         let dll_pe = LoadedPE::from_file(dll_path)
             .map_err(|e| format!("Failed to load {}: {:?}", dll_name, e))?;
@@ -169,22 +183,28 @@ impl ModuleRegistry {
         let actual_size = std::cmp::max(image_size, file_size);
         let mapped_size = ((actual_size + 0xFFF) & !0xFFF) as usize;
         
-        log::info!("📚 Loaded {} with {} exports", dll_name, dll_pe.exports().len());
+        log::info!("📚 Loaded {} with {} exports (original base: 0x{:x})", 
+                 dll_name, dll_pe.exports().len(), dll_pe.image_base());
         
         // Allocate base address for the DLL
         let base_addr = match desired_base {
             Some(addr) => {
                 // Optionally update next_dll_base to avoid conflicts
-                if addr >= self.next_dll_base {
-                    self.next_dll_base = addr + mapped_size as u64 + 0x10000;
+                {
+                    let mut inner = self.inner.write().unwrap();
+                    if addr >= inner.next_dll_base {
+                        inner.next_dll_base = addr + mapped_size as u64 + 0x10000;
+                    }
                 }
                 addr
             },
             None => self.allocate_base_address(mapped_size as u64)
         };
 
-        // Load the DLL into memory
+        // Map memory for the DLL
         emu.mem_map(base_addr, mapped_size, Permission::ALL).unwrap(); // TODO: not unwrap
+        
+        // Write the PE headers first (for programs that read headers at runtime)
         emu.mem_write(base_addr, &dll_pe_bytes).unwrap(); // TODO: not unwrap
         
         // Build export map with mock addresses for hook interception
@@ -225,8 +245,8 @@ mod tests {
         // Create an emulator
         let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64).unwrap();
 
-        // Initialize the module registry
-        let mut registry = MODULE_REGISTRY.write().unwrap();
+        // Get the module registry
+        let registry = &MODULE_REGISTRY;
         
         // Determine the path to ole32.dll
         let ole32_path = "./assets/ole32.dll";

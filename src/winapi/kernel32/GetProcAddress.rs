@@ -15,9 +15,7 @@ pub fn GetProcAddress(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     let proc_name = memory::read_string_from_memory(emu, proc_name_ptr)?;
     
     // Look up the function in the module's exports
-    let registry = MODULE_REGISTRY.read().unwrap();
-    
-    match registry.get_loaded_module_by_module_base(module_base) {
+    match MODULE_REGISTRY.get_loaded_module_by_module_base(module_base) {
         Some(loaded_module) => {
             let module_name = &loaded_module.name;
             match loaded_module.get_proc_address(&proc_name) {

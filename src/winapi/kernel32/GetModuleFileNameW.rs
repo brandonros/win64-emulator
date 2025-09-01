@@ -19,8 +19,7 @@ pub fn GetModuleFileNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::u
         "C:\\Program Files\\Application\\main.exe"
     } else {
         // Check if this is a known module
-        let registry = MODULE_REGISTRY.read().unwrap();
-        if let Some(module) = registry.get_loaded_module_by_module_base(h_module) {
+        if let Some(module) = MODULE_REGISTRY.get_loaded_module_by_module_base(h_module) {
             // Return a mock path based on the module name
             match module.name.as_str() {
                 "main.exe" | "main" => "C:\\Program Files\\Application\\main.exe",

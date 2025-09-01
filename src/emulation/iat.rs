@@ -34,7 +34,7 @@ pub fn setup_iat(emu: &mut Unicorn<'static, ()>, pe: &LoadedPE) -> Result<(), uc
                 
                 // Verify DLL is registered (on first occurrence only)
                 let dll_name = entry.import.dll_name().to_lowercase();
-                if MODULE_REGISTRY.read().unwrap().get_module_handle(Some(&dll_name)).is_none() {
+                if MODULE_REGISTRY.get_module_handle(Some(&dll_name)).is_none() {
                     panic!("  ⚠️  DLL '{}' is imported but not in module registry", dll_name);
                 }
                 

@@ -8,7 +8,7 @@ pub fn LoadLibraryW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     let module_name = memory::read_wide_string_from_memory(emu, module_name_ptr)?;
     
     // Try to get the module handle from registry
-    match MODULE_REGISTRY.read().unwrap().get_module_handle(Some(&module_name)) {
+    match MODULE_REGISTRY.get_module_handle(Some(&module_name)) {
         Some(handle) => {
             emu.reg_write(RegisterX86::RAX, handle)?;
             log::info!("kernel32!LoadLibraryW('{}') -> 0x{:016x}", module_name, handle);
