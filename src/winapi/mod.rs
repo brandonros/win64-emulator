@@ -136,6 +136,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "FindClose") => kernel32::FindClose(emu_ref),
         ("kernel32.dll", "CreateFileA") => kernel32::CreateFileA(emu_ref),
         ("kernel32.dll", "DeviceIoControl") => kernel32::DeviceIoControl(emu_ref),        
+        ("kernel32.dll", "ExitProcess") => kernel32::ExitProcess(emu_ref),        
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),

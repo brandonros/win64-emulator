@@ -114,3 +114,4 @@ declare_api!(FileTimeToDosDateTime);
 declare_api!(FindClose);
 declare_api!(CreateFileA);
 declare_api!(DeviceIoControl);
+declare_api!(ExitProcess);
