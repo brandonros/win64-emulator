@@ -131,6 +131,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "CreateMutexA") => kernel32::CreateMutexA(emu_ref),
         ("kernel32.dll", "GetSystemFirmwareTable") => kernel32::GetSystemFirmwareTable(emu_ref),
         ("kernel32.dll", "GlobalAddAtomA") => kernel32::GlobalAddAtomA(emu_ref),
+        ("kernel32.dll", "FileTimeToLocalFileTime") => kernel32::FileTimeToLocalFileTime(emu_ref),
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
