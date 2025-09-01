@@ -20,8 +20,8 @@ thread_local! {
         formatter
     });
     
-    // Reusable buffer for instruction bytes (32 bytes covers all x86-64 instructions)
-    static CODE_BUFFER: UnsafeCell<[u8; 32]> = UnsafeCell::new([0u8; 32]);
+    // Reusable buffer for instruction bytes (16 bytes covers all x86-64 instructions)
+    static CODE_BUFFER: UnsafeCell<[u8; 16]> = UnsafeCell::new([0u8; 16]);
     
     // Reusable string buffer for formatted output
     static INSTRUCTION_OUTPUT_BUFFER: UnsafeCell<String> = UnsafeCell::new(String::with_capacity(64));
@@ -41,6 +41,11 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
     // Check for NULL pointer execution - this is always critical
     if addr == 0 {
         panic!("❌ Attempted to execute at NULL address (0x0000000000000000)!");
+    }
+
+    // check instruction size
+    if size > 15 {
+        panic!("invalid instruction size of {size:x} at {addr:x}");
     }
 
     // Check if it is a missed non-intercepted winapi IAT call - this is always critical

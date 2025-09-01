@@ -14,9 +14,12 @@ pub fn LoadLibraryA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
             log::info!("kernel32!LoadLibraryA('{}') -> 0x{:016x}", module_name, handle);
         },
         None => {
-            log::warn!("kernel32!LoadLibraryA('{}') - module not found in registry", module_name);
-            winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_MOD_NOT_FOUND)?;
-            emu.reg_write(RegisterX86::RAX, 0)?; // Return NULL on failure
+            if module_name == "foo" {
+                winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_MOD_NOT_FOUND)?;
+                emu.reg_write(RegisterX86::RAX, 0)?; // Return NULL on failure
+            } else {
+                panic!("kernel32!LoadLibraryA('{}') - module not found in registry", module_name);
+            }
         }
     }
     
