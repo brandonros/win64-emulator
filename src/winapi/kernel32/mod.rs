@@ -117,3 +117,4 @@ declare_api!(DeviceIoControl);
 declare_api!(ExitProcess);
 declare_api!(AddVectoredExceptionHandler);
 declare_api!(SetThreadStackGuarantee);
+declare_api!(SetThreadDescription);

@@ -17,6 +17,7 @@ pub fn GetSystemMetrics(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
         42 => 1,    // SM_DBCSENABLED - DBCS support (Double-Byte Character Set)
         74 => 1,    // SM_MIDEASTENABLED - Middle East language support (0 = not enabled)
         82 => 1,    // SM_IMMENABLED - IME support for East Asian input
+        4096 => 0,  // SM_REMOTESESSION
         _ => {
             log::warn!("[GetSystemMetrics] Unhandled metric index: {}", index);
             panic!("[GetSystemMetrics] Unimplemented system metric: {}", index);

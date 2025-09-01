@@ -26,3 +26,58 @@ If the function succeeds, the return value is nonzero.
 
 If the function fails, the return value is 0 (zero). To get extended error information, call GetLastError.
 */
+
+use unicorn_engine::{Unicorn, RegisterX86};
+
+// Default stack guarantee size (4KB is typical)
+const DEFAULT_STACK_GUARANTEE: u32 = 0x1000;
+
+pub fn SetThreadStackGuarantee(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+    // BOOL SetThreadStackGuarantee(
+    //   [in, out] PULONG StackSizeInBytes  // RCX - pointer to ULONG
+    // );
+    
+    let stack_size_ptr = emu.reg_read(RegisterX86::RCX)?;
+    
+    if stack_size_ptr == 0 {
+        log::warn!("[SetThreadStackGuarantee] NULL pointer provided, returning FALSE");
+        emu.reg_write(RegisterX86::RAX, 0)?;
+        return Ok(());
+    }
+    
+    // Read the requested stack size
+    let mut size_bytes = [0u8; 4];
+    emu.mem_read(stack_size_ptr, &mut size_bytes)?;
+    let requested_size = u32::from_le_bytes(size_bytes);
+    
+    log::info!("[SetThreadStackGuarantee] StackSizeInBytes ptr: 0x{:x}, requested size: 0x{:x}", 
+              stack_size_ptr, requested_size);
+    
+    // Mock implementation - always use a default guarantee size
+    let previous_size = DEFAULT_STACK_GUARANTEE;
+    
+    // Write the previous size back to the pointer
+    emu.mem_write(stack_size_ptr, &previous_size.to_le_bytes())?;
+    
+    if requested_size == 0 {
+        // Just querying current size
+        log::info!("[SetThreadStackGuarantee] Query mode - returning current size: 0x{:x}", 
+                  previous_size);
+    } else if requested_size < previous_size {
+        // Can't reduce size - ignore but succeed
+        log::info!("[SetThreadStackGuarantee] Requested size 0x{:x} < current 0x{:x}, ignoring", 
+                  requested_size, previous_size);
+    } else {
+        // Would set new size in real implementation
+        log::info!("[SetThreadStackGuarantee] Mock: Would set stack guarantee to 0x{:x}", 
+                  requested_size);
+    }
+    
+    // Return TRUE (success)
+    emu.reg_write(RegisterX86::RAX, 1)?;
+    
+    log::info!("[SetThreadStackGuarantee] Returning TRUE with previous size: 0x{:x}", 
+              previous_size);
+    
+    Ok(())
+}
