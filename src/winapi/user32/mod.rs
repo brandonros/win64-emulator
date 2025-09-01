@@ -23,3 +23,4 @@ declare_api!(EnumDisplayDevicesA);
 declare_api!(EnumDisplayMonitors);
 declare_api!(MonitorFromWindow);
 declare_api!(MonitorFromRect);
+declare_api!(GetPropA);
