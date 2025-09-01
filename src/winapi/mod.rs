@@ -15,6 +15,7 @@ mod ole32;
 mod gdi32;
 mod comctl32;
 mod ucrtbase;
+mod msvcrt;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,
@@ -141,6 +142,7 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "AddVectoredExceptionHandler") => kernel32::AddVectoredExceptionHandler(emu_ref),        
         ("kernel32.dll", "SetThreadStackGuarantee") => kernel32::SetThreadStackGuarantee(emu_ref),        
         ("kernel32.dll", "SetThreadDescription") => kernel32::SetThreadDescription(emu_ref),        
+        ("kernel32.dll", "WriteConsoleA") => kernel32::WriteConsoleA(emu_ref),        
 
         // user32
         ("user32.dll", "CharLowerBuffW") => user32::CharLowerBuffW(emu_ref),
@@ -177,6 +179,7 @@ pub fn handle_winapi_call<D>(
         ("ntdll.dll", "ZwSetInformationFile") => ntdll::ZwSetInformationFile(emu_ref),
         ("ntdll.dll", "NtSetInformationThread") => ntdll::NtSetInformationThread(emu_ref),
         ("ntdll.dll", "ZwQueryInformationFile") => ntdll::ZwQueryInformationFile(emu_ref),
+        ("ntdll.dll", "RtlInitUnicodeString") => ntdll::RtlInitUnicodeString(emu_ref),
 
         // oleaut32
         ("oleaut32.dll", "SysReAllocStringLen") => oleaut32::SysReAllocStringLen(emu_ref),
@@ -186,6 +189,9 @@ pub fn handle_winapi_call<D>(
 
         // ole32
         ("ole32.dll", "OleInitialize") => ole32::OleInitialize(emu_ref),
+
+        // msvcrt
+        ("msvcrt.dll", "memcpy") => msvcrt::memcpy(emu_ref),
 
         // advapi32
         ("advapi32.dll", "GetUserNameA") => advapi32::GetUserNameA(emu_ref),

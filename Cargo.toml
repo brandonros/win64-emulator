@@ -24,6 +24,7 @@ features = [
     "Wdk_Foundation",
     "Wdk_Storage_FileSystem",
     "Wdk_Storage",
+    "Wdk_System",
     "Wdk",
     "Win32_Globalization",
     "Win32_Graphics_Gdi",

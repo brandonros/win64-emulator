@@ -21,3 +21,4 @@ declare_api!(ZwReadFile);
 declare_api!(ZwClose);
 declare_api!(NtSetInformationThread);
 declare_api!(ZwQueryInformationFile);
+declare_api!(RtlInitUnicodeString);

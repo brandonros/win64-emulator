@@ -308,8 +308,8 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
         log::info!("[ZwReadFile] [VFS] Read {} bytes from handle 0x{:x}", bytes_to_read, file_handle);
     }
     
-    // Return the actual status (STATUS_SUCCESS or STATUS_END_OF_FILE)
-    emu.reg_write(RegisterX86::RAX, status as u64)?;
+    // TODO: return STATUS_END_OF_FILE or always STATUS_SUCCESS?
+    emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
     
     log::debug!("[ZwReadFile] Returning NTSTATUS: 0x{:08x}", status);
     

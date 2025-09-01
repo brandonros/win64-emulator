@@ -50,6 +50,7 @@ impl Emulator {
         MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/vcruntime140.dll", "vcruntime140.dll", None)?;
         MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/shlwapi.dll", "shlwapi.dll", None)?;
         MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/comctl32.dll", "comctl32.dll", None)?;
+        MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/msvcrt.dll", "msvcrt.dll", None)?;        
         MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/api-ms-win-core-synch-l1-2-0.dll", "api-ms-win-core-synch-l1-2-0.dll", None)?;
         MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/api-ms-win-crt-runtime-l1-1-0.dll", "api-ms-win-crt-runtime-l1-1-0.dll", None)?;
         MODULE_REGISTRY.load_system_dll(&mut emu, "./assets/api-ms-win-crt-math-l1-1-0.dll", "api-ms-win-crt-math-l1-1-0.dll", None)?;
