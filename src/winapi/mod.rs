@@ -14,6 +14,7 @@ mod uxtheme;
 mod ole32;
 mod gdi32;
 mod comctl32;
+mod ucrtbase;
 
 pub fn handle_winapi_call<D>(
     emu: &mut Unicorn<D>,
@@ -137,6 +138,8 @@ pub fn handle_winapi_call<D>(
         ("kernel32.dll", "CreateFileA") => kernel32::CreateFileA(emu_ref),
         ("kernel32.dll", "DeviceIoControl") => kernel32::DeviceIoControl(emu_ref),        
         ("kernel32.dll", "ExitProcess") => kernel32::ExitProcess(emu_ref),        
+        ("kernel32.dll", "AddVectoredExceptionHandler") => kernel32::AddVectoredExceptionHandler(emu_ref),        
+        ("kernel32.dll", "SetThreadStackGuarantee") => kernel32::SetThreadStackGuarantee(emu_ref),        
 
         // user32
         ("user32.dll", "GetSystemMetrics") => user32::GetSystemMetrics(emu_ref),
@@ -198,6 +201,13 @@ pub fn handle_winapi_call<D>(
         // comctl32
         ("comctl32.dll", "InitCommonControls") => comctl32::InitCommonControls(emu_ref),
         ("comctl32.dll", "InitCommonControlsEx") => comctl32::InitCommonControlsEx(emu_ref),
+
+        // ucrtbase
+        ("api-ms-win-crt-runtime-l1-1-0.dll", "_initterm_e") => ucrtbase::_initterm_e(emu_ref),
+        ("api-ms-win-crt-runtime-l1-1-0.dll", "_initterm") => ucrtbase::_initterm(emu_ref),
+        ("api-ms-win-crt-runtime-l1-1-0.dll", "_get_initial_narrow_environment") => ucrtbase::_get_initial_narrow_environment(emu_ref),
+        ("api-ms-win-crt-runtime-l1-1-0.dll", "__p___argv") => ucrtbase::__p___argv(emu_ref),
+        ("api-ms-win-crt-runtime-l1-1-0.dll", "__p___argc") => ucrtbase::__p___argc(emu_ref),        
 
         _ => {
             panic!("Unimplemented API call: {}!{}", dll_name, function_name);
