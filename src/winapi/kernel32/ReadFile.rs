@@ -248,7 +248,7 @@ pub fn ReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
                 };
                 (Some(filename), file_data)
             } else {
-                log::warn!("[ReadFile] Handle 0x{:x} not found in VFS", h_file);
+                log::warn!("[ReadFile] Handle 0x{:x} not found in VFS ERROR_INVALID_HANDLE", h_file);
                 winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
                 emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
                 return Ok(());

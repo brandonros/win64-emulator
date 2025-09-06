@@ -46,14 +46,12 @@ pub fn HeapDestroy(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         emu.reg_write(RegisterX86::RAX, 1)?; // Return TRUE - success
     } else {
         // Unknown or invalid heap handle
-        log::warn!("[HeapDestroy] Invalid or unknown heap handle: 0x{:x}", h_heap);
+        log::warn!("[HeapDestroy] Invalid or unknown heap handle: 0x{:x} ERROR_INVALID_HANDLE", h_heap);
         
         // In Windows, HeapDestroy returns FALSE and sets last error to ERROR_INVALID_HANDLE
         // We'll set the last error
         const ERROR_INVALID_HANDLE: u32 = 6;
-        if let Err(e) = crate::winapi::set_last_error(emu, ERROR_INVALID_HANDLE) {
-            log::error!("[HeapDestroy] Failed to set last error: {:?}", e);
-        }
+        crate::winapi::set_last_error(emu, ERROR_INVALID_HANDLE)?;
         
         emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
     }

@@ -26,7 +26,7 @@ pub fn WriteFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> 
 
     // invalid handle
     if h_file != 0x14 && h_file != 0x18 {
-        log::warn!("[WriteFile] Unknown module handle: 0x{:x}", h_file);
+        log::warn!("[WriteFile] Unknown module handle: 0x{:x} ERROR_INVALID_HANDLE", h_file);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
         emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
         return Ok(());

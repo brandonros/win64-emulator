@@ -88,7 +88,7 @@ pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
         // Format the instruction using reusable string buffer
         INSTRUCTION_OUTPUT_BUFFER.with(|instruction_output_buffer| {
             // Handle logging if enabled
-            let should_log = cfg!(feature = "log-instruction");
+            let should_log = cfg!(feature = "log-instruction") || count >= 635314000;
             if should_log {
                 use std::fmt::Write;
 

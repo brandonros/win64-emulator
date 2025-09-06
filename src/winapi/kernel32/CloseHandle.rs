@@ -15,14 +15,14 @@ pub fn CloseHandle(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     match h_object {
         0 => {
             // NULL handle
-            log::warn!("[CloseHandle] Attempting to close NULL handle");
+            log::warn!("[CloseHandle] Attempting to close NULL handle ERROR_INVALID_HANDLE");
             winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
             emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE for failure
             return Ok(());
         },
         0xFFFFFFFFFFFFFFFF => {
             // INVALID_HANDLE_VALUE (-1)
-            log::warn!("[CloseHandle] Attempting to close INVALID_HANDLE_VALUE");
+            log::warn!("[CloseHandle] Attempting to close INVALID_HANDLE_VALUE ERROR_INVALID_HANDLE");
             winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
             emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE for failure
             return Ok(());
@@ -45,7 +45,7 @@ pub fn CloseHandle(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
                 log::info!("[CloseHandle] Closing handle: 0x{:x}", h_object);
                 emu.reg_write(RegisterX86::RAX, 1)?; // Return TRUE for success
             } else {
-                log::warn!("[CloseHandle] Unknown/invalid handle: 0x{:x}", h_object);
+                log::warn!("[CloseHandle] Unknown/invalid handle: 0x{:x} ERROR_INVALID_HANDLE", h_object);
                 winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
                 emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE for failure
             }

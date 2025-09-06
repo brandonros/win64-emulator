@@ -20,7 +20,7 @@ pub fn SetFilePointer(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
 
     // Invalid handle check
     if h_file != 0x14 && h_file != 0x18 && !(h_file >= 0x100 && h_file <= 0x1000) {
-        log::warn!("[SetFilePointer] Invalid handle: 0x{:x}", h_file);
+        log::warn!("[SetFilePointer] Invalid handle: 0x{:x} ERROR_INVALID_HANDLE", h_file);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
         emu.reg_write(RegisterX86::RAX, 0xFFFFFFFF)?; // INVALID_SET_FILE_POINTER
         return Ok(());

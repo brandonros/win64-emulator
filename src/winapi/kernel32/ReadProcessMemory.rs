@@ -65,7 +65,7 @@ pub fn ReadProcessMemory(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
         }
     } else {
         // Reading from another process - not supported in this emulator
-        log::warn!("[ReadProcessMemory] Cross-process memory reading not supported, hProcess: 0x{:x}", h_process);
+        log::warn!("[ReadProcessMemory] Cross-process memory reading not supported, hProcess: 0x{:x} ERROR_INVALID_HANDLE", h_process);
         
         // Set bytes read to 0 if pointer is provided
         if lp_number_of_bytes_read != 0 {
