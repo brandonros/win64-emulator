@@ -1,8 +1,8 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::{memory, vfs::VIRTUAL_FS};
 use crate::winapi;
 
-pub fn CreateFileW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CreateFileW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HANDLE CreateFileW(
     //   LPCWSTR               lpFileName,       // RCX
     //   DWORD                 dwDesiredAccess,   // RDX  
@@ -13,13 +13,13 @@ pub fn CreateFileW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     //   HANDLE                hTemplateFile          // [RSP+50]
     // )
     
-    let file_name_ptr = emu.reg_read(RegisterX86::RCX)?;
-    let desired_access = emu.reg_read(RegisterX86::RDX)? as u32;
-    let share_mode = emu.reg_read(RegisterX86::R8)? as u32;
-    let security_attributes = emu.reg_read(RegisterX86::R9)?;
+    let file_name_ptr = emu.reg_read(X86Register::RCX)?;
+    let desired_access = emu.reg_read(X86Register::RDX)? as u32;
+    let share_mode = emu.reg_read(X86Register::R8)? as u32;
+    let security_attributes = emu.reg_read(X86Register::R9)?;
     
     // Read stack parameters
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut creation_disposition_bytes = [0u8; 4];
     emu.mem_read(rsp + 0x40, &mut creation_disposition_bytes)?;
     let creation_disposition = u32::from_le_bytes(creation_disposition_bytes);
@@ -57,7 +57,7 @@ pub fn CreateFileW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     if file_name_ptr == 0 {
         log::warn!("[CreateFileW] NULL filename provided");
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0xFFFFFFFFFFFFFFFF)?; // INVALID_HANDLE_VALUE
+        emu.reg_write(X86Register::RAX, 0xFFFFFFFFFFFFFFFF)?; // INVALID_HANDLE_VALUE
         return Ok(());
     }
     
@@ -69,7 +69,7 @@ pub fn CreateFileW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         // Console output - return a special handle
         let console_handle = 0x20u64;
         log::info!("[CreateFileW] Opening console output, returning handle: 0x{:x}", console_handle);
-        emu.reg_write(RegisterX86::RAX, console_handle)?;
+        emu.reg_write(X86Register::RAX, console_handle)?;
         return Ok(());
     }
     
@@ -77,7 +77,7 @@ pub fn CreateFileW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         // NUL device - return a special handle
         let nul_handle = 0x30u64;
         log::info!("[CreateFileW] Opening NUL device, returning handle: 0x{:x}", nul_handle);
-        emu.reg_write(RegisterX86::RAX, nul_handle)?;
+        emu.reg_write(X86Register::RAX, nul_handle)?;
         return Ok(());
     }
     
@@ -97,7 +97,7 @@ pub fn CreateFileW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     };
     
     log::info!("[CreateFileW] Created handle: 0x{:x}", handle);
-    emu.reg_write(RegisterX86::RAX, handle)?;
+    emu.reg_write(X86Register::RAX, handle)?;
     
     Ok(())
 }

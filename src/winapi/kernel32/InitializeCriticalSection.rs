@@ -1,12 +1,10 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
+use crate::emulation::memory;
 use windows_sys::Win32::System::Threading::CRITICAL_SECTION;
 
-use crate::emulation::memory;
-
-pub fn InitializeCriticalSection(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn InitializeCriticalSection(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get the pointer to CRITICAL_SECTION structure from RCX register
-    let critical_section_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let critical_section_ptr = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[InitializeCriticalSection] critical_section_ptr: 0x{:x}", critical_section_ptr);
     

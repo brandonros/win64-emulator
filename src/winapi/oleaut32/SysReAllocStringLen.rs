@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
 
 /*
@@ -47,16 +47,16 @@ typedef OLECHAR* BSTR;
 typedef BSTR* LPBSTR;
 */
 
-pub fn SysReAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SysReAllocStringLen(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // INT SysReAllocStringLen(
     //   [in, out]      BSTR          *pbstr,  // RCX
     //   [in, optional] const OLECHAR *psz,    // RDX
     //   [in]           unsigned int  len      // R8
     // )
     
-    let pbstr = emu.reg_read(RegisterX86::RCX)?;
-    let psz = emu.reg_read(RegisterX86::RDX)?;
-    let len = emu.reg_read(RegisterX86::R8)? as u32;
+    let pbstr = emu.reg_read(X86Register::RCX)?;
+    let psz = emu.reg_read(X86Register::RDX)?;
+    let len = emu.reg_read(X86Register::R8)? as u32;
     
     log::info!("[SysReAllocStringLen] pbstr: 0x{:x}", pbstr);
     log::info!("[SysReAllocStringLen] psz: 0x{:x}", psz);
@@ -65,7 +65,7 @@ pub fn SysReAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     // Check for NULL pbstr pointer (would cause access violation)
     if pbstr == 0 {
         log::error!("[SysReAllocStringLen] NULL pbstr pointer - would crash!");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -86,15 +86,12 @@ pub fn SysReAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     let total_size = 4 + string_data_size + 2; // TODO add 16 padding as a workaround?
     
     // Allocate new memory for the BSTR
-    let alloc_addr = {
-        let mut heap = HEAP_ALLOCATIONS.lock().unwrap();
-        match heap.allocate(emu, total_size) {
-            Ok(addr) => addr,
-            Err(e) => {
-                log::error!("[SysReAllocStringLen] Failed to allocate memory: {}", e);
-                emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
-                return Ok(());
-            }
+    let alloc_addr = match HEAP_ALLOCATIONS.allocate(emu, total_size) {
+        Ok(addr) => addr,
+        Err(e) => {
+            log::error!("[SysReAllocStringLen] Failed to allocate memory: {}", e);
+            emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
+            return Ok(());
         }
     };
     
@@ -136,16 +133,13 @@ pub fn SysReAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     if current_bstr != 0 {
         // BSTR pointer points to string data, actual allocation starts 4 bytes before
         let old_alloc_start = current_bstr - 4;
-        {
-            let mut heap = HEAP_ALLOCATIONS.lock().unwrap();
-            match heap.free(old_alloc_start, emu) {
-                Ok(_) => {
-                    log::info!("[SysReAllocStringLen] Freed old BSTR allocation at 0x{:x}", old_alloc_start);
-                }
-                Err(e) => {
-                    log::warn!("[SysReAllocStringLen] Failed to free old BSTR: {}", e);
-                    // Continue anyway - we've already allocated the new BSTR
-                }
+        match HEAP_ALLOCATIONS.free(old_alloc_start, emu) {
+            Ok(_) => {
+                log::info!("[SysReAllocStringLen] Freed old BSTR allocation at 0x{:x}", old_alloc_start);
+            }
+            Err(e) => {
+                log::warn!("[SysReAllocStringLen] Failed to free old BSTR: {}", e);
+                // Continue anyway - we've already allocated the new BSTR
             }
         }
     }
@@ -158,7 +152,7 @@ pub fn SysReAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     log::info!("[SysReAllocStringLen] Updated *pbstr to point to new BSTR");
     
     // Return TRUE (non-zero) to indicate success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

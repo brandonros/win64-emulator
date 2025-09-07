@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 const HORZRES: i32 = 8;
 const VERTRES: i32 = 10;
@@ -7,9 +7,9 @@ const PLANES: i32 = 14;
 const LOGPIXELSX: i32 = 88;
 const LOGPIXELSY: i32 = 90;
 
-pub fn GetDeviceCaps(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
-    let hdc = emu.reg_read(RegisterX86::RCX)?;
-    let index = emu.reg_read(RegisterX86::RDX)? as i32;
+pub fn GetDeviceCaps(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
+    let hdc = emu.reg_read(X86Register::RCX)?;
+    let index = emu.reg_read(X86Register::RDX)? as i32;
     
     let result = match index {
         HORZRES => 1920,
@@ -28,7 +28,7 @@ pub fn GetDeviceCaps(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
         log::info!("[GetDeviceCaps] HDC: 0x{:x}, Index: {}, returning: {}", hdc, index, result);
     }
     
-    emu.reg_write(RegisterX86::RAX, result as u64)?;
+    emu.reg_write(X86Register::RAX, result as u64)?;
     
     Ok(())
 }

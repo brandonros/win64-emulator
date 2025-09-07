@@ -23,7 +23,7 @@ Type: BOOL
 Returns TRUE if successful, or FALSE otherwise.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use windows_sys::Win32::UI::Controls::INITCOMMONCONTROLSEX;
 
@@ -46,16 +46,16 @@ const ICC_NATIVEFNTCTL_CLASS: u32 = 0x00002000;
 const ICC_STANDARD_CLASSES: u32 = 0x00004000;
 const ICC_LINK_CLASS: u32 = 0x00008000;
 
-pub fn InitCommonControlsEx(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn InitCommonControlsEx(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL InitCommonControlsEx(
     //   const INITCOMMONCONTROLSEX *picce  // RCX
     // )
     
-    let picce_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let picce_ptr = emu.reg_read(X86Register::RCX)?;
     
     if picce_ptr == 0 {
         log::warn!("[InitCommonControlsEx] NULL INITCOMMONCONTROLSEX pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
@@ -64,7 +64,7 @@ pub fn InitCommonControlsEx(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine:
         Ok(s) => s,
         Err(e) => {
             log::error!("[InitCommonControlsEx] Failed to read INITCOMMONCONTROLSEX: {:?}", e);
-            emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+            emu.reg_write(X86Register::RAX, 0)?; // FALSE
             return Ok(());
         }
     };
@@ -98,7 +98,7 @@ pub fn InitCommonControlsEx(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine:
         icce.dwICC, classes.join(", "));
     
     // Return TRUE for success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

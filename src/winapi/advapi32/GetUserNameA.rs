@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::winapi;
 
 /*
@@ -40,14 +40,14 @@ If GetUserName is called from a process that is running under the "NETWORK SERVI
 
 */
 
-pub fn GetUserNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetUserNameA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL GetUserNameA(
     //   [out]     LPSTR   lpBuffer,    // RCX
     //   [in, out] LPDWORD pcbBuffer    // RDX
     // )
     
-    let lp_buffer = emu.reg_read(RegisterX86::RCX)?;
-    let pcb_buffer = emu.reg_read(RegisterX86::RDX)?;
+    let lp_buffer = emu.reg_read(X86Register::RCX)?;
+    let pcb_buffer = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[GetUserNameA] lpBuffer: 0x{:x}", lp_buffer);
     log::info!("[GetUserNameA] pcbBuffer: 0x{:x}", pcb_buffer);
@@ -56,7 +56,7 @@ pub fn GetUserNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     if pcb_buffer == 0 {
         log::error!("[GetUserNameA] NULL pcbBuffer pointer");
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -80,7 +80,7 @@ pub fn GetUserNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
         emu.mem_write(pcb_buffer, &required_size_bytes)?;
         
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -101,7 +101,7 @@ pub fn GetUserNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     log::warn!("[GetUserNameA] Mock implementation - returned username: '{}'", username);
     
     // Return TRUE (success)
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

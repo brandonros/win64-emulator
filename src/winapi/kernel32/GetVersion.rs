@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 /*
 GetVersion function (sysinfoapi.h)
@@ -57,7 +57,7 @@ void main()
 }
 */
 
-pub fn GetVersion(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetVersion(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD GetVersion();
     // No parameters - returns version info in RAX
     
@@ -87,7 +87,7 @@ pub fn GetVersion(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     log::warn!("[GetVersion] Mock implementation - returned Windows 10.0 Build 19041");
     
     // Return the packed version information
-    emu.reg_write(RegisterX86::RAX, version_dword as u64)?;
+    emu.reg_write(X86Register::RAX, version_dword as u64)?;
     
     Ok(())
 }

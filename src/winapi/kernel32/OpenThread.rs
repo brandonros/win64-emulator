@@ -1,15 +1,15 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn OpenThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn OpenThread(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HANDLE OpenThread(
     //   DWORD dwDesiredAccess,  // RCX
     //   BOOL  bInheritHandle,   // RDX
     //   DWORD dwThreadId        // R8
     // )
     
-    let desired_access = emu.reg_read(RegisterX86::RCX)? as u32;
-    let inherit_handle = emu.reg_read(RegisterX86::RDX)? as u32;
-    let thread_id = emu.reg_read(RegisterX86::R8)? as u32;
+    let desired_access = emu.reg_read(X86Register::RCX)? as u32;
+    let inherit_handle = emu.reg_read(X86Register::RDX)? as u32;
+    let thread_id = emu.reg_read(X86Register::R8)? as u32;
     
     // Common access rights
     const THREAD_TERMINATE: u32 = 0x0001;
@@ -45,7 +45,7 @@ pub fn OpenThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     if thread_id == 0 {
         log::warn!("[OpenThread] Invalid thread ID: 0");
         // Return NULL to indicate failure
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -61,7 +61,7 @@ pub fn OpenThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     log::warn!("[OpenThread] Mock implementation - returning fake handle: 0x{:x}", handle);
     
     // Return the handle
-    emu.reg_write(RegisterX86::RAX, handle)?;
+    emu.reg_write(X86Register::RAX, handle)?;
     
     Ok(())
 }

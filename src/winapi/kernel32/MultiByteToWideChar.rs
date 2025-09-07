@@ -1,6 +1,6 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn MultiByteToWideChar(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn MultiByteToWideChar(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // int MultiByteToWideChar(
     //   UINT   CodePage,       // RCX
     //   DWORD  dwFlags,        // RDX
@@ -10,13 +10,13 @@ pub fn MultiByteToWideChar(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     //   int    cchWideChar     // [RSP+0x28] (not 0x48!)
     // )
     
-    let code_page = emu.reg_read(RegisterX86::RCX)? as u32;
-    let flags = emu.reg_read(RegisterX86::RDX)? as u32;
-    let multi_byte_str = emu.reg_read(RegisterX86::R8)?;
-    let cb_multi_byte = emu.reg_read(RegisterX86::R9)? as i32;
+    let code_page = emu.reg_read(X86Register::RCX)? as u32;
+    let flags = emu.reg_read(X86Register::RDX)? as u32;
+    let multi_byte_str = emu.reg_read(X86Register::R8)?;
+    let cb_multi_byte = emu.reg_read(X86Register::R9)? as i32;
     
     // Read stack parameters - CORRECTED OFFSETS
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut wide_char_str_bytes = [0u8; 8];
     emu.mem_read(rsp + 0x20, &mut wide_char_str_bytes)?;  // Fixed: was 0x40
     let wide_char_str = u64::from_le_bytes(wide_char_str_bytes);
@@ -29,7 +29,7 @@ pub fn MultiByteToWideChar(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     if wide_char_str == 0 && cch_wide_char > 0 {
         log::warn!("[MultiByteToWideChar] Output buffer is NULL but cch_wide_char = {}", cch_wide_char);
         // This is actually invalid - should return 0 and set error
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -39,20 +39,20 @@ pub fn MultiByteToWideChar(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     
     if cch_wide_char < 0 || cch_wide_char > 1_000_000 {
         log::warn!("[MultiByteToWideChar] Suspicious cch_wide_char = {}", cch_wide_char);
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
     if cb_multi_byte < -1 || cb_multi_byte > 10_000_000 {
         log::warn!("[MultiByteToWideChar] Suspicious cb_multi_byte = {}", cb_multi_byte);
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
     // Check for NULL source string
     if multi_byte_str == 0 {
         log::warn!("[MultiByteToWideChar] NULL source string");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -92,7 +92,7 @@ pub fn MultiByteToWideChar(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     // If cchWideChar is 0, return the required buffer size (in wide characters, not bytes!)
     if cch_wide_char == 0 {
         log::info!("[MultiByteToWideChar] Query mode - returning required size: {} wide chars", wide_chars.len());
-        emu.reg_write(RegisterX86::RAX, wide_chars.len() as u64)?;
+        emu.reg_write(X86Register::RAX, wide_chars.len() as u64)?;
         return Ok(());
     }
     
@@ -105,16 +105,16 @@ pub fn MultiByteToWideChar(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
             }
             
             log::info!("[MultiByteToWideChar] Successfully converted {} wide characters", wide_chars.len());
-            emu.reg_write(RegisterX86::RAX, wide_chars.len() as u64)?;
+            emu.reg_write(X86Register::RAX, wide_chars.len() as u64)?;
         } else {
             log::warn!("[MultiByteToWideChar] Buffer too small: need {} but got {}", wide_chars.len(), cch_wide_char);
             // Should set ERROR_INSUFFICIENT_BUFFER here
-            emu.reg_write(RegisterX86::RAX, 0)?;
+            emu.reg_write(X86Register::RAX, 0)?;
         }
     } else {
         // Invalid parameter - non-zero cch but null buffer
         log::warn!("[MultiByteToWideChar] Invalid parameter: null buffer with non-zero size");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
     }
     
     Ok(())

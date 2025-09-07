@@ -1,13 +1,13 @@
-use unicorn_engine::{RegisterX86, Unicorn};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::pe::MODULE_REGISTRY;
 use crate::winapi;
 
-pub fn FreeLibrary(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn FreeLibrary(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL FreeLibrary(
     //   HMODULE hLibModule
     // )
     
-    let h_lib_module = emu.reg_read(RegisterX86::RCX)?;
+    let h_lib_module = emu.reg_read(X86Register::RCX)?;
     
     log::info!("kernel32!FreeLibrary(0x{:016x})", h_lib_module);
     
@@ -15,7 +15,7 @@ pub fn FreeLibrary(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     if h_lib_module == 0 {
         log::warn!("kernel32!FreeLibrary - NULL handle provided ERROR_INVALID_HANDLE");
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -28,11 +28,11 @@ pub fn FreeLibrary(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         // In a real implementation, you might decrease reference count here
         // For simulation, we just succeed
         log::info!("kernel32!FreeLibrary(0x{:016x}) -> TRUE (success)", h_lib_module);
-        emu.reg_write(RegisterX86::RAX, 1)?; // Return TRUE
+        emu.reg_write(X86Register::RAX, 1)?; // Return TRUE
     } else {
         log::warn!("kernel32!FreeLibrary(0x{:016x}) - invalid module handle ERROR_INVALID_HANDLE", h_lib_module);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
     }
     
     Ok(())

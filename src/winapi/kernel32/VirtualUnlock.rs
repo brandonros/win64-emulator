@@ -1,13 +1,13 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn VirtualUnlock(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn VirtualUnlock(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL VirtualUnlock(
     //   LPVOID lpAddress,  // RCX
     //   SIZE_T dwSize      // RDX
     // )
     
-    let address = emu.reg_read(RegisterX86::RCX)?;
-    let size = emu.reg_read(RegisterX86::RDX)?;
+    let address = emu.reg_read(X86Register::RCX)?;
+    let size = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[VirtualUnlock] address: 0x{:x}, size: 0x{:x}", address, size);
     
@@ -16,7 +16,7 @@ pub fn VirtualUnlock(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     // For emulation purposes, we just pretend it succeeded
     
     // Return TRUE (1) for success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     log::info!("[VirtualUnlock] Unlocked {} bytes at 0x{:x} (mock)", size, address);
     

@@ -1,6 +1,6 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn IsDebuggerPresent(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn IsDebuggerPresent(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL IsDebuggerPresent(void)
     // Takes no parameters, returns TRUE if a debugger is attached, FALSE otherwise
     
@@ -17,7 +17,7 @@ pub fn IsDebuggerPresent(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     log::warn!("[IsDebuggerPresent] Note: This is often used as an anti-debugging check");
     
     // Return FALSE (0) - no debugger present
-    emu.reg_write(RegisterX86::RAX, if debugger_present { 1 } else { 0 })?;
+    emu.reg_write(X86Register::RAX, if debugger_present { 1 } else { 0 })?;
     
     Ok(())
 }

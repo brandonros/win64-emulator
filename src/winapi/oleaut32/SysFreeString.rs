@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
 
 /*
@@ -24,12 +24,12 @@ None
 Requirements
 */
 
-pub fn SysFreeString(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SysFreeString(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // void SysFreeString(
     //   [in, optional] BSTR bstrString  // RCX
     // )
     
-    let bstr_string = emu.reg_read(RegisterX86::RCX)?;
+    let bstr_string = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[SysFreeString] bstrString: 0x{:x}", bstr_string);
     
@@ -49,17 +49,14 @@ pub fn SysFreeString(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     // Just free the memory - no need to read the content
     
     // Free the memory starting from the allocation address (including length prefix)
-    {
-        let mut heap = HEAP_ALLOCATIONS.lock().unwrap();
-        match heap.free(allocation_start, emu) {
-            Ok(_) => {
-                log::info!("[SysFreeString] Successfully freed BSTR allocation at 0x{:x}", allocation_start);
-            }
-            Err(e) => {
-                log::warn!("[SysFreeString] Failed to free BSTR allocation: {}", e);
-                // Don't return error - SysFreeString should not fail even with invalid pointers
-                // in some implementations, though it's undefined behavior
-            }
+    match HEAP_ALLOCATIONS.free(allocation_start, emu) {
+        Ok(_) => {
+            log::info!("[SysFreeString] Successfully freed BSTR allocation at 0x{:x}", allocation_start);
+        }
+        Err(e) => {
+            log::warn!("[SysFreeString] Failed to free BSTR allocation: {}", e);
+            // Don't return error - SysFreeString should not fail even with invalid pointers
+            // in some implementations, though it's undefined behavior
         }
     }
     

@@ -1,12 +1,14 @@
 use std::fmt;
 
 use unicorn_engine::uc_error;
+use crate::emulation::engine::EmulatorError;
 
 // Custom error type that can handle both object parsing and unicorn errors
 #[derive(Debug)]
 pub enum LoaderError {
     ObjectError(object::Error),
     UnicornError(uc_error),
+    EmulatorError(EmulatorError),
     IoError(std::io::Error),
     InvalidFormat(String),
     Other(String),
@@ -17,6 +19,7 @@ impl fmt::Display for LoaderError {
         match self {
             LoaderError::ObjectError(e) => write!(f, "Object parsing error: {}", e),
             LoaderError::UnicornError(e) => write!(f, "Unicorn emulation error: {:?}", e),
+            LoaderError::EmulatorError(e) => write!(f, "Emulator error: {}", e),
             LoaderError::IoError(e) => write!(f, "IO error: {}", e),
             LoaderError::InvalidFormat(msg) => write!(f, "Invalid format: {}", msg),
             LoaderError::Other(msg) => write!(f, "Error: {}", msg),
@@ -53,5 +56,11 @@ impl From<&str> for LoaderError {
 impl From<String> for LoaderError {
     fn from(msg: String) -> Self {
         LoaderError::InvalidFormat(msg)
+    }
+}
+
+impl From<EmulatorError> for LoaderError {
+    fn from(err: EmulatorError) -> Self {
+        LoaderError::EmulatorError(err)
     }
 }

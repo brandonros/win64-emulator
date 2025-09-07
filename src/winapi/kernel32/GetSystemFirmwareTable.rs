@@ -113,7 +113,7 @@ if (bytesWritten != smBiosDataSize) {
 
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::fs;
 
 fn load_firmware_table_from_bin() -> Result<Vec<u8>, std::io::Error> {
@@ -121,11 +121,11 @@ fn load_firmware_table_from_bin() -> Result<Vec<u8>, std::io::Error> {
     fs::read("mock_files/firmware_table.bin") // Adjust path as needed
 }
 
-pub fn GetSystemFirmwareTable(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
-    let provider_signature = emu.reg_read(RegisterX86::RCX)? as u32;
-    let table_id = emu.reg_read(RegisterX86::RDX)? as u32;
-    let buffer_ptr = emu.reg_read(RegisterX86::R8)?;
-    let buffer_size = emu.reg_read(RegisterX86::R9)? as u32;
+pub fn GetSystemFirmwareTable(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
+    let provider_signature = emu.reg_read(X86Register::RCX)? as u32;
+    let table_id = emu.reg_read(X86Register::RDX)? as u32;
+    let buffer_ptr = emu.reg_read(X86Register::R8)?;
+    let buffer_size = emu.reg_read(X86Register::R9)? as u32;
     
     // Convert signature to string for logging
     let provider_bytes = provider_signature.to_le_bytes();
@@ -148,7 +148,7 @@ pub fn GetSystemFirmwareTable(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             },
             Err(e) => {
                 log::error!("[GetSystemFirmwareTable] Failed to load firmware_table.bin: {}", e);
-                emu.reg_write(RegisterX86::RAX, 0)?;
+                emu.reg_write(X86Register::RAX, 0)?;
                 return Ok(());
             }
         };
@@ -156,14 +156,14 @@ pub fn GetSystemFirmwareTable(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
         // Check if this is a size query (buffer is NULL)
         if buffer_ptr == 0 {
             log::info!("[GetSystemFirmwareTable] Size query - returning {} bytes", firmware_table_data.len());
-            emu.reg_write(RegisterX86::RAX, firmware_table_data.len() as u64)?;
+            emu.reg_write(X86Register::RAX, firmware_table_data.len() as u64)?;
             return Ok(());
         }
         
         // Check if buffer is large enough
         if buffer_size < firmware_table_data.len() as u32 {
             log::warn!("[GetSystemFirmwareTable] Buffer too small: {} < {}", buffer_size, firmware_table_data.len());
-            emu.reg_write(RegisterX86::RAX, firmware_table_data.len() as u64)?;
+            emu.reg_write(X86Register::RAX, firmware_table_data.len() as u64)?;
             return Ok(());
         }
         
@@ -174,12 +174,12 @@ pub fn GetSystemFirmwareTable(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             "[GetSystemFirmwareTable] Wrote {} bytes of raw firmware table data",
             firmware_table_data.len()
         );
-        emu.reg_write(RegisterX86::RAX, firmware_table_data.len() as u64)?;
+        emu.reg_write(X86Register::RAX, firmware_table_data.len() as u64)?;
         
     } else {
         // For other providers, return error
         log::warn!("[GetSystemFirmwareTable] Unsupported provider: '{}'", provider_str);
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
     }
     
     Ok(())

@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 /*
 pub unsafe extern "system" fn GetCurrentDirectoryW(
@@ -50,14 +50,14 @@ GetCurrentDirectory function and should avoid using relative path names. The cur
 In Windows 8 and Windows Server 2012, this function is supported by the following technologies.
 */
 
-pub fn GetCurrentDirectoryW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetCurrentDirectoryW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD GetCurrentDirectoryW(
     //   [in]  DWORD  nBufferLength,  // RCX
     //   [out] LPWSTR lpBuffer        // RDX
     // )
     
-    let n_buffer_length = emu.reg_read(RegisterX86::RCX)? as u32;
-    let lp_buffer = emu.reg_read(RegisterX86::RDX)?;
+    let n_buffer_length = emu.reg_read(X86Register::RCX)? as u32;
+    let lp_buffer = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[GetCurrentDirectoryW] nBufferLength: {} wide characters", n_buffer_length);
     log::info!("[GetCurrentDirectoryW] lpBuffer: 0x{:x}", lp_buffer);
@@ -70,7 +70,7 @@ pub fn GetCurrentDirectoryW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine:
     // If buffer is NULL or size is 0, return required buffer size
     if lp_buffer == 0 || n_buffer_length == 0 {
         log::info!("[GetCurrentDirectoryW] Buffer is NULL or size is 0, returning required size: {}", required_buffer_size);
-        emu.reg_write(RegisterX86::RAX, required_buffer_size as u64)?;
+        emu.reg_write(X86Register::RAX, required_buffer_size as u64)?;
         return Ok(());
     }
     
@@ -79,7 +79,7 @@ pub fn GetCurrentDirectoryW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine:
         // Buffer too small - return required size (including null terminator)
         log::warn!("[GetCurrentDirectoryW] Buffer too small: need {} wide characters, got {}", 
                   required_buffer_size, n_buffer_length);
-        emu.reg_write(RegisterX86::RAX, required_buffer_size as u64)?;
+        emu.reg_write(X86Register::RAX, required_buffer_size as u64)?;
         return Ok(());
     }
     
@@ -100,7 +100,7 @@ pub fn GetCurrentDirectoryW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine:
     log::warn!("[GetCurrentDirectoryW] Mock implementation - returned current directory: '{}'", current_dir);
     
     // Return the length of the string copied (NOT including null terminator)
-    emu.reg_write(RegisterX86::RAX, current_dir_wide_len as u64)?;
+    emu.reg_write(X86Register::RAX, current_dir_wide_len as u64)?;
     
     Ok(())
 }

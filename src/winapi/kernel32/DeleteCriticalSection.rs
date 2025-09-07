@@ -1,11 +1,11 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn DeleteCriticalSection(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn DeleteCriticalSection(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // void DeleteCriticalSection(
     //   LPCRITICAL_SECTION lpCriticalSection  // RCX
     // )
     
-    let critical_section_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let critical_section_ptr = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[DeleteCriticalSection] lpCriticalSection: 0x{:x}", critical_section_ptr);
     

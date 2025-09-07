@@ -1,7 +1,6 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn GetCurrentProcess(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetCurrentProcess(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // GetCurrentProcess takes no parameters and returns a pseudo handle
     // The pseudo handle is a special constant: (HANDLE)-1 = 0xFFFFFFFFFFFFFFFF
     
@@ -10,7 +9,7 @@ pub fn GetCurrentProcess(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     log::info!("[GetCurrentProcess] Returning pseudo handle: 0x{:x}", pseudo_handle);
     
     // Set the return value in RAX register
-    emu.reg_write(RegisterX86::RAX, pseudo_handle)?;
+    emu.reg_write(X86Register::RAX, pseudo_handle)?;
     
     Ok(())
 }

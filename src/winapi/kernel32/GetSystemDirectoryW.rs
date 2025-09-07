@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 /*
 GetSystemDirectoryW function (sysinfoapi.h)
@@ -33,14 +33,14 @@ Remarks
 Applications should not create files in the system directory. If the user is running a shared version of the operating system, the application does not have write access to the system directory.
 */
 
-pub fn GetSystemDirectoryW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetSystemDirectoryW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // UINT GetSystemDirectoryW(
     //   [out] LPWSTR lpBuffer,  // RCX
     //   [in]  UINT   uSize      // RDX
     // )
     
-    let lp_buffer = emu.reg_read(RegisterX86::RCX)?;
-    let u_size = emu.reg_read(RegisterX86::RDX)? as u32;
+    let lp_buffer = emu.reg_read(X86Register::RCX)?;
+    let u_size = emu.reg_read(X86Register::RDX)? as u32;
     
     log::info!("[GetSystemDirectoryW] lpBuffer: 0x{:x}", lp_buffer);
     log::info!("[GetSystemDirectoryW] uSize: {} wide characters", u_size);
@@ -54,7 +54,7 @@ pub fn GetSystemDirectoryW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     if u_size == 0 || lp_buffer == 0 {
         // Return required buffer size (including null terminator)
         log::info!("[GetSystemDirectoryW] Buffer is NULL or size is 0, returning required size: {}", required_buffer_size);
-        emu.reg_write(RegisterX86::RAX, required_buffer_size as u64)?;
+        emu.reg_write(X86Register::RAX, required_buffer_size as u64)?;
         return Ok(());
     }
     
@@ -62,7 +62,7 @@ pub fn GetSystemDirectoryW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
         // Buffer too small - return required size (including null terminator)
         log::warn!("[GetSystemDirectoryW] Buffer too small: need {} wide characters, got {}", 
                   required_buffer_size, u_size);
-        emu.reg_write(RegisterX86::RAX, required_buffer_size as u64)?;
+        emu.reg_write(X86Register::RAX, required_buffer_size as u64)?;
         return Ok(());
     }
     
@@ -84,7 +84,7 @@ pub fn GetSystemDirectoryW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     log::warn!("[GetSystemDirectoryW] Mock implementation - returned system directory: '{}'", system_directory);
     
     // Return the length of the string copied (NOT including null terminator)
-    emu.reg_write(RegisterX86::RAX, system_dir_wide_len as u64)?;
+    emu.reg_write(X86Register::RAX, system_dir_wide_len as u64)?;
     
     Ok(())
 }

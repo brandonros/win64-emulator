@@ -1,14 +1,13 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 use crate::pe::MODULE_REGISTRY;
 use crate::winapi;
 
-pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetModuleFileNameA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get parameters from registers (x64 calling convention)
-    let h_module = emu.reg_read(RegisterX86::RCX)?;
-    let lp_filename = emu.reg_read(RegisterX86::RDX)?;
-    let n_size = emu.reg_read(RegisterX86::R8)? as u32;
+    let h_module = emu.reg_read(X86Register::RCX)?;
+    let lp_filename = emu.reg_read(X86Register::RDX)?;
+    let n_size = emu.reg_read(X86Register::R8)? as u32;
     
     log::info!("[GetModuleFileNameA] hModule: 0x{:x}, lpFilename: 0x{:x}, nSize: {}", 
               h_module, lp_filename, n_size);
@@ -16,13 +15,13 @@ pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::u
     // Determine which module to get the filename for
     let filename = if h_module == 0 {
         // NULL means get the main executable's path
-        "C:\\Program Files\\Application\\enigma_test_protected.exe"
+        "C:\\Program Files\\Application\\main.exe"
     } else {
         // Check if this is a known module
         if let Some(module) = MODULE_REGISTRY.get_loaded_module_by_module_base(h_module) {
             // Return a mock path based on the module name
             match module.name.as_str() {
-                "enigma_test_protected.exe" | "enigma_test_protected" => "C:\\Program Files\\Application\\enigma_test_protected.exe",
+                "main.exe" | "main" => "C:\\Program Files\\Application\\main.exe",
                 "kernel32.dll" | "kernel32" => "C:\\Windows\\System32\\kernel32.dll",
                 "user32.dll" | "user32" => "C:\\Windows\\System32\\user32.dll",
                 "ntdll.dll" | "ntdll" => "C:\\Windows\\System32\\ntdll.dll",
@@ -38,7 +37,7 @@ pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::u
         } else {
             log::warn!("[GetModuleFileNameA] Unknown module handle: 0x{:x} ERROR_INVALID_HANDLE", h_module);
             winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
-            emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+            emu.reg_write(X86Register::RAX, 0)?; // Return 0 for failure
             return Ok(());
         }
     };
@@ -57,7 +56,7 @@ pub fn GetModuleFileNameA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::u
     }
     
     // Return the number of characters copied (not including null terminator)
-    emu.reg_write(RegisterX86::RAX, actual_copied as u64)?;
+    emu.reg_write(X86Register::RAX, actual_copied as u64)?;
     
     log::info!("[GetModuleFileNameA] Returned path: {} (length: {})", 
               &filename[..actual_copied], actual_copied);

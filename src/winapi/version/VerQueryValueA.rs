@@ -108,13 +108,13 @@ for( i=0; i < (cbTranslate/sizeof(struct LANGANDCODEPAGE)); i++ )
                 &dwBytes); 
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
 use crate::winapi;
 use windows_sys::Win32::Storage::FileSystem::VS_FIXEDFILEINFO;
 
-pub fn VerQueryValueA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn VerQueryValueA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL VerQueryValueA(
     //   LPCVOID pBlock,      // RCX
     //   LPCSTR  lpSubBlock,  // RDX
@@ -122,10 +122,10 @@ pub fn VerQueryValueA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     //   PUINT   puLen        // R9
     // )
     
-    let pblock = emu.reg_read(RegisterX86::RCX)?;
-    let subblock_ptr = emu.reg_read(RegisterX86::RDX)?;
-    let buffer_ptr_ptr = emu.reg_read(RegisterX86::R8)?;
-    let len_ptr = emu.reg_read(RegisterX86::R9)?;
+    let pblock = emu.reg_read(X86Register::RCX)?;
+    let subblock_ptr = emu.reg_read(X86Register::RDX)?;
+    let buffer_ptr_ptr = emu.reg_read(X86Register::R8)?;
+    let len_ptr = emu.reg_read(X86Register::R9)?;
     
     // Read the subblock string
     let subblock = memory::read_string_from_memory(emu, subblock_ptr)?;
@@ -159,21 +159,18 @@ pub fn VerQueryValueA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
         );
         
         // Return TRUE
-        emu.reg_write(RegisterX86::RAX, 1)?;
+        emu.reg_write(X86Register::RAX, 1)?;
     } else if subblock == "\\VarFileInfo\\Translation" {
         // Return translation array (language and code page identifiers)
         // For simplicity, return US English (0x0409) with Unicode code page (0x04B0)
         
         // Allocate space for translation array
-        let translation_addr = {
-            let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-            match heap_mgr.allocate(emu, 4) {
-                Ok(addr) => addr,
-                Err(e) => {
-                    log::error!("[VerQueryValueA] Failed to allocate memory: {}", e);
-                    emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
-                    return Ok(());
-                }
+        let translation_addr = match HEAP_ALLOCATIONS.allocate(emu, 4) {
+            Ok(addr) => addr,
+            Err(e) => {
+                log::error!("[VerQueryValueA] Failed to allocate memory: {}", e);
+                emu.reg_write(X86Register::RAX, 0)?; // FALSE
+                return Ok(());
             }
         };
         
@@ -194,7 +191,7 @@ pub fn VerQueryValueA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
         );
         
         // Return TRUE
-        emu.reg_write(RegisterX86::RAX, 1)?;
+        emu.reg_write(X86Register::RAX, 1)?;
     } else if subblock.starts_with("\\StringFileInfo\\") {
         // Parse string query like \StringFileInfo\040904B0\FileDescription
         let parts: Vec<&str> = subblock.split('\\').collect();
@@ -216,15 +213,12 @@ pub fn VerQueryValueA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
             };
             
             // Allocate and write the string
-            let string_addr = {
-                let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-                match heap_mgr.allocate(emu, string_value.len() + 1) {
-                    Ok(addr) => addr,
-                    Err(e) => {
-                        log::error!("[VerQueryValueA] Failed to allocate memory: {}", e);
-                        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
-                        return Ok(());
-                    }
+            let string_addr = match HEAP_ALLOCATIONS.allocate(emu, string_value.len() + 1) {
+                Ok(addr) => addr,
+                Err(e) => {
+                    log::error!("[VerQueryValueA] Failed to allocate memory: {}", e);
+                    emu.reg_write(X86Register::RAX, 0)?; // FALSE
+                    return Ok(());
                 }
             };
             memory::write_string_to_memory(emu, string_addr, string_value)?;
@@ -242,16 +236,16 @@ pub fn VerQueryValueA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
             );
             
             // Return TRUE
-            emu.reg_write(RegisterX86::RAX, 1)?;
+            emu.reg_write(X86Register::RAX, 1)?;
         } else {
             log::warn!("[VerQueryValueA] Invalid StringFileInfo query: {}", subblock);
             winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_RESOURCE_NAME_NOT_FOUND)?;
-            emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+            emu.reg_write(X86Register::RAX, 0)?; // FALSE
         }
     } else {
         log::warn!("[VerQueryValueA] Unknown subblock: {}", subblock);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_RESOURCE_NAME_NOT_FOUND)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
     }
     
     Ok(())

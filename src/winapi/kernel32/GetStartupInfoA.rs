@@ -1,12 +1,11 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::System::Threading::STARTUPINFOA;
 
 use crate::emulation::memory;
 
-pub fn GetStartupInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetStartupInfoA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get the pointer to STARTUPINFO structure from RCX register
-    let startup_info_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let startup_info_ptr = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[GetStartupInfoA] startup_info_ptr: 0x{:x}", startup_info_ptr);
     

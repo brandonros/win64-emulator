@@ -35,7 +35,7 @@ To unregister the handler, use the RemoveVectoredExceptionHandler function funct
 To compile an application that uses this function, define the _WIN32_WINNT macro as 0x0500 or later. For more information, see Using the Windows Headers.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::collections::HashSet;
 use std::sync::{LazyLock, RwLock};
@@ -48,14 +48,14 @@ pub static REGISTERED_HANDLERS: LazyLock<RwLock<HashSet<u64>>> = LazyLock::new(|
     RwLock::new(HashSet::new())
 });
 
-pub fn AddVectoredExceptionHandler(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn AddVectoredExceptionHandler(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // PVOID AddVectoredExceptionHandler(
     //   ULONG First,                        // RCX
     //   PVECTORED_EXCEPTION_HANDLER Handler  // RDX
     // );
     
-    let first = emu.reg_read(RegisterX86::RCX)?;
-    let handler = emu.reg_read(RegisterX86::RDX)?;
+    let first = emu.reg_read(X86Register::RCX)?;
+    let handler = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[AddVectoredExceptionHandler] First: {}, Handler: 0x{:x}", first, handler);
     
@@ -67,7 +67,7 @@ pub fn AddVectoredExceptionHandler(emu: &mut Unicorn<()>) -> Result<(), unicorn_
     
     if handler == 0 {
         log::warn!("[AddVectoredExceptionHandler] NULL handler provided, returning NULL");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
     } else {
         // Generate a unique handle for this handler
         let handle = HANDLER_COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -80,7 +80,7 @@ pub fn AddVectoredExceptionHandler(emu: &mut Unicorn<()>) -> Result<(), unicorn_
         
         log::info!("[AddVectoredExceptionHandler] Registered handler 0x{:x} with handle 0x{:x}", 
                   handler, handle);
-        emu.reg_write(RegisterX86::RAX, handle)?;
+        emu.reg_write(X86Register::RAX, handle)?;
     }
     
     Ok(())

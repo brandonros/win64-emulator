@@ -137,11 +137,11 @@ If there is a transaction bound to the file handle, then the function returns da
 In Windows 8 and Windows Server 2012, this function is supported by the following technologies.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::vfs::VIRTUAL_FS;
 use crate::winapi;
 
-pub fn ReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn ReadFile(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL ReadFile(
     //   HANDLE hFile,
     //   LPVOID lpBuffer,
@@ -150,13 +150,13 @@ pub fn ReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     //   LPOVERLAPPED lpOverlapped
     // )
     
-    let h_file = emu.reg_read(RegisterX86::RCX)?;
-    let lp_buffer = emu.reg_read(RegisterX86::RDX)?;
-    let n_number_of_bytes_to_read = emu.reg_read(RegisterX86::R8)? as u32;
-    let lp_number_of_bytes_read = emu.reg_read(RegisterX86::R9)?;
+    let h_file = emu.reg_read(X86Register::RCX)?;
+    let lp_buffer = emu.reg_read(X86Register::RDX)?;
+    let n_number_of_bytes_to_read = emu.reg_read(X86Register::R8)? as u32;
+    let lp_number_of_bytes_read = emu.reg_read(X86Register::R9)?;
     
     // Get lpOverlapped from stack (5th parameter)
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let lp_overlapped_bytes = emu.mem_read_as_vec(rsp + 0x28, 8)?;
     let lp_overlapped = u64::from_le_bytes(lp_overlapped_bytes.try_into().unwrap());
     
@@ -182,7 +182,7 @@ pub fn ReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     if lp_overlapped == 0 && lp_number_of_bytes_read == 0 {
         log::error!("[ReadFile] lpNumberOfBytesRead cannot be NULL for synchronous operations");
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -211,7 +211,7 @@ pub fn ReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
                 }
                 
                 // Return TRUE (success) - EOF is still a successful read
-                emu.reg_write(RegisterX86::RAX, 1)?;
+                emu.reg_write(X86Register::RAX, 1)?;
                 
                 log::info!("[ReadFile] EOF reached on stdin, {} bytes read", bytes_read);
             },
@@ -221,7 +221,7 @@ pub fn ReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
                 
                 // Set error for invalid operation
                 winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_FUNCTION)?;
-                emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+                emu.reg_write(X86Register::RAX, 0)?; // Return 0 for failure
             },
             _ => unreachable!()
         }
@@ -250,7 +250,7 @@ pub fn ReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
             } else {
                 log::warn!("[ReadFile] Handle 0x{:x} not found in VFS ERROR_INVALID_HANDLE", h_file);
                 winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
-                emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+                emu.reg_write(X86Register::RAX, 0)?; // Return 0 for failure
                 return Ok(());
             }
         };
@@ -283,7 +283,7 @@ pub fn ReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
         }
         
         // Return TRUE (success)
-        emu.reg_write(RegisterX86::RAX, 1)?;
+        emu.reg_write(X86Register::RAX, 1)?;
         
         if let Some(filename) = filename {
             log::info!("[ReadFile] Read {} bytes from '{}' at offset {}", bytes_to_read, filename, position);

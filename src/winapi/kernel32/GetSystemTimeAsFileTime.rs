@@ -1,12 +1,11 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::Foundation::FILETIME;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::emulation::memory;
 
-pub fn GetSystemTimeAsFileTime(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetSystemTimeAsFileTime(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get the pointer to FILETIME structure from RCX register
-    let filetime_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let filetime_ptr = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[GetSystemTimeAsFileTime] filetime_ptr: 0x{:x}", filetime_ptr);
     

@@ -80,7 +80,7 @@ If the call to this function occurs in user mode, you should use the name "NtQue
 For calls from kernel-mode drivers, the NtXxx and ZwXxx versions of a Windows Native System Services routine can behave differently in the way that they handle and interpret input parameters. For more information about the relationship between the NtXxx**** and ZwXxx**** versions of a routine, see Using Nt and Zw Versions of the Native System Services Routines.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::vfs::VIRTUAL_FS;
 use crate::emulation::memory;
 use windows_sys::Wdk::Storage::FileSystem::{
@@ -113,7 +113,7 @@ const STATUS_INVALID_INFO_CLASS: u32 = 0xC0000003;
 const STATUS_INFO_LENGTH_MISMATCH: u32 = 0xC0000004;
 const STATUS_BUFFER_OVERFLOW: u32 = 0x80000005;
 
-pub fn ZwQueryInformationFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn ZwQueryInformationFile(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // NTSTATUS ZwQueryInformationFile(
     //   HANDLE                 FileHandle,           // RCX
     //   PIO_STATUS_BLOCK       IoStatusBlock,        // RDX
@@ -122,13 +122,13 @@ pub fn ZwQueryInformationFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
     //   FILE_INFORMATION_CLASS FileInformationClass  // Stack [RSP+0x28]
     // )
     
-    let file_handle = emu.reg_read(RegisterX86::RCX)?;
-    let io_status_block_ptr = emu.reg_read(RegisterX86::RDX)?;
-    let file_info_ptr = emu.reg_read(RegisterX86::R8)?;
-    let length = emu.reg_read(RegisterX86::R9)? as u32;
+    let file_handle = emu.reg_read(X86Register::RCX)?;
+    let io_status_block_ptr = emu.reg_read(X86Register::RDX)?;
+    let file_info_ptr = emu.reg_read(X86Register::R8)?;
+    let length = emu.reg_read(X86Register::R9)? as u32;
     
     // Read FileInformationClass from stack
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut info_class_bytes = [0u8; 4];
     emu.mem_read(rsp + 0x28, &mut info_class_bytes)?;
     let info_class = u32::from_le_bytes(info_class_bytes);
@@ -325,7 +325,7 @@ pub fn ZwQueryInformationFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
     }
     
     // Return NTSTATUS
-    emu.reg_write(RegisterX86::RAX, status as u64)?;
+    emu.reg_write(X86Register::RAX, status as u64)?;
     
     log::info!("[ZwQueryInformationFile] Returning status: 0x{:08x}", status);
     

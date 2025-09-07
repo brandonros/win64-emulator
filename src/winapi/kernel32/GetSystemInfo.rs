@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::System::SystemInformation::SYSTEM_INFO;
 use crate::emulation::memory;
 
@@ -27,12 +27,12 @@ None
 Requirements
 */
 
-pub fn GetSystemInfo(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetSystemInfo(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // VOID GetSystemInfo(
     //   [out] LPSYSTEM_INFO lpSystemInfo  // RCX
     // )
     
-    let lp_system_info = emu.reg_read(RegisterX86::RCX)?;
+    let lp_system_info = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[GetSystemInfo] lpSystemInfo: 0x{:x}", lp_system_info);
     

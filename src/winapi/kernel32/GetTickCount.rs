@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /*
@@ -26,7 +26,7 @@ To obtain the time elapsed since the computer was started, retrieve the System U
 To obtain the time the system has spent in the working state since it was started, use the QueryUnbiasedInterruptTime function.
 */
 
-pub fn GetTickCount(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetTickCount(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD GetTickCount();
     // No parameters - returns tick count in RAX
     
@@ -53,7 +53,7 @@ pub fn GetTickCount(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     log::warn!("[GetTickCount] Mock implementation - using current time as tick source");
     
     // Return the tick count in RAX (32-bit value, zero-extended to 64 bits)
-    emu.reg_write(RegisterX86::RAX, tick_count as u64)?;
+    emu.reg_write(X86Register::RAX, tick_count as u64)?;
     
     Ok(())
 }

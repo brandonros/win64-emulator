@@ -1,13 +1,8 @@
-use crate::loader_error::LoaderError;
-use crate::emulation::Emulator;
+use win64_emulator::loader_error::LoaderError;
+use win64_emulator::emulation::Emulator;
 #[cfg(feature = "trace-instruction")]
-use crate::emulation::tracing;
+use win64_emulator::emulation::tracing;
 use std::env;
-
-mod pe;
-mod loader_error;
-mod emulation;
-mod winapi;
 
 fn print_usage() {
     println!("Usage: {} <PE_FILE_PATH>", env::args().nth(0).unwrap_or_else(|| "win64-emulator".to_string()));
@@ -77,9 +72,9 @@ fn main() -> Result<(), LoaderError> {
     }
 
     // Dump memory regions
-    for region in emulator.get_emu().mem_regions().unwrap() {
+    for (begin, end) in emulator.get_memory_regions().unwrap() {
         log::info!("Mapped region: 0x{:016x} - 0x{:016x} (size: 0x{:x})", 
-                  region.begin, region.end, region.end - region.begin + 1);
+                  begin, end, end - begin + 1);
     }
 
     // Look for specific symbols based on PE type

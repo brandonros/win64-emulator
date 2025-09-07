@@ -30,17 +30,17 @@ Note that the handle to the DC can only be used by a single thread at any one ti
 After painting with a common DC, the ReleaseDC function must be called to release the DC. Class and private DCs do not have to be released. ReleaseDC must be called from the same thread that called GetDC. The number of DCs is limited only by available memory.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // DC handle counter - starts at a non-zero value
 static DC_HANDLE_COUNTER: AtomicU64 = AtomicU64::new(0x20000);
 
-pub fn GetDC(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetDC(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HDC GetDC([in] HWND hWnd)
     // RCX = hWnd (handle to the window, or NULL for entire screen)
     
-    let hwnd = emu.reg_read(RegisterX86::RCX)?;
+    let hwnd = emu.reg_read(X86Register::RCX)?;
     
     // Generate a new DC handle
     let hdc = DC_HANDLE_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -52,7 +52,7 @@ pub fn GetDC(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     }
     
     // Return the DC handle
-    emu.reg_write(RegisterX86::RAX, hdc)?;
+    emu.reg_write(X86Register::RAX, hdc)?;
     
     Ok(())
 }

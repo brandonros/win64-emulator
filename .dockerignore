@@ -1,0 +1,31 @@
+# Ignore the target directory to avoid copying build artifacts
+/target
+target/
+
+# Ignore debug builds
+debug/
+*.pdb
+
+# Ignore editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore Git files (Docker COPY will handle .git anyway)
+.git/
+.gitignore
+
+# Ignore the Dockerfile itself
+Dockerfile
+.dockerignore
+
+# Ignore any local environment files
+.env
+.env.local
+
+# Ignore documentation that's not needed for building
+*.md
+LICENSE*
+docs/

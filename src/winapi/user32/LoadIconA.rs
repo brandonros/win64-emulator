@@ -40,7 +40,7 @@ If the function succeeds, the return value is a handle to the newly loaded icon.
 If the function fails, the return value is NULL. To get extended error information, call GetLastError.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -59,14 +59,14 @@ const IDI_INFORMATION: u64 = 32516; // Same as IDI_ASTERISK
 // Global handle counter for icon handles
 static NEXT_ICON_HANDLE: AtomicU64 = AtomicU64::new(0x9000);
 
-pub fn LoadIconA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn LoadIconA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HICON LoadIconA(
     //   HINSTANCE hInstance,  // RCX
     //   LPCSTR    lpIconName  // RDX
     // )
     
-    let hinstance = emu.reg_read(RegisterX86::RCX)?;
-    let icon_name_ptr = emu.reg_read(RegisterX86::RDX)?;
+    let hinstance = emu.reg_read(X86Register::RCX)?;
+    let icon_name_ptr = emu.reg_read(X86Register::RDX)?;
     
     // Check if loading system icon (hInstance == NULL)
     if hinstance == 0 {
@@ -105,7 +105,7 @@ pub fn LoadIconA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> 
     log::info!("[LoadIconA] Returning icon handle: 0x{:x}", icon_handle);
     
     // Return the icon handle
-    emu.reg_write(RegisterX86::RAX, icon_handle)?;
+    emu.reg_write(X86Register::RAX, icon_handle)?;
     
     Ok(())
 }

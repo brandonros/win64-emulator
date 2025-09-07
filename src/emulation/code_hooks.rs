@@ -1,14 +1,18 @@
 use std::cell::UnsafeCell;
+use std::sync::atomic::{AtomicPtr, Ordering};
 
 use iced_x86::{Decoder, DecoderOptions, Formatter, IntelFormatter};
 use unicorn_engine::Unicorn;
 
 use crate::emulation::iat_hooks;
+use crate::emulation::engine::EmulatorEngine;
+use crate::emulation::unicorn_backend::UnicornEngine;
 use crate::pe::constants::{MOCK_FUNCTION_BASE, MOCK_FUNCTION_SIZE};
 
-// Thread-local state for the code hook - all in one block for efficiency
-// Using UnsafeCell for maximum single-threaded performance (no RefCell overhead)
 thread_local! {
+    // Global pointer to the UnicornEngine wrapper - set once at initialization
+    static GLOBAL_ENGINE: UnsafeCell<*mut UnicornEngine> = UnsafeCell::new(std::ptr::null_mut());
+
     // Instruction counter
     static COUNTER: UnsafeCell<u64> = UnsafeCell::new(0);
     
@@ -30,6 +34,12 @@ thread_local! {
     static LOG_MESSAGE_BUFFER: UnsafeCell<String> = UnsafeCell::new(String::with_capacity(128));
 }
 
+pub unsafe fn register_global_engine(engine: *mut UnicornEngine) {
+    GLOBAL_ENGINE.with(|e| {
+        *e.get() = engine;
+    });
+}
+
 pub fn get_count() -> u64 {
     COUNTER.with(|c| unsafe {
         let counter = &mut *c.get();
@@ -37,7 +47,17 @@ pub fn get_count() -> u64 {
     })
 }
 
-pub fn code_hook_callback<D>(emu: &mut Unicorn<D>, addr: u64, size: u32) {
+// Thin wrapper for Unicorn that converts to trait and calls the real implementation
+pub fn code_hook_callback_unicorn<D>(_emu: &mut Unicorn<D>, addr: u64, size: u32) {
+    // SAFETY: GLOBAL_ENGINE is set once at initialization and never modified
+    GLOBAL_ENGINE.with(|e| {
+        let engine = unsafe { &mut **e.get() };
+        code_hook_callback(engine, addr, size);
+    });
+}
+
+// The real implementation that uses the trait
+pub fn code_hook_callback(emu: &mut dyn EmulatorEngine, addr: u64, size: u32) {
     // Check for NULL pointer execution - this is always critical
     if addr == 0 {
         panic!("❌ Attempted to execute at NULL address (0x0000000000000000)!");

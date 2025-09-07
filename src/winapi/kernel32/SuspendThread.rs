@@ -1,11 +1,11 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn SuspendThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SuspendThread(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD SuspendThread(
     //   HANDLE hThread  // RCX
     // )
     
-    let thread_handle = emu.reg_read(RegisterX86::RCX)?;
+    let thread_handle = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[SuspendThread] hThread: 0x{:x}", thread_handle);
     
@@ -13,7 +13,7 @@ pub fn SuspendThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     if thread_handle == 0 || thread_handle == 0xFFFFFFFFFFFFFFFF {
         log::warn!("[SuspendThread] Invalid thread handle: 0x{:x}", thread_handle);
         // Return -1 (0xFFFFFFFF) to indicate failure
-        emu.reg_write(RegisterX86::RAX, 0xFFFFFFFF)?;
+        emu.reg_write(X86Register::RAX, 0xFFFFFFFF)?;
         return Ok(());
     }
     
@@ -36,7 +36,7 @@ pub fn SuspendThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     log::info!("[SuspendThread] Returning previous suspend count: {}", previous_count);
     
     // Return the previous suspend count
-    emu.reg_write(RegisterX86::RAX, previous_count as u64)?;
+    emu.reg_write(X86Register::RAX, previous_count as u64)?;
     
     Ok(())
 }

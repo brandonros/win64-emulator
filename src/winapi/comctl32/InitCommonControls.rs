@@ -12,9 +12,9 @@ Return value
 None
 */
 
-use unicorn_engine::Unicorn;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError};
 
-pub fn InitCommonControls(_emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn InitCommonControls(_emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // void InitCommonControls()
     // No parameters, no return value
     

@@ -1,6 +1,6 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn EnumResourceLanguagesA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn EnumResourceLanguagesA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL EnumResourceLanguagesA(
     //   HMODULE          hModule,     // RCX
     //   LPCSTR           lpType,      // RDX
@@ -9,13 +9,13 @@ pub fn EnumResourceLanguagesA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
     //   LONG_PTR         lParam       // [RSP+0x28]
     // )
     
-    let h_module = emu.reg_read(RegisterX86::RCX)?;
-    let lp_type = emu.reg_read(RegisterX86::RDX)?;
-    let lp_name = emu.reg_read(RegisterX86::R8)?;
-    let enum_func = emu.reg_read(RegisterX86::R9)?;
+    let h_module = emu.reg_read(X86Register::RCX)?;
+    let lp_type = emu.reg_read(X86Register::RDX)?;
+    let lp_name = emu.reg_read(X86Register::R8)?;
+    let enum_func = emu.reg_read(X86Register::R9)?;
     
     // Read stack parameter
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut l_param_bytes = [0u8; 8];
     emu.mem_read(rsp + 0x28, &mut l_param_bytes)?;
     let l_param = u64::from_le_bytes(l_param_bytes);
@@ -29,7 +29,7 @@ pub fn EnumResourceLanguagesA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
     // Check for NULL callback
     if enum_func == 0 {
         log::warn!("[EnumResourceLanguagesA] NULL callback function");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -41,13 +41,13 @@ pub fn EnumResourceLanguagesA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             Ok(type_name) => type_name,
             Err(_) => {
                 log::warn!("[EnumResourceLanguagesA] Failed to read resource type string");
-                emu.reg_write(RegisterX86::RAX, 0)?;
+                emu.reg_write(X86Register::RAX, 0)?;
                 return Ok(());
             }
         }
     } else {
         log::warn!("[EnumResourceLanguagesA] NULL resource type");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     };
     
@@ -59,13 +59,13 @@ pub fn EnumResourceLanguagesA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             Ok(name) => name,
             Err(_) => {
                 log::warn!("[EnumResourceLanguagesA] Failed to read resource name string");
-                emu.reg_write(RegisterX86::RAX, 0)?;
+                emu.reg_write(X86Register::RAX, 0)?;
                 return Ok(());
             }
         }
     } else {
         log::warn!("[EnumResourceLanguagesA] NULL resource name");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     };
     
@@ -106,14 +106,14 @@ pub fn EnumResourceLanguagesA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
         // - [RSP+0x28] = lParam
         
         // Save current context
-        let saved_rip = emu.reg_read(RegisterX86::RIP)?;
-        let saved_rsp = emu.reg_read(RegisterX86::RSP)?;
+        let saved_rip = emu.reg_read(X86Register::RIP)?;
+        let saved_rsp = emu.reg_read(X86Register::RSP)?;
         
         // Set up parameters for callback
-        emu.reg_write(RegisterX86::RCX, h_module)?;
-        emu.reg_write(RegisterX86::RDX, lp_type)?;
-        emu.reg_write(RegisterX86::R8, lp_name)?;
-        emu.reg_write(RegisterX86::R9, *lang_id as u64)?;
+        emu.reg_write(X86Register::RCX, h_module)?;
+        emu.reg_write(X86Register::RDX, lp_type)?;
+        emu.reg_write(X86Register::R8, lp_name)?;
+        emu.reg_write(X86Register::R9, *lang_id as u64)?;
         
         // Would need to set up stack parameter for lParam
         // In a real implementation, we'd push it to stack
@@ -123,13 +123,13 @@ pub fn EnumResourceLanguagesA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
         log::info!("[EnumResourceLanguagesA] Mock: Assuming callback returns TRUE");
         
         // Restore context
-        emu.reg_write(RegisterX86::RIP, saved_rip)?;
-        emu.reg_write(RegisterX86::RSP, saved_rsp)?;
+        emu.reg_write(X86Register::RIP, saved_rip)?;
+        emu.reg_write(X86Register::RSP, saved_rsp)?;
     }
     
     // Return TRUE - enumeration completed successfully
     log::info!("[EnumResourceLanguagesA] Enumeration complete");
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

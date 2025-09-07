@@ -1,5 +1,5 @@
-use unicorn_engine::Unicorn;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError};
 
-pub fn MonitorFromRect(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn MonitorFromRect(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     panic!("TODO");
 }

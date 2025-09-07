@@ -1,13 +1,13 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 use crate::winapi;
 
-pub fn SetLastError(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SetLastError(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // void SetLastError(DWORD dwErrCode)
     // dwErrCode in RCX (x64 calling convention)
     
     // Get the error code from RCX
-    let error_code = emu.reg_read(RegisterX86::RCX)? as u32;
+    let error_code = emu.reg_read(X86Register::RCX)? as u32;
     
     // Write error code to TEB
     winapi::set_last_error(emu, error_code)?;

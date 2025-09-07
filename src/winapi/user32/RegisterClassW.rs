@@ -27,7 +27,7 @@ If the function succeeds, the return value is a class atom that uniquely identif
 If the function fails, the return value is zero. To get extended error information, call GetLastError.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use std::sync::atomic::{AtomicU16, Ordering};
 use windows_sys::Win32::UI::WindowsAndMessaging::WNDCLASSW;
@@ -35,16 +35,16 @@ use windows_sys::Win32::UI::WindowsAndMessaging::WNDCLASSW;
 // Global atom counter
 static NEXT_CLASS_ATOM: AtomicU16 = AtomicU16::new(0xC000);
 
-pub fn RegisterClassW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RegisterClassW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // ATOM RegisterClassW(
     //   const WNDCLASSW *lpWndClass  // RCX
     // )
     
-    let wndclass_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let wndclass_ptr = emu.reg_read(X86Register::RCX)?;
     
     if wndclass_ptr == 0 {
         log::warn!("[RegisterClassW] NULL WNDCLASSW pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -55,7 +55,7 @@ pub fn RegisterClassW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
         Ok(wc) => wc,
         Err(e) => {
             log::error!("[RegisterClassW] Failed to read WNDCLASSW structure: {:?}", e);
-            emu.reg_write(RegisterX86::RAX, 0)?;
+            emu.reg_write(X86Register::RAX, 0)?;
             return Ok(());
         }
     };
@@ -85,7 +85,7 @@ pub fn RegisterClassW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     
     log::info!("[RegisterClassW] Registered with atom: 0x{:x}", class_atom);
     
-    emu.reg_write(RegisterX86::RAX, class_atom as u64)?;
+    emu.reg_write(X86Register::RAX, class_atom as u64)?;
     
     Ok(())
 }

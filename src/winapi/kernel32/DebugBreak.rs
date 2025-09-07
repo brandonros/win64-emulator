@@ -1,6 +1,6 @@
-use unicorn_engine::Unicorn;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError};
 
-pub fn DebugBreak(_emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn DebugBreak(_emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // void DebugBreak()
     // No parameters
     
@@ -36,7 +36,7 @@ pub fn DebugBreak(_emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     log::info!("[DebugBreak] Continuing execution (mock behavior)");
     
     // Option 2: Stop emulation (uncomment if you want to halt)
-    // return Err(unicorn_engine::uc_error::EXCEPTION);
+    // return Err(EmulatorError::EXCEPTION);
     
     // Option 3: Simulate the INT 3 instruction effect
     // We could write 0xCC to the current RIP location and let it execute

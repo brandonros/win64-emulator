@@ -40,7 +40,7 @@ If the function succeeds, the return value is the handle to the newly loaded cur
 If the function fails, the return value is NULL. To get extended error information, call GetLastError.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -65,14 +65,14 @@ const IDC_HELP: u64 = 32651;
 // Global handle counter for cursor handles
 static NEXT_CURSOR_HANDLE: AtomicU64 = AtomicU64::new(0xA000);
 
-pub fn LoadCursorA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn LoadCursorA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HCURSOR LoadCursorA(
     //   HINSTANCE hInstance,    // RCX
     //   LPCSTR    lpCursorName  // RDX
     // )
     
-    let hinstance = emu.reg_read(RegisterX86::RCX)?;
-    let cursor_name_ptr = emu.reg_read(RegisterX86::RDX)?;
+    let hinstance = emu.reg_read(X86Register::RCX)?;
+    let cursor_name_ptr = emu.reg_read(X86Register::RDX)?;
     
     // Check if loading system cursor (hInstance == NULL)
     if hinstance == 0 {
@@ -120,7 +120,7 @@ pub fn LoadCursorA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     log::info!("[LoadCursorA] Returning cursor handle: 0x{:x}", cursor_handle);
     
     // Return the cursor handle
-    emu.reg_write(RegisterX86::RAX, cursor_handle)?;
+    emu.reg_write(X86Register::RAX, cursor_handle)?;
     
     Ok(())
 }

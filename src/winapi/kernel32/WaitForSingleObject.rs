@@ -1,13 +1,13 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn WaitForSingleObject(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn WaitForSingleObject(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD WaitForSingleObject(
     //   HANDLE hHandle,        // RCX
     //   DWORD  dwMilliseconds  // RDX
     // )
     
-    let handle = emu.reg_read(RegisterX86::RCX)?;
-    let timeout_ms = emu.reg_read(RegisterX86::RDX)? as u32;
+    let handle = emu.reg_read(X86Register::RCX)?;
+    let timeout_ms = emu.reg_read(X86Register::RDX)? as u32;
     
     log::info!("[WaitForSingleObject] hHandle: 0x{:x}, dwMilliseconds: {}", 
               handle, timeout_ms);
@@ -17,7 +17,7 @@ pub fn WaitForSingleObject(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
         log::warn!("[WaitForSingleObject] Invalid handle: 0x{:x}", handle);
         // Return WAIT_FAILED
         const WAIT_FAILED: u32 = 0xFFFFFFFF;
-        emu.reg_write(RegisterX86::RAX, WAIT_FAILED as u64)?;
+        emu.reg_write(X86Register::RAX, WAIT_FAILED as u64)?;
         return Ok(());
     }
     
@@ -46,7 +46,7 @@ pub fn WaitForSingleObject(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     log::info!("[WaitForSingleObject] Returning: 0x{:x}", result);
     
     // Return the result
-    emu.reg_write(RegisterX86::RAX, result as u64)?;
+    emu.reg_write(X86Register::RAX, result as u64)?;
     
     Ok(())
 }

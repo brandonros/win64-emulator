@@ -1,18 +1,18 @@
-/*use unicorn_engine::{Unicorn, RegisterX86};
+/*use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::Globalization::{CP_ACP, CP_UTF7, CP_UTF8};
 use crate::emulation::memory;
 use crate::winapi;
 
-pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn WideCharToMultiByte(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get parameters from registers (x64 calling convention)
-    let code_page = emu.reg_read(RegisterX86::RCX)? as u32;
-    let dw_flags = emu.reg_read(RegisterX86::RDX)? as u32;
-    let lp_wide_char_str = emu.reg_read(RegisterX86::R8)?;
-    let cch_wide_char = emu.reg_read(RegisterX86::R9)? as i32;
+    let code_page = emu.reg_read(X86Register::RCX)? as u32;
+    let dw_flags = emu.reg_read(X86Register::RDX)? as u32;
+    let lp_wide_char_str = emu.reg_read(X86Register::R8)?;
+    let cch_wide_char = emu.reg_read(X86Register::R9)? as i32;
     
     // Get stack parameters (5th-8th parameters)
     // Shadow space (0x20) + actual parameters
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let lp_multi_byte_str = {
         let bytes = emu.mem_read_as_vec(rsp + 0x28, 8)?;
         u64::from_le_bytes(bytes.try_into().unwrap())
@@ -39,7 +39,7 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     if lp_wide_char_str == 0 {
         log::warn!("[WideCharToMultiByte] Invalid parameter: lpWideCharStr is NULL");
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
 
@@ -48,7 +48,7 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
         if lp_default_char != 0 || lp_used_default_char != 0 {
             log::warn!("[WideCharToMultiByte] Invalid parameter: UTF-7/UTF-8 cannot use default char");
             winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-            emu.reg_write(RegisterX86::RAX, 0)?;
+            emu.reg_write(X86Register::RAX, 0)?;
             return Ok(());
         }
     }
@@ -78,7 +78,7 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
         } else {
             input_len
         };
-        emu.reg_write(RegisterX86::RAX, required_size as u64)?;
+        emu.reg_write(X86Register::RAX, required_size as u64)?;
         winapi::set_last_error(emu, 0)?;
         log::info!("[WideCharToMultiByte] Size query: returning {}", required_size);
         return Ok(());
@@ -102,7 +102,7 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
         log::warn!("[WideCharToMultiByte] Buffer too small: need {} bytes, have {}", 
                   bytes_needed, cb_multi_byte);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
 
@@ -124,7 +124,7 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     }
 
     // 8. Return number of bytes written
-    emu.reg_write(RegisterX86::RAX, bytes_needed as u64)?;
+    emu.reg_write(X86Register::RAX, bytes_needed as u64)?;
     winapi::set_last_error(emu, 0)?;
 
     // Log the conversion
@@ -139,7 +139,7 @@ fn convert_wide_to_multibyte(
     wide_string: &str, 
     code_page: u32,
     lp_default_char: u64
-) -> Result<(Vec<u8>, bool), unicorn_engine::uc_error> {
+) -> Result<(Vec<u8>, bool), EmulatorError> {
     let mut used_default = false;
     
     let multi_byte_data = match code_page {
@@ -193,20 +193,18 @@ fn convert_wide_to_multibyte(
     Ok((multi_byte_data, used_default))
 }*/
 
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
-
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 
-pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn WideCharToMultiByte(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get parameters from registers (x64 calling convention)
-    let code_page = emu.reg_read(RegisterX86::RCX)? as u32;
-    let _dw_flags = emu.reg_read(RegisterX86::RDX)? as u32;
-    let lp_wide_char_str = emu.reg_read(RegisterX86::R8)?;
-    let cch_wide_char = emu.reg_read(RegisterX86::R9)? as i32;
+    let code_page = emu.reg_read(X86Register::RCX)? as u32;
+    let _dw_flags = emu.reg_read(X86Register::RDX)? as u32;
+    let lp_wide_char_str = emu.reg_read(X86Register::R8)?;
+    let cch_wide_char = emu.reg_read(X86Register::R9)? as i32;
     
     // Get stack parameters (5th and 6th parameters)
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let lp_multi_byte_str = emu.mem_read_as_vec(rsp + 0x28, 8)?; // TODO: 0x20 or 0x28
     let lp_multi_byte_str = u64::from_le_bytes(lp_multi_byte_str.try_into().unwrap());
     let cb_multi_byte = emu.mem_read_as_vec(rsp + 0x30, 4)?; // TODO: 0x28 or 0x30
@@ -218,13 +216,13 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     // Validate input parameters
     if lp_wide_char_str == 0 && cch_wide_char != 0 {
         log::warn!("[WideCharToMultiByte] Invalid parameter: lpWideCharStr is NULL with non-zero cchWideChar");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
     // Handle NULL input (return 0)
     if lp_wide_char_str == 0 {
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -257,7 +255,7 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     
     // If cbMultiByte is 0, just return required size
     if cb_multi_byte == 0 {
-        emu.reg_write(RegisterX86::RAX, required_size as u64)?;
+        emu.reg_write(X86Register::RAX, required_size as u64)?;
         log::info!("[WideCharToMultiByte] Returning required size: {}", required_size);
         return Ok(());
     }
@@ -265,7 +263,7 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     // Check if buffer is large enough
     if cb_multi_byte < required_size as i32 {
         // ERROR_INSUFFICIENT_BUFFER
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         log::warn!("[WideCharToMultiByte] Buffer too small");
         return Ok(());
     }
@@ -276,7 +274,7 @@ pub fn WideCharToMultiByte(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     }
     
     // Return number of bytes written
-    emu.reg_write(RegisterX86::RAX, required_size as u64)?;
+    emu.reg_write(X86Register::RAX, required_size as u64)?;
     
     log::info!("[WideCharToMultiByte] Converted '{}' to {} bytes", 
               wide_string, required_size);

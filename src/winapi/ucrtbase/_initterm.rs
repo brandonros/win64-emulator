@@ -22,16 +22,16 @@ Return value
 A non-zero error code if an initialization fails and throws an error; 0 if no error occurs.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn _initterm(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn _initterm(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // _initterm walks through a table of function pointers and calls them
     // RCX = first pointer (start of table)
     // RDX = last pointer (end of table)
     // Returns void (no return value)
     
-    let start_ptr = emu.reg_read(RegisterX86::RCX)?;
-    let end_ptr = emu.reg_read(RegisterX86::RDX)?;
+    let start_ptr = emu.reg_read(X86Register::RCX)?;
+    let end_ptr = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[_initterm] Walking function pointer table from 0x{:x} to 0x{:x}", 
                start_ptr, end_ptr);

@@ -1,15 +1,15 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn FindResourceA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn FindResourceA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HRSRC FindResourceA(
     //   HMODULE hModule,  // RCX
     //   LPCSTR  lpName,   // RDX
     //   LPCSTR  lpType    // R8
     // )
     
-    let h_module = emu.reg_read(RegisterX86::RCX)?;
-    let lp_name = emu.reg_read(RegisterX86::RDX)?;
-    let lp_type = emu.reg_read(RegisterX86::R8)?;
+    let h_module = emu.reg_read(X86Register::RCX)?;
+    let lp_name = emu.reg_read(X86Register::RDX)?;
+    let lp_type = emu.reg_read(X86Register::R8)?;
     
     log::info!("[FindResourceA] hModule: 0x{:x}", h_module);
     log::info!("[FindResourceA] lpName: 0x{:x}", lp_name);
@@ -25,13 +25,13 @@ pub fn FindResourceA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
             Ok(name) => name,
             Err(_) => {
                 log::warn!("[FindResourceA] Failed to read resource name string");
-                emu.reg_write(RegisterX86::RAX, 0)?;
+                emu.reg_write(X86Register::RAX, 0)?;
                 return Ok(());
             }
         }
     } else {
         log::warn!("[FindResourceA] NULL resource name");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     };
     
@@ -45,13 +45,13 @@ pub fn FindResourceA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
             Ok(type_name) => type_name,
             Err(_) => {
                 log::warn!("[FindResourceA] Failed to read resource type string");
-                emu.reg_write(RegisterX86::RAX, 0)?;
+                emu.reg_write(X86Register::RAX, 0)?;
                 return Ok(());
             }
         }
     } else {
         log::warn!("[FindResourceA] NULL resource type");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     };
     
@@ -95,10 +95,10 @@ pub fn FindResourceA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
         };
         
         log::info!("[FindResourceA] Resource found! Returning handle: 0x{:x}", resource_handle);
-        emu.reg_write(RegisterX86::RAX, resource_handle)?;
+        emu.reg_write(X86Register::RAX, resource_handle)?;
     } else {
         log::info!("[FindResourceA] Resource not found");
-        emu.reg_write(RegisterX86::RAX, 0)?; // NULL - resource not found
+        emu.reg_write(X86Register::RAX, 0)?; // NULL - resource not found
     }
     
     log::warn!("[FindResourceA] Mock implementation - not actually searching PE resources");

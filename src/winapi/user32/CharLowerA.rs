@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory::utils::read_string_from_memory;
 
 /*
@@ -30,12 +30,12 @@ If the operand is a single character, the return value is a 32-bit value whose h
 There is no indication of success or failure. Failure is rare. There is no extended error information for this function; do not call GetLastError.
 */
 
-pub fn CharLowerA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CharLowerA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // LPSTR CharLowerA(
     //   [in, out] LPSTR lpsz  // RCX
     // )
     
-    let lpsz = emu.reg_read(RegisterX86::RCX)?;
+    let lpsz = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[CharLowerA] lpsz: 0x{:x}", lpsz);
     
@@ -58,7 +58,7 @@ pub fn CharLowerA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
                   lower_char as char, lower_char);
         
         // Return the converted character in the low-order word
-        emu.reg_write(RegisterX86::RAX, lower_char as u64)?;
+        emu.reg_write(X86Register::RAX, lower_char as u64)?;
     } else {
         // String conversion mode
         log::info!("[CharLowerA] String mode: pointer at 0x{:x}", lpsz);
@@ -89,12 +89,12 @@ pub fn CharLowerA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
                 }
                 
                 // Return the original pointer (string was converted in place)
-                emu.reg_write(RegisterX86::RAX, lpsz)?;
+                emu.reg_write(X86Register::RAX, lpsz)?;
             }
             Err(e) => {
                 log::error!("[CharLowerA] Failed to read string from memory: {:?}", e);
                 // Return the original pointer even on failure (per documentation)
-                emu.reg_write(RegisterX86::RAX, lpsz)?;
+                emu.reg_write(X86Register::RAX, lpsz)?;
             }
         }
     }

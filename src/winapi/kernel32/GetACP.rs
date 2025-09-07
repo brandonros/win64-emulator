@@ -1,7 +1,6 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn GetACP(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetACP(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // GetACP takes no parameters and returns the code page identifier in RAX
     
     // 1252 = Windows-1252 (Latin 1) - most common Western European code page
@@ -13,7 +12,7 @@ pub fn GetACP(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     log::info!("[GetACP] Returning code page: {}", code_page);
     
     // Set the return value in RAX register
-    emu.reg_write(RegisterX86::RAX, code_page)?;
+    emu.reg_write(X86Register::RAX, code_page)?;
     
     Ok(())
 }

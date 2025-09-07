@@ -96,7 +96,7 @@ Copy
 EnumDisplayMonitors(NULL, NULL, MyInfoEnumProc, 0);  
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::Foundation::RECT;
 
 use crate::emulation::memory::{self, heap_manager::HEAP_ALLOCATIONS};
@@ -104,11 +104,11 @@ use crate::emulation::memory::{self, heap_manager::HEAP_ALLOCATIONS};
 // Primary monitor handle - same as in MonitorFromPoint
 const PRIMARY_MONITOR_HANDLE: u64 = 0x10001;
 
-pub fn EnumDisplayMonitors(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
-    let hdc = emu.reg_read(RegisterX86::RCX)?;
-    let lprc_clip = emu.reg_read(RegisterX86::RDX)?;
-    let lpfn_enum = emu.reg_read(RegisterX86::R8)?;
-    let dw_data = emu.reg_read(RegisterX86::R9)?;
+pub fn EnumDisplayMonitors(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
+    let hdc = emu.reg_read(X86Register::RCX)?;
+    let lprc_clip = emu.reg_read(X86Register::RDX)?;
+    let lpfn_enum = emu.reg_read(X86Register::R8)?;
+    let dw_data = emu.reg_read(X86Register::R9)?;
     
     log::info!("[EnumDisplayMonitors] HDC: 0x{:x}, lprcClip: 0x{:x}, lpfnEnum: 0x{:x}, dwData: 0x{:x}",
         hdc, lprc_clip, lpfn_enum, dw_data);
@@ -116,23 +116,20 @@ pub fn EnumDisplayMonitors(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     // Check for NULL callback
     if lpfn_enum == 0 {
         log::error!("[EnumDisplayMonitors] NULL callback function");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
     // Allocate memory for the RECT structure using heap manager
-    let rect_addr = {
-        let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-        match heap_mgr.allocate(emu, std::mem::size_of::<RECT>()) {
-            Ok(addr) => {
-                log::info!("[EnumDisplayMonitors] Allocated RECT at 0x{:x}", addr);
-                addr
-            }
-            Err(e) => {
-                log::error!("[EnumDisplayMonitors] Failed to allocate RECT: {}", e);
-                emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
-                return Ok(());
-            }
+    let rect_addr = match HEAP_ALLOCATIONS.allocate(emu, std::mem::size_of::<RECT>()) {
+        Ok(addr) => {
+            log::info!("[EnumDisplayMonitors] Allocated RECT at 0x{:x}", addr);
+            addr
+        }
+        Err(e) => {
+            log::error!("[EnumDisplayMonitors] Failed to allocate RECT: {}", e);
+            emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
+            return Ok(());
         }
     };
     
@@ -148,24 +145,21 @@ pub fn EnumDisplayMonitors(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     memory::write_struct(emu, rect_addr, &monitor_rect)?;
     
     // Save current context
-    let old_rsp = emu.reg_read(RegisterX86::RSP)?;
-    let old_rip = emu.reg_read(RegisterX86::RIP)?;
+    let old_rsp = emu.reg_read(X86Register::RSP)?;
+    let old_rip = emu.reg_read(X86Register::RIP)?;
     
     // Allocate memory for return stub using heap manager
-    let return_addr = {
-        let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-        match heap_mgr.allocate(emu, 16) { // Small allocation for RET instruction
-            Ok(addr) => {
-                log::info!("[EnumDisplayMonitors] Allocated return stub at 0x{:x}", addr);
-                addr
-            }
-            Err(e) => {
-                // Clean up the RECT allocation before returning
-                heap_mgr.free(rect_addr, emu).ok();
-                log::error!("[EnumDisplayMonitors] Failed to allocate return stub: {}", e);
-                emu.reg_write(RegisterX86::RAX, 0)?;
-                return Ok(());
-            }
+    let return_addr = match HEAP_ALLOCATIONS.allocate(emu, 16) { // Small allocation for RET instruction
+        Ok(addr) => {
+            log::info!("[EnumDisplayMonitors] Allocated return stub at 0x{:x}", addr);
+            addr
+        }
+        Err(e) => {
+            // Clean up the RECT allocation before returning
+            HEAP_ALLOCATIONS.free(rect_addr, emu).ok();
+            log::error!("[EnumDisplayMonitors] Failed to allocate return stub: {}", e);
+            emu.reg_write(X86Register::RAX, 0)?;
+            return Ok(());
         }
     };
 
@@ -174,20 +168,20 @@ pub fn EnumDisplayMonitors(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     
     // Prepare stack for callback call
     let new_rsp = (old_rsp - 0x40) & !0xF; // Extra space + alignment
-    emu.reg_write(RegisterX86::RSP, new_rsp)?;
+    emu.reg_write(X86Register::RSP, new_rsp)?;
     
     // Push return address on stack
     emu.mem_write(new_rsp, &return_addr.to_le_bytes())?;
     
     // Set up parameters for callback:
     // BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData)
-    emu.reg_write(RegisterX86::RCX, PRIMARY_MONITOR_HANDLE)?;  // hMonitor
-    emu.reg_write(RegisterX86::RDX, if hdc != 0 { hdc } else { 0 })?; // hdcMonitor
-    emu.reg_write(RegisterX86::R8, rect_addr)?;  // lprcMonitor
-    emu.reg_write(RegisterX86::R9, dw_data)?;    // dwData (pass through)
+    emu.reg_write(X86Register::RCX, PRIMARY_MONITOR_HANDLE)?;  // hMonitor
+    emu.reg_write(X86Register::RDX, if hdc != 0 { hdc } else { 0 })?; // hdcMonitor
+    emu.reg_write(X86Register::R8, rect_addr)?;  // lprcMonitor
+    emu.reg_write(X86Register::R9, dw_data)?;    // dwData (pass through)
     
     // Set RIP to callback function
-    emu.reg_write(RegisterX86::RIP, lpfn_enum)?;
+    emu.reg_write(X86Register::RIP, lpfn_enum)?;
     
     log::info!("[EnumDisplayMonitors] Executing callback at 0x{:x} for monitor rect ({},{},{},{})", 
         lpfn_enum, monitor_rect.left, monitor_rect.top, monitor_rect.right, monitor_rect.bottom);
@@ -198,7 +192,7 @@ pub fn EnumDisplayMonitors(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     let callback_succeeded = match result {
         Ok(_) => {
             // Get the callback's return value (BOOL in RAX)
-            let callback_result = emu.reg_read(RegisterX86::RAX)?;
+            let callback_result = emu.reg_read(X86Register::RAX)?;
             log::info!("[EnumDisplayMonitors] Callback returned: {}", callback_result);
             
             // If callback returned FALSE (0), enumeration should stop
@@ -214,21 +208,18 @@ pub fn EnumDisplayMonitors(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     };
     
     // Free the allocated RECT memory
-    {
-        let mut heap_mgr = HEAP_ALLOCATIONS.lock().unwrap();
-        if let Err(e) = heap_mgr.free(rect_addr, emu) {
-            log::warn!("[EnumDisplayMonitors] Failed to free RECT at 0x{:x}: {}", rect_addr, e);
-        } else {
-            log::info!("[EnumDisplayMonitors] Freed RECT at 0x{:x}", rect_addr);
-        }
+    if let Err(e) = HEAP_ALLOCATIONS.free(rect_addr, emu) {
+        log::warn!("[EnumDisplayMonitors] Failed to free RECT at 0x{:x}: {}", rect_addr, e);
+    } else {
+        log::info!("[EnumDisplayMonitors] Freed RECT at 0x{:x}", rect_addr);
     }
     
     // Restore original context
-    emu.reg_write(RegisterX86::RSP, old_rsp)?;
-    emu.reg_write(RegisterX86::RIP, old_rip)?;
+    emu.reg_write(X86Register::RSP, old_rsp)?;
+    emu.reg_write(X86Register::RIP, old_rip)?;
     
     // Return based on callback success
-    emu.reg_write(RegisterX86::RAX, if callback_succeeded { 1 } else { 0 })?;
+    emu.reg_write(X86Register::RAX, if callback_succeeded { 1 } else { 0 })?;
     
     Ok(())
 }

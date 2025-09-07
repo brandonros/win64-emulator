@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::winapi::kernel32::AddVectoredExceptionHandler::REGISTERED_HANDLERS;
 
 /*
@@ -24,19 +24,19 @@ If the function succeeds, the return value is nonzero.
 If the function fails, the return value is zero.
 */
 
-pub fn RemoveVectoredExceptionHandler(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RemoveVectoredExceptionHandler(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // ULONG RemoveVectoredExceptionHandler(
     //   PVOID Handle  // RCX
     // );
     
-    let handle = emu.reg_read(RegisterX86::RCX)?;
+    let handle = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[RemoveVectoredExceptionHandler] Handle: 0x{:x}", handle);
     
     // Check for NULL handle
     if handle == 0 {
         log::error!("[RemoveVectoredExceptionHandler] NULL handle provided");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 (failure)
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 (failure)
         return Ok(());
     }
     
@@ -44,7 +44,7 @@ pub fn RemoveVectoredExceptionHandler(emu: &mut Unicorn<()>) -> Result<(), unico
     // Handler handles from AddVectoredExceptionHandler start at 0x1000
     if handle < 0x1000 {
         log::warn!("[RemoveVectoredExceptionHandler] Invalid handle 0x{:x}", handle);
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 (failure)
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 (failure)
         return Ok(());
     }
     
@@ -64,10 +64,10 @@ pub fn RemoveVectoredExceptionHandler(emu: &mut Unicorn<()>) -> Result<(), unico
     
     if was_registered {
         log::info!("[RemoveVectoredExceptionHandler] Successfully removed handler with handle 0x{:x}", handle);
-        emu.reg_write(RegisterX86::RAX, 1)?; // Return non-zero (success)
+        emu.reg_write(X86Register::RAX, 1)?; // Return non-zero (success)
     } else {
         log::warn!("[RemoveVectoredExceptionHandler] Handle 0x{:x} was not registered", handle);
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 (failure)
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 (failure)
     }
     
     log::warn!("[RemoveVectoredExceptionHandler] Mock implementation - handler not actually removed from exception chain");

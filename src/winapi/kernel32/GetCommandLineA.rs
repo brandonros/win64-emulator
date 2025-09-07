@@ -1,5 +1,4 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::OnceLock;
 
 use crate::emulation::memory;
@@ -8,23 +7,22 @@ use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
 // Store the command line address once allocated
 static COMMAND_LINE_A_ADDRESS: OnceLock<u64> = OnceLock::new();
 
-pub fn GetCommandLineA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetCommandLineA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Check if already initialized
     let cmd_addr = if let Some(&addr) = COMMAND_LINE_A_ADDRESS.get() {
         addr
     } else {
         // First call - allocate and initialize
-        let command_line = "C:\\Program Files\\Application\\enigma_test_protected.exe";
+        let command_line = "C:\\Program Files\\Application\\main.exe";
         
         // Calculate size needed (including null terminator)
         let size = command_line.len() + 1;
         
         // Allocate from heap
-        let addr = HEAP_ALLOCATIONS.lock().unwrap()
-            .allocate(emu, size)
+        let addr = HEAP_ALLOCATIONS.allocate(emu, size)
             .map_err(|e| {
                 log::error!("[GetCommandLineA] {}", e);
-                unicorn_engine::uc_error::NOMEM
+                EmulatorError::NOMEM
             })?;
         
         // Write the string to memory
@@ -42,7 +40,7 @@ pub fn GetCommandLineA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
     log::debug!("[GetCommandLineA] Returning command line pointer: 0x{:x}", cmd_addr);
     
     // Return pointer in RAX
-    emu.reg_write(RegisterX86::RAX, cmd_addr)?;
+    emu.reg_write(X86Register::RAX, cmd_addr)?;
     
     Ok(())
 }

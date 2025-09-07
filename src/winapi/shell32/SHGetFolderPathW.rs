@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 
 /*
@@ -130,7 +130,7 @@ See also
 IKnownFolder::GetPath
 */
 
-pub fn SHGetFolderPathW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SHGetFolderPathW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HRESULT SHGetFolderPathW(
     //   [in]  HWND   hwnd,      // RCX
     //   [in]  int    csidl,     // RDX
@@ -139,13 +139,13 @@ pub fn SHGetFolderPathW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     //   [out] LPWSTR pszPath    // [RSP+0x28]
     // )
     
-    let hwnd = emu.reg_read(RegisterX86::RCX)?;
-    let csidl = emu.reg_read(RegisterX86::RDX)? as i32;
-    let h_token = emu.reg_read(RegisterX86::R8)?;
-    let dw_flags = emu.reg_read(RegisterX86::R9)? as u32;
+    let hwnd = emu.reg_read(X86Register::RCX)?;
+    let csidl = emu.reg_read(X86Register::RDX)? as i32;
+    let h_token = emu.reg_read(X86Register::R8)?;
+    let dw_flags = emu.reg_read(X86Register::R9)? as u32;
     
     // Read pszPath from stack (5th parameter)
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut psz_path_bytes = [0u8; 8];
     emu.mem_read(rsp + 0x28, &mut psz_path_bytes)?;
     let psz_path = u64::from_le_bytes(psz_path_bytes);
@@ -163,7 +163,7 @@ pub fn SHGetFolderPathW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     // Check for NULL pszPath
     if psz_path == 0 {
         log::error!("[SHGetFolderPathW] NULL pszPath pointer");
-        emu.reg_write(RegisterX86::RAX, E_INVALIDARG as u64)?;
+        emu.reg_write(X86Register::RAX, E_INVALIDARG as u64)?;
         return Ok(());
     }
     
@@ -209,7 +209,7 @@ pub fn SHGetFolderPathW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
         0x000e => "C:\\Users\\User\\Videos",              // CSIDL_MYVIDEO
         _ => {
             log::warn!("[SHGetFolderPathW] Unimplemented CSIDL value: 0x{:x}", actual_csidl);
-            emu.reg_write(RegisterX86::RAX, E_INVALIDARG as u64)?;
+            emu.reg_write(X86Register::RAX, E_INVALIDARG as u64)?;
             return Ok(());
         }
     };
@@ -221,7 +221,7 @@ pub fn SHGetFolderPathW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     log::warn!("[SHGetFolderPathW] Mock implementation - returned folder: '{}'", folder_path);
     
     // Return S_OK
-    emu.reg_write(RegisterX86::RAX, S_OK as u64)?;
+    emu.reg_write(X86Register::RAX, S_OK as u64)?;
     
     Ok(())
 }

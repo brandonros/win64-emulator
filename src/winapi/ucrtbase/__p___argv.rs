@@ -2,7 +2,7 @@
 char*** CDECL MSVCRT___p___argv(void) { return &MSVCRT___argv; }
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::OnceLock;
 use crate::emulation::memory;
 use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
@@ -10,7 +10,7 @@ use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
 // Store the argv pointer address once allocated
 static ARGV_POINTER_ADDRESS: OnceLock<u64> = OnceLock::new();
 
-pub fn __p___argv(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn __p___argv(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Check if already initialized
     let p_argv_addr = if let Some(&addr) = ARGV_POINTER_ADDRESS.get() {
         addr
@@ -20,22 +20,20 @@ pub fn __p___argv(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
         
         // Allocate space for program name string
         let prog_name_size = prog_name.len() + 1;
-        let prog_name_addr = HEAP_ALLOCATIONS.lock().unwrap()
-            .allocate(emu, prog_name_size)
+        let prog_name_addr = HEAP_ALLOCATIONS.allocate(emu, prog_name_size)
             .map_err(|e| {
                 log::error!("[__p___argv] Failed to allocate program name: {}", e);
-                unicorn_engine::uc_error::NOMEM
+                EmulatorError::NOMEM
             })?;
         
         // Write program name string
         memory::write_string_to_memory(emu, prog_name_addr, prog_name)?;
         
         // Allocate space for argv array (2 pointers: program name and null)
-        let argv_array_addr = HEAP_ALLOCATIONS.lock().unwrap()
-            .allocate(emu, 16) // 2 * sizeof(pointer) on x64
+        let argv_array_addr = HEAP_ALLOCATIONS.allocate(emu, 16) // 2 * sizeof(pointer) on x64
             .map_err(|e| {
                 log::error!("[__p___argv] Failed to allocate argv array: {}", e);
-                unicorn_engine::uc_error::NOMEM
+                EmulatorError::NOMEM
             })?;
         
         // Write argv array
@@ -43,11 +41,10 @@ pub fn __p___argv(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
         emu.mem_write(argv_array_addr + 8, &0u64.to_le_bytes())?; // argv[1] = NULL
         
         // Allocate space for pointer to argv array
-        let p_argv_addr = HEAP_ALLOCATIONS.lock().unwrap()
-            .allocate(emu, 8) // sizeof(pointer) on x64
+        let p_argv_addr = HEAP_ALLOCATIONS.allocate(emu, 8) // sizeof(pointer) on x64
             .map_err(|e| {
                 log::error!("[__p___argv] Failed to allocate p_argv: {}", e);
-                unicorn_engine::uc_error::NOMEM
+                EmulatorError::NOMEM
             })?;
         
         // Write pointer to argv array
@@ -65,7 +62,7 @@ pub fn __p___argv(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     log::debug!("[__p___argv] Returning argv pointer pointer: 0x{:x}", p_argv_addr);
     
     // Return pointer in RAX
-    emu.reg_write(RegisterX86::RAX, p_argv_addr)?;
+    emu.reg_write(X86Register::RAX, p_argv_addr)?;
     
     Ok(())
 }

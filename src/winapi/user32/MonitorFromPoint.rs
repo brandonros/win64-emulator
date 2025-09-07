@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // Monitor flags
@@ -12,14 +12,14 @@ const PRIMARY_MONITOR_HANDLE: u64 = 0x10001;
 // Monitor handle counter for non-primary monitors
 static MONITOR_HANDLE_COUNTER: AtomicU64 = AtomicU64::new(0x10002);
 
-pub fn MonitorFromPoint(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn MonitorFromPoint(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HMONITOR MonitorFromPoint(
     //   [in] POINT pt,      // RCX (x and y packed into 64-bit: low 32 bits = x, high 32 bits = y)
     //   [in] DWORD dwFlags  // RDX
     // )
     
-    let point = emu.reg_read(RegisterX86::RCX)?;
-    let flags = emu.reg_read(RegisterX86::RDX)? as u32;
+    let point = emu.reg_read(X86Register::RCX)?;
+    let flags = emu.reg_read(X86Register::RDX)? as u32;
     
     // Extract x and y from POINT structure (two 32-bit LONG values)
     let x = (point & 0xFFFFFFFF) as i32;
@@ -58,7 +58,7 @@ pub fn MonitorFromPoint(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     log::info!("[MonitorFromPoint] Returning HMONITOR: 0x{:x}", hmonitor);
     
     // Return the monitor handle
-    emu.reg_write(RegisterX86::RAX, hmonitor)?;
+    emu.reg_write(X86Register::RAX, hmonitor)?;
     
     Ok(())
 }

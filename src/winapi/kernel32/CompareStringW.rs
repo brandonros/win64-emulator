@@ -1,6 +1,6 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn CompareStringW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CompareStringW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // int CompareStringW(
     //   LCID   Locale,    // RCX
     //   DWORD  dwCmpFlags,// RDX
@@ -10,13 +10,13 @@ pub fn CompareStringW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     //   int    cchCount2  // [RSP+0x30]
     // )
     
-    let locale = emu.reg_read(RegisterX86::RCX)?;
-    let dw_cmp_flags = emu.reg_read(RegisterX86::RDX)?;
-    let lp_string1 = emu.reg_read(RegisterX86::R8)?;
-    let cch_count1 = emu.reg_read(RegisterX86::R9)? as i32;
+    let locale = emu.reg_read(X86Register::RCX)?;
+    let dw_cmp_flags = emu.reg_read(X86Register::RDX)?;
+    let lp_string1 = emu.reg_read(X86Register::R8)?;
+    let cch_count1 = emu.reg_read(X86Register::R9)? as i32;
     
     // Read stack parameters
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut lp_string2_bytes = [0u8; 8];
     emu.mem_read(rsp + 0x28, &mut lp_string2_bytes)?;
     let lp_string2 = u64::from_le_bytes(lp_string2_bytes);
@@ -35,7 +35,7 @@ pub fn CompareStringW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     // Check for NULL pointers
     if lp_string1 == 0 || lp_string2 == 0 {
         log::warn!("[CompareStringW] NULL string pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 on error
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 on error
         return Ok(());
     }
     
@@ -46,7 +46,7 @@ pub fn CompareStringW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
             Ok(s) => s,
             Err(_) => {
                 log::warn!("[CompareStringW] Failed to read wide string1");
-                emu.reg_write(RegisterX86::RAX, 0)?;
+                emu.reg_write(X86Register::RAX, 0)?;
                 return Ok(());
             }
         }
@@ -56,7 +56,7 @@ pub fn CompareStringW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
         let mut buffer = vec![0u8; byte_count];
         if let Err(_) = emu.mem_read(lp_string1, &mut buffer) {
             log::warn!("[CompareStringW] Failed to read string1 buffer");
-            emu.reg_write(RegisterX86::RAX, 0)?;
+            emu.reg_write(X86Register::RAX, 0)?;
             return Ok(());
         }
         // Convert bytes to UTF-16 and then to String
@@ -76,7 +76,7 @@ pub fn CompareStringW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
             Ok(s) => s,
             Err(_) => {
                 log::warn!("[CompareStringW] Failed to read wide string2");
-                emu.reg_write(RegisterX86::RAX, 0)?;
+                emu.reg_write(X86Register::RAX, 0)?;
                 return Ok(());
             }
         }
@@ -86,7 +86,7 @@ pub fn CompareStringW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
         let mut buffer = vec![0u8; byte_count];
         if let Err(_) = emu.mem_read(lp_string2, &mut buffer) {
             log::warn!("[CompareStringW] Failed to read string2 buffer");
-            emu.reg_write(RegisterX86::RAX, 0)?;
+            emu.reg_write(X86Register::RAX, 0)?;
             return Ok(());
         }
         // Convert bytes to UTF-16 and then to String
@@ -165,7 +165,7 @@ pub fn CompareStringW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     
     log::warn!("[CompareStringW] Mock implementation - simplified locale-aware comparison");
     
-    emu.reg_write(RegisterX86::RAX, result)?;
+    emu.reg_write(X86Register::RAX, result)?;
     
     Ok(())
 }

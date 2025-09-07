@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 /*
 ZwSetInformationFile function (wdm.h)
@@ -73,7 +73,7 @@ For calls from kernel-mode drivers, the NtXxx and ZwXxx versions of a Windows Na
 
 */
 
-pub fn ZwSetInformationFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn ZwSetInformationFile(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // NTSTATUS ZwSetInformationFile(
     //   [in]  HANDLE                 FileHandle,           // RCX
     //   [out] PIO_STATUS_BLOCK       IoStatusBlock,        // RDX
@@ -82,13 +82,13 @@ pub fn ZwSetInformationFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine:
     //   [in]  FILE_INFORMATION_CLASS FileInformationClass  // [RSP+0x28]
     // )
     
-    let file_handle = emu.reg_read(RegisterX86::RCX)?;
-    let io_status_block = emu.reg_read(RegisterX86::RDX)?;
-    let file_information = emu.reg_read(RegisterX86::R8)?;
-    let length = emu.reg_read(RegisterX86::R9)? as u32;
+    let file_handle = emu.reg_read(X86Register::RCX)?;
+    let io_status_block = emu.reg_read(X86Register::RDX)?;
+    let file_information = emu.reg_read(X86Register::R8)?;
+    let length = emu.reg_read(X86Register::R9)? as u32;
     
     // Read FileInformationClass from stack
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut class_bytes = [0u8; 4];
     emu.mem_read(rsp + 0x28, &mut class_bytes)?;
     let file_information_class = u32::from_le_bytes(class_bytes);
@@ -107,7 +107,7 @@ pub fn ZwSetInformationFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine:
     // Basic validation
     if file_handle == 0 || io_status_block == 0 {
         log::error!("[ZwSetInformationFile] Invalid handle or IoStatusBlock");
-        emu.reg_write(RegisterX86::RAX, STATUS_INVALID_PARAMETER as u64)?;
+        emu.reg_write(X86Register::RAX, STATUS_INVALID_PARAMETER as u64)?;
         return Ok(());
     }
     
@@ -122,7 +122,7 @@ pub fn ZwSetInformationFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine:
     log::warn!("[ZwSetInformationFile] Mock implementation - no actual file operation performed");
     
     // Return STATUS_SUCCESS
-    emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+    emu.reg_write(X86Register::RAX, STATUS_SUCCESS as u64)?;
     
     Ok(())
 }

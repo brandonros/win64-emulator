@@ -38,7 +38,7 @@ If the lpString parameter has the form "#1234", GlobalAddAtom returns an integer
 If lpString has any other form, GlobalAddAtom returns a string atom.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use crate::winapi;
 use std::collections::HashMap;
@@ -110,18 +110,18 @@ static GLOBAL_ATOM_TABLE: LazyLock<RwLock<GlobalAtomTable>> = LazyLock::new(|| {
     RwLock::new(GlobalAtomTable::new())
 });
 
-pub fn GlobalAddAtomA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GlobalAddAtomA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // ATOM GlobalAddAtomA(
     //   LPCSTR lpString  // RCX
     // )
     
-    let string_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let string_ptr = emu.reg_read(X86Register::RCX)?;
     
     // Check for null pointer
     if string_ptr == 0 {
         log::warn!("[GlobalAddAtomA] NULL string pointer");
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for error
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 for error
         return Ok(());
     }
     
@@ -134,12 +134,12 @@ pub fn GlobalAddAtomA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
         if atom_value == 0 || atom_value >= 0xC000 {
             log::warn!("[GlobalAddAtomA] Invalid integer atom value: 0x{:04x}", atom_value);
             winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-            emu.reg_write(RegisterX86::RAX, 0)?;
+            emu.reg_write(X86Register::RAX, 0)?;
             return Ok(());
         }
         
         log::info!("[GlobalAddAtomA] Returning integer atom: 0x{:04x}", atom_value);
-        emu.reg_write(RegisterX86::RAX, atom_value as u64)?;
+        emu.reg_write(X86Register::RAX, atom_value as u64)?;
         return Ok(());
     }
     
@@ -155,13 +155,13 @@ pub fn GlobalAddAtomA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
             if value == 0 || value >= 0xC000 {
                 log::warn!("[GlobalAddAtomA] Invalid integer atom value from string: {}", value);
                 winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-                emu.reg_write(RegisterX86::RAX, 0)?;
+                emu.reg_write(X86Register::RAX, 0)?;
                 return Ok(());
             }
             
             let atom = value as u16;
             log::info!("[GlobalAddAtomA] Parsed integer atom from string: 0x{:04x}", atom);
-            emu.reg_write(RegisterX86::RAX, atom as u64)?;
+            emu.reg_write(X86Register::RAX, atom as u64)?;
             return Ok(());
         }
     }
@@ -170,7 +170,7 @@ pub fn GlobalAddAtomA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     if string.len() > 255 {
         log::warn!("[GlobalAddAtomA] String too long: {} bytes", string.len());
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -183,7 +183,7 @@ pub fn GlobalAddAtomA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     log::info!("[GlobalAddAtomA] Returning atom: 0x{:04x} for string \"{}\"", atom, string);
     
     // Return the atom
-    emu.reg_write(RegisterX86::RAX, atom as u64)?;
+    emu.reg_write(X86Register::RAX, atom as u64)?;
     
     Ok(())
 }

@@ -35,20 +35,20 @@ Remarks
 Call the GetFileVersionInfoSize function before calling the GetFileVersionInfo function. The size returned by GetFileVersionInfoSize indicates the buffer size required for the version information returned by GetFileVersionInfo.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use crate::emulation::vfs::VIRTUAL_FS;
 use crate::winapi;
 use windows_sys::Win32::Storage::FileSystem::VS_FIXEDFILEINFO;
 
-pub fn GetFileVersionInfoSizeA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetFileVersionInfoSizeA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD GetFileVersionInfoSizeA(
     //   LPCSTR  lptstrFilename,  // RCX
     //   LPDWORD lpdwHandle        // RDX
     // )
     
-    let filename_ptr = emu.reg_read(RegisterX86::RCX)?;
-    let handle_ptr = emu.reg_read(RegisterX86::RDX)?;
+    let filename_ptr = emu.reg_read(X86Register::RCX)?;
+    let handle_ptr = emu.reg_read(X86Register::RDX)?;
     
     // Read the filename
     let filename = if filename_ptr != 0 {
@@ -88,15 +88,15 @@ pub fn GetFileVersionInfoSizeA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engi
     if filename.is_empty() {
         log::warn!("[GetFileVersionInfoSizeA] Invalid filename (null or empty), returning 0");
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
     } else if !file_exists {
         log::warn!("[GetFileVersionInfoSizeA] File not found in VFS: \"{}\"", filename);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_FILE_NOT_FOUND)?;
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
     } else {
         log::info!("[GetFileVersionInfoSizeA] File \"{}\" exists in VFS, returning version info size: {} bytes (VS_FIXEDFILEINFO: {} + strings: {})", 
             filename, mock_version_info_size, fixed_file_info_size, VERSION_STRINGS_SIZE);
-        emu.reg_write(RegisterX86::RAX, mock_version_info_size as u64)?;
+        emu.reg_write(X86Register::RAX, mock_version_info_size as u64)?;
     }
     
     Ok(())

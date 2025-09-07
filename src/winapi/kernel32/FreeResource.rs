@@ -1,18 +1,18 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn FreeResource(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn FreeResource(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL FreeResource(
     //   HGLOBAL hResData  // RCX
     // )
     
-    let h_res_data = emu.reg_read(RegisterX86::RCX)?;
+    let h_res_data = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[FreeResource] hResData: 0x{:x}", h_res_data);
     
     // Check for NULL resource data handle
     if h_res_data == 0 {
         log::warn!("[FreeResource] NULL resource data handle");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -44,7 +44,7 @@ pub fn FreeResource(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     log::info!("[FreeResource] Returning FALSE (0) - resources are automatically freed");
     log::warn!("[FreeResource] This function is obsolete in Win32 and does nothing");
     
-    emu.reg_write(RegisterX86::RAX, 0)?; // Always return FALSE
+    emu.reg_write(X86Register::RAX, 0)?; // Always return FALSE
     
     Ok(())
 }

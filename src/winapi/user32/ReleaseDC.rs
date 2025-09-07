@@ -1,12 +1,12 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn ReleaseDC(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
-    let hwnd = emu.reg_read(RegisterX86::RCX)?;
-    let hdc = emu.reg_read(RegisterX86::RDX)?;
+pub fn ReleaseDC(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
+    let hwnd = emu.reg_read(X86Register::RCX)?;
+    let hdc = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[ReleaseDC] Window handle: 0x{:x}, DC handle: 0x{:x}, returning 1 (success)", hwnd, hdc);
     
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

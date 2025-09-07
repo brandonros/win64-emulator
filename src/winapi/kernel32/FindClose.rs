@@ -1,11 +1,11 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn FindClose(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
-    let h_find_file = emu.reg_read(RegisterX86::RCX)?;
+pub fn FindClose(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
+    let h_find_file = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[FindClose] Closing find handle: 0x{:x}, returning 1 (success)", h_find_file);
     
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

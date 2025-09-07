@@ -1,7 +1,7 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory::{TEB_BASE, TEB_LAST_ERROR_VALUE_OFFSET};
 
-pub fn GetLastError(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetLastError(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD GetLastError(void) - no parameters
     // Returns the last error value from TEB
     
@@ -12,7 +12,7 @@ pub fn GetLastError(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     let last_error = u32::from_le_bytes(error_bytes);
     
     // Return error code in RAX (EAX for 32-bit value)
-    emu.reg_write(RegisterX86::RAX, last_error as u64)?;
+    emu.reg_write(X86Register::RAX, last_error as u64)?;
     
     log::info!("kernel32!GetLastError() -> 0x{:x}", last_error);
     

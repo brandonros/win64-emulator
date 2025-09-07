@@ -39,14 +39,14 @@ If the function succeeds, the return value is nonzero.
 If the function fails, the return value is zero. To get extended error information, call GetLastError.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::Foundation::FILETIME;
 use crate::emulation::memory;
 
-pub fn FileTimeToDosDateTime(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
-    let lp_file_time = emu.reg_read(RegisterX86::RCX)?;
-    let lp_fat_date = emu.reg_read(RegisterX86::RDX)?;
-    let lp_fat_time = emu.reg_read(RegisterX86::R8)?;
+pub fn FileTimeToDosDateTime(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
+    let lp_file_time = emu.reg_read(X86Register::RCX)?;
+    let lp_fat_date = emu.reg_read(X86Register::RDX)?;
+    let lp_fat_time = emu.reg_read(X86Register::R8)?;
     
     // Read the FILETIME structure
     let file_time: FILETIME = memory::read_struct(emu, lp_file_time)?;
@@ -71,7 +71,7 @@ pub fn FileTimeToDosDateTime(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine
               lp_file_time, file_time.dwLowDateTime, file_time.dwHighDateTime, dos_date, dos_time);
     
     // Return success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

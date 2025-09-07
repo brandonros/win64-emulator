@@ -1,18 +1,18 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn LockResource(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn LockResource(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // LPVOID LockResource(
     //   HGLOBAL hResData  // RCX
     // )
     
-    let h_res_data = emu.reg_read(RegisterX86::RCX)?;
+    let h_res_data = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[LockResource] hResData: 0x{:x}", h_res_data);
     
     // Check for NULL resource data handle
     if h_res_data == 0 {
         log::warn!("[LockResource] NULL resource data handle");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -73,7 +73,7 @@ pub fn LockResource(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
         log::info!("[LockResource] Failed to lock resource");
     }
     
-    emu.reg_write(RegisterX86::RAX, data_ptr)?;
+    emu.reg_write(X86Register::RAX, data_ptr)?;
     
     Ok(())
 }

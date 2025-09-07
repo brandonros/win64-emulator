@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 // Common Windows messages
 const WM_NULL: u32 = 0x0000;
@@ -58,7 +58,7 @@ const HTCAPTION: i64 = 2;
 // MA_ACTIVATE for WM_MOUSEACTIVATE
 const MA_ACTIVATE: i64 = 1;
 
-pub fn DefWindowProcW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn DefWindowProcW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // LRESULT DefWindowProcW(
     //   [in] HWND   hWnd,    // RCX
     //   [in] UINT   Msg,     // RDX
@@ -66,10 +66,10 @@ pub fn DefWindowProcW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     //   [in] LPARAM lParam   // R9
     // )
     
-    let hwnd = emu.reg_read(RegisterX86::RCX)?;
-    let msg = emu.reg_read(RegisterX86::RDX)? as u32;
-    let wparam = emu.reg_read(RegisterX86::R8)?;
-    let lparam = emu.reg_read(RegisterX86::R9)?;
+    let hwnd = emu.reg_read(X86Register::RCX)?;
+    let msg = emu.reg_read(X86Register::RDX)? as u32;
+    let wparam = emu.reg_read(X86Register::R8)?;
+    let lparam = emu.reg_read(X86Register::R9)?;
     
     let msg_name = match msg {
         WM_NULL => "WM_NULL",
@@ -259,7 +259,7 @@ pub fn DefWindowProcW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     };
     
     // Return the result
-    emu.reg_write(RegisterX86::RAX, result as u64)?;
+    emu.reg_write(X86Register::RAX, result as u64)?;
     
     Ok(())
 }

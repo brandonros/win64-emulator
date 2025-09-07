@@ -19,7 +19,7 @@ BOOL SystemParametersInfoA(
 );
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use crate::winapi;
 
@@ -49,7 +49,7 @@ const SPI_GETCOMBOBOXANIMATION: u32 = 0x1004;
 const SPI_GETLISTBOXSMOOTHSCROLLING: u32 = 0x1006;
 const SPI_GETGRADIENTCAPTIONS: u32 = 0x1008;
 
-pub fn SystemParametersInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SystemParametersInfoA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL SystemParametersInfoA(
     //   UINT  uiAction,  // RCX
     //   UINT  uiParam,   // RDX
@@ -57,10 +57,10 @@ pub fn SystemParametersInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine
     //   UINT  fWinIni    // R9
     // )
     
-    let action = emu.reg_read(RegisterX86::RCX)? as u32;
-    let param = emu.reg_read(RegisterX86::RDX)? as u32;
-    let pv_param = emu.reg_read(RegisterX86::R8)?;
-    let win_ini = emu.reg_read(RegisterX86::R9)? as u32;
+    let action = emu.reg_read(X86Register::RCX)? as u32;
+    let param = emu.reg_read(X86Register::RDX)? as u32;
+    let pv_param = emu.reg_read(X86Register::R8)?;
+    let win_ini = emu.reg_read(X86Register::R9)? as u32;
     
     log::info!(
         "[SystemParametersInfoA] Action: 0x{:04x}, Param: 0x{:x}, pvParam: 0x{:x}, fWinIni: 0x{:x}",
@@ -166,7 +166,7 @@ pub fn SystemParametersInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine
     }
     
     // Return TRUE for success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

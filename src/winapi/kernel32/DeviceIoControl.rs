@@ -1,13 +1,13 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn DeviceIoControl(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
-    let h_device = emu.reg_read(RegisterX86::RCX)?;
-    let dw_io_control_code = emu.reg_read(RegisterX86::RDX)? as u32;
-    let lp_in_buffer = emu.reg_read(RegisterX86::R8)?;
-    let n_in_buffer_size = emu.reg_read(RegisterX86::R9)? as u32;
+pub fn DeviceIoControl(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
+    let h_device = emu.reg_read(X86Register::RCX)?;
+    let dw_io_control_code = emu.reg_read(X86Register::RDX)? as u32;
+    let lp_in_buffer = emu.reg_read(X86Register::R8)?;
+    let n_in_buffer_size = emu.reg_read(X86Register::R9)? as u32;
     
     // Read stack parameters
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut lp_out_buffer_bytes = [0u8; 8];
     emu.mem_read(rsp + 0x40, &mut lp_out_buffer_bytes)?;
     let lp_out_buffer = u64::from_le_bytes(lp_out_buffer_bytes);
@@ -44,7 +44,7 @@ pub fn DeviceIoControl(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
     log::warn!("[DeviceIoControl] Control code 0x{:08x} not implemented, returning success", dw_io_control_code);
     
     // Return success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

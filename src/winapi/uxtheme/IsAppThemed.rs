@@ -26,9 +26,9 @@ In Windows 8, it is not possible to turn off visual styles.
 Do not call this function during DllMain or global objects constructors. This may cause invalid return values.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn IsAppThemed(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn IsAppThemed(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL IsAppThemed()
     // No parameters
     
@@ -36,7 +36,7 @@ pub fn IsAppThemed(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     
     // Return TRUE to indicate the application is themed
     // In Windows 8+, visual styles cannot be turned off
-    emu.reg_write(RegisterX86::RAX, 1)?; // TRUE
+    emu.reg_write(X86Register::RAX, 1)?; // TRUE
     
     log::info!("[IsAppThemed] Returning TRUE (app is themed)");
     

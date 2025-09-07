@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::System::Diagnostics::ToolHelp::MODULEENTRY32;
 use crate::emulation::memory::utils::write_struct;
 use crate::pe::module_registry::MODULE_REGISTRY;
@@ -29,14 +29,14 @@ Return value
 Returns TRUE if the first entry of the module list has been copied to the buffer or FALSE otherwise. The ERROR_NO_MORE_FILES error value is returned by the GetLastError function if no modules exist or the snapshot does not contain module information.
 */
 
-pub fn Module32First(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn Module32First(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL Module32First(
     //   [in]      HANDLE          hSnapshot,  // RCX
     //   [in, out] LPMODULEENTRY32 lpme        // RDX
     // )
     
-    let h_snapshot = emu.reg_read(RegisterX86::RCX)?;
-    let lpme = emu.reg_read(RegisterX86::RDX)?;
+    let h_snapshot = emu.reg_read(X86Register::RCX)?;
+    let lpme = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[Module32First] hSnapshot: 0x{:x}", h_snapshot);
     log::info!("[Module32First] lpme: 0x{:x}", lpme);
@@ -44,14 +44,14 @@ pub fn Module32First(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     // Check for NULL module entry pointer
     if lpme == 0 {
         log::error!("[Module32First] NULL lpme pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
     // Check for invalid snapshot handle
     if h_snapshot == 0 || h_snapshot == 0xFFFFFFFFFFFFFFFF {
         log::error!("[Module32First] Invalid snapshot handle");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
@@ -61,7 +61,7 @@ pub fn Module32First(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
         Ok(_) => {},
         Err(e) => {
             log::error!("[Module32First] Failed to read dwSize: {:?}", e);
-            emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+            emu.reg_write(X86Register::RAX, 0)?; // FALSE
             return Ok(());
         }
     }
@@ -71,7 +71,7 @@ pub fn Module32First(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     if dw_size < std::mem::size_of::<MODULEENTRY32>() as u32 {
         log::error!("[Module32First] Invalid dwSize: {} (expected at least {})", 
                    dw_size, std::mem::size_of::<MODULEENTRY32>());
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
@@ -82,13 +82,13 @@ pub fn Module32First(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     
     if modules.is_empty() {
         log::error!("[Module32First] No modules registered in the module registry");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
-    // Find the main module (enigma_test_protected) or use the first module
+    // Find the main module (main) or use the first module
     let main_module = modules.iter()
-        .find(|m| m.name.contains("enigma_test_protected"))
+        .find(|m| m.name.contains("main"))
         .or_else(|| modules.first())
         .unwrap();
     
@@ -147,7 +147,7 @@ pub fn Module32First(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
         }
         Err(e) => {
             log::error!("[Module32First] Failed to write module entry: {:?}", e);
-            emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+            emu.reg_write(X86Register::RAX, 0)?; // FALSE
             return Ok(());
         }
     }
@@ -155,7 +155,7 @@ pub fn Module32First(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     log::warn!("[Module32First] Mock implementation - returning first module entry");
     
     // Return TRUE (success)
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

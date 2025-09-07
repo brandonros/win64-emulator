@@ -1,6 +1,6 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn RtlUnwindEx(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RtlUnwindEx(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // VOID RtlUnwindEx(
     //   PVOID             TargetFrame,      // RCX
     //   PVOID             TargetIp,         // RDX
@@ -10,13 +10,13 @@ pub fn RtlUnwindEx(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     //   PUNWIND_HISTORY_TABLE HistoryTable  // [RSP+0x30]
     // )
     
-    let target_frame = emu.reg_read(RegisterX86::RCX)?;
-    let target_ip = emu.reg_read(RegisterX86::RDX)?;
-    let exception_record = emu.reg_read(RegisterX86::R8)?;
-    let return_value = emu.reg_read(RegisterX86::R9)?;
+    let target_frame = emu.reg_read(X86Register::RCX)?;
+    let target_ip = emu.reg_read(X86Register::RDX)?;
+    let exception_record = emu.reg_read(X86Register::R8)?;
+    let return_value = emu.reg_read(X86Register::R9)?;
     
     // Read stack parameters
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut context_record_bytes = [0u8; 8];
     emu.mem_read(rsp + 0x28, &mut context_record_bytes)?;
     let context_record = u64::from_le_bytes(context_record_bytes);

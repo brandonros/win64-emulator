@@ -27,21 +27,21 @@ If the function succeeds, the return value is nonzero.
 If the function fails, the return value is 0 (zero). To get extended error information, call GetLastError.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 // Default stack guarantee size (4KB is typical)
 const DEFAULT_STACK_GUARANTEE: u32 = 0x1000;
 
-pub fn SetThreadStackGuarantee(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SetThreadStackGuarantee(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL SetThreadStackGuarantee(
     //   [in, out] PULONG StackSizeInBytes  // RCX - pointer to ULONG
     // );
     
-    let stack_size_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let stack_size_ptr = emu.reg_read(X86Register::RCX)?;
     
     if stack_size_ptr == 0 {
         log::warn!("[SetThreadStackGuarantee] NULL pointer provided, returning FALSE");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -74,7 +74,7 @@ pub fn SetThreadStackGuarantee(emu: &mut Unicorn<()>) -> Result<(), unicorn_engi
     }
     
     // Return TRUE (success)
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     log::info!("[SetThreadStackGuarantee] Returning TRUE with previous size: 0x{:x}", 
               previous_size);

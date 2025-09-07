@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::winapi;
 
 /*
@@ -40,14 +40,14 @@ The GetComputerName function retrieves the NetBIOS name established at system st
 If the caller is running under a client session, this function returns the server name. To retrieve the client name, use the WTSQuerySessionInformation function.
 */
 
-pub fn GetComputerNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetComputerNameW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL GetComputerNameW(
     //   [out]     LPWSTR  lpBuffer,  // RCX
     //   [in, out] LPDWORD nSize      // RDX
     // )
     
-    let lp_buffer = emu.reg_read(RegisterX86::RCX)?;
-    let n_size = emu.reg_read(RegisterX86::RDX)?;
+    let lp_buffer = emu.reg_read(X86Register::RCX)?;
+    let n_size = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[GetComputerNameW] lpBuffer: 0x{:x}", lp_buffer);
     log::info!("[GetComputerNameW] nSize: 0x{:x}", n_size);
@@ -56,7 +56,7 @@ pub fn GetComputerNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     if n_size == 0 {
         log::error!("[GetComputerNameW] NULL nSize pointer");
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -82,7 +82,7 @@ pub fn GetComputerNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
         emu.mem_write(n_size, &required_size_bytes)?;
         
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_BUFFER_OVERFLOW)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -111,7 +111,7 @@ pub fn GetComputerNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     log::warn!("[GetComputerNameW] Mock implementation - returned computer name: '{}'", computer_name);
     
     // Return TRUE (success)
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory::heap_manager::HEAP_ALLOCATIONS;
 
 /*
@@ -32,14 +32,14 @@ The string can contain embedded null characters and does not need to end with a 
 Note  This function does not convert a char * string into a Unicode BSTR.
 */
 
-pub fn SysAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SysAllocStringLen(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BSTR SysAllocStringLen(
     //   [in] const OLECHAR *strIn,  // RCX
     //   [in] UINT          ui        // RDX
     // )
     
-    let str_in = emu.reg_read(RegisterX86::RCX)?;
-    let ui = emu.reg_read(RegisterX86::RDX)? as u32;
+    let str_in = emu.reg_read(X86Register::RCX)?;
+    let ui = emu.reg_read(X86Register::RDX)? as u32;
     
     log::info!("[SysAllocStringLen] strIn: 0x{:x}", str_in);
     log::info!("[SysAllocStringLen] ui: {} characters", ui);
@@ -54,15 +54,12 @@ pub fn SysAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     let total_size = 4 + string_data_size + 2; // TODO: add 16 for some padding as a guess/workaround?
     
     // Allocate memory for the BSTR
-    let alloc_addr = {
-        let mut heap = HEAP_ALLOCATIONS.lock().unwrap();
-        match heap.allocate(emu, total_size) {
-            Ok(addr) => addr,
-            Err(e) => {
-                log::error!("[SysAllocStringLen] Failed to allocate memory: {}", e);
-                emu.reg_write(RegisterX86::RAX, 0)?; // Return NULL
-                return Ok(());
-            }
+    let alloc_addr = match HEAP_ALLOCATIONS.allocate(emu, total_size) {
+        Ok(addr) => addr,
+        Err(e) => {
+            log::error!("[SysAllocStringLen] Failed to allocate memory: {}", e);
+            emu.reg_write(X86Register::RAX, 0)?; // Return NULL
+            return Ok(());
         }
     };
     
@@ -111,7 +108,7 @@ pub fn SysAllocStringLen(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     log::info!("[SysAllocStringLen] BSTR header at 0x{:x}, data at 0x{:x}", alloc_addr, bstr);
     
     // Return the BSTR pointer (points to string data, not the length prefix)
-    emu.reg_write(RegisterX86::RAX, bstr)?;
+    emu.reg_write(X86Register::RAX, bstr)?;
     
     Ok(())
 }

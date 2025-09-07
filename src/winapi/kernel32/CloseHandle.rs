@@ -1,13 +1,13 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 use crate::winapi;
 
-pub fn CloseHandle(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CloseHandle(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL CloseHandle(
     //   HANDLE hObject
     // )
     
-    let h_object = emu.reg_read(RegisterX86::RCX)?;
+    let h_object = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[CloseHandle] hObject: 0x{:x}", h_object);
 
@@ -17,14 +17,14 @@ pub fn CloseHandle(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
             // NULL handle
             log::warn!("[CloseHandle] Attempting to close NULL handle ERROR_INVALID_HANDLE");
             winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
-            emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE for failure
+            emu.reg_write(X86Register::RAX, 0)?; // Return FALSE for failure
             return Ok(());
         },
         0xFFFFFFFFFFFFFFFF => {
             // INVALID_HANDLE_VALUE (-1)
             log::warn!("[CloseHandle] Attempting to close INVALID_HANDLE_VALUE ERROR_INVALID_HANDLE");
             winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
-            emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE for failure
+            emu.reg_write(X86Register::RAX, 0)?; // Return FALSE for failure
             return Ok(());
         },
         0x10 | 0x14 | 0x18 => {
@@ -35,7 +35,7 @@ pub fn CloseHandle(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
             // Windows allows closing standard handles but they remain valid
             // We'll simulate this by succeeding but logging a warning
             log::info!("[CloseHandle] Standard handle close simulated (handle remains valid)");
-            emu.reg_write(RegisterX86::RAX, 1)?; // Return TRUE for success
+            emu.reg_write(X86Register::RAX, 1)?; // Return TRUE for success
             return Ok(());
         },
         _ => {
@@ -43,11 +43,11 @@ pub fn CloseHandle(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
             // For simulation purposes, we'll accept a limited range of "valid" handles
             if h_object >= 0x100 && h_object <= 0x1000 {
                 log::info!("[CloseHandle] Closing handle: 0x{:x}", h_object);
-                emu.reg_write(RegisterX86::RAX, 1)?; // Return TRUE for success
+                emu.reg_write(X86Register::RAX, 1)?; // Return TRUE for success
             } else {
                 log::warn!("[CloseHandle] Unknown/invalid handle: 0x{:x} ERROR_INVALID_HANDLE", h_object);
                 winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_HANDLE)?;
-                emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE for failure
+                emu.reg_write(X86Register::RAX, 0)?; // Return FALSE for failure
             }
         }
     }

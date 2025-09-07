@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use std::collections::HashMap;
 use std::sync::{Mutex, LazyLock};
@@ -13,17 +13,17 @@ static CLIPBOARD_FORMATS: LazyLock<Mutex<HashMap<String, u32>>> = LazyLock::new(
 // Counter for new format IDs (0xC000 through 0xFFFF)
 static NEXT_FORMAT_ID: AtomicU32 = AtomicU32::new(0xC000);
 
-pub fn RegisterClipboardFormatA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RegisterClipboardFormatA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // UINT RegisterClipboardFormatA(
     //   [in] LPCSTR lpszFormat  // RCX
     // )
     
-    let lpsz_format = emu.reg_read(RegisterX86::RCX)?;
+    let lpsz_format = emu.reg_read(X86Register::RCX)?;
     
     // Check for NULL format name
     if lpsz_format == 0 {
         log::error!("[RegisterClipboardFormatA] NULL format name");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 for failure
         return Ok(());
     }
     
@@ -33,7 +33,7 @@ pub fn RegisterClipboardFormatA(emu: &mut Unicorn<()>) -> Result<(), unicorn_eng
         Err(e) => {
             log::error!("[RegisterClipboardFormatA] Failed to read format name from 0x{:x}: {:?}", 
                 lpsz_format, e);
-            emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+            emu.reg_write(X86Register::RAX, 0)?; // Return 0 for failure
             return Ok(());
         }
     };
@@ -41,7 +41,7 @@ pub fn RegisterClipboardFormatA(emu: &mut Unicorn<()>) -> Result<(), unicorn_eng
     // Check for empty format name
     if format_name.is_empty() {
         log::error!("[RegisterClipboardFormatA] Empty format name");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 for failure
         return Ok(());
     }
     
@@ -66,7 +66,7 @@ pub fn RegisterClipboardFormatA(emu: &mut Unicorn<()>) -> Result<(), unicorn_eng
             // Check if we've exceeded the valid range (0xC000-0xFFFF)
             if new_id > 0xFFFF {
                 log::error!("[RegisterClipboardFormatA] Exceeded maximum clipboard format ID range");
-                emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+                emu.reg_write(X86Register::RAX, 0)?; // Return 0 for failure
                 return Ok(());
             }
             
@@ -78,7 +78,7 @@ pub fn RegisterClipboardFormatA(emu: &mut Unicorn<()>) -> Result<(), unicorn_eng
     };
     
     // Return the format ID
-    emu.reg_write(RegisterX86::RAX, format_id as u64)?;
+    emu.reg_write(X86Register::RAX, format_id as u64)?;
     
     Ok(())
 }

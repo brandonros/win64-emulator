@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use std::collections::HashMap;
 use std::sync::{Mutex, LazyLock};
@@ -9,26 +9,26 @@ static WINDOW_PROPERTIES: LazyLock<Mutex<HashMap<(u64, String), u64>>> = LazyLoc
     Mutex::new(HashMap::new())
 });
 
-pub fn GetPropA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetPropA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HANDLE GetPropA(
     //   [in] HWND   hWnd,      // RCX
     //   [in] LPCSTR lpString   // RDX
     // )
     
-    let hwnd = emu.reg_read(RegisterX86::RCX)?;
-    let lp_string = emu.reg_read(RegisterX86::RDX)?;
+    let hwnd = emu.reg_read(X86Register::RCX)?;
+    let lp_string = emu.reg_read(X86Register::RDX)?;
     
     // Handle NULL window
     if hwnd == 0 {
         log::error!("[GetPropA] NULL window handle");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return NULL
+        emu.reg_write(X86Register::RAX, 0)?; // Return NULL
         return Ok(());
     }
     
     // Get the property name
     let property_name = if lp_string == 0 {
         log::error!("[GetPropA] NULL property string");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return NULL
+        emu.reg_write(X86Register::RAX, 0)?; // Return NULL
         return Ok(());
     } else if lp_string < 0x10000 {
         // It's an atom (16-bit value in low word)
@@ -39,7 +39,7 @@ pub fn GetPropA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
             Ok(name) => name,
             Err(e) => {
                 log::error!("[GetPropA] Failed to read property string from 0x{:x}: {:?}", lp_string, e);
-                emu.reg_write(RegisterX86::RAX, 0)?; // Return NULL
+                emu.reg_write(X86Register::RAX, 0)?; // Return NULL
                 return Ok(());
             }
         }
@@ -56,11 +56,11 @@ pub fn GetPropA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     match handle {
         Some(h) => {
             log::info!("[GetPropA] Found property \"{}\" with handle: 0x{:x}", property_name, h);
-            emu.reg_write(RegisterX86::RAX, h)?;
+            emu.reg_write(X86Register::RAX, h)?;
         }
         None => {
             log::info!("[GetPropA] Property \"{}\" not found", property_name);
-            emu.reg_write(RegisterX86::RAX, 0)?; // Return NULL
+            emu.reg_write(X86Register::RAX, 0)?; // Return NULL
         }
     }
     

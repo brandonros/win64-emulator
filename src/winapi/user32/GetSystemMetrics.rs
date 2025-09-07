@@ -1,9 +1,8 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn GetSystemMetrics(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetSystemMetrics(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get the metric index from ECX register
-    let index = emu.reg_read(RegisterX86::RCX)? as i32;
+    let index = emu.reg_read(X86Register::RCX)? as i32;
     
     let value = match index {
         0 => 1920,  // SM_CXSCREEN - width of primary display
@@ -27,7 +26,7 @@ pub fn GetSystemMetrics(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     log::debug!("[GetSystemMetrics] Index: {} = {}", index, value);
     
     // Return value in EAX
-    emu.reg_write(RegisterX86::RAX, value as u64)?;
+    emu.reg_write(X86Register::RAX, value as u64)?;
     
     Ok(())
 }

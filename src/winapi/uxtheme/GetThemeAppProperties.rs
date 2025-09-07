@@ -35,14 +35,14 @@ DWORD resultFlags = GetThemeAppProperties();
 bool ctrlsAreThemed = ((resultFlags & STAP_ALLOW_CONTROLS) != 0);
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 // Theme app property flags
 const STAP_ALLOW_NONCLIENT: u32 = 0x00000001;
 const STAP_ALLOW_CONTROLS: u32 = 0x00000002;
 const STAP_ALLOW_WEBCONTENT: u32 = 0x00000004;
 
-pub fn GetThemeAppProperties(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetThemeAppProperties(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD GetThemeAppProperties()
     // No parameters
     
@@ -51,7 +51,7 @@ pub fn GetThemeAppProperties(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine
     // Return all flags enabled (typical for modern Windows applications)
     let properties = STAP_ALLOW_NONCLIENT | STAP_ALLOW_CONTROLS | STAP_ALLOW_WEBCONTENT;
     
-    emu.reg_write(RegisterX86::RAX, properties as u64)?;
+    emu.reg_write(X86Register::RAX, properties as u64)?;
     
     log::info!("[GetThemeAppProperties] Returning 0x{:x} (NONCLIENT | CONTROLS | WEBCONTENT)", properties);
     

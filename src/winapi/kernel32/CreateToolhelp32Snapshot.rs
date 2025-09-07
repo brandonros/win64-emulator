@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /*
@@ -70,14 +70,14 @@ const TH32CS_SNAPALL: u32 = TH32CS_SNAPHEAPLIST | TH32CS_SNAPMODULE | TH32CS_SNA
 // Snapshot handle counter - starts at a non-zero value
 static SNAPSHOT_HANDLE_COUNTER: AtomicU64 = AtomicU64::new(0x30000);
 
-pub fn CreateToolhelp32Snapshot(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CreateToolhelp32Snapshot(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HANDLE CreateToolhelp32Snapshot(
     //   [in] DWORD dwFlags,       // RCX
     //   [in] DWORD th32ProcessID  // RDX
     // )
     
-    let dw_flags = emu.reg_read(RegisterX86::RCX)? as u32;
-    let th32_process_id = emu.reg_read(RegisterX86::RDX)? as u32;
+    let dw_flags = emu.reg_read(X86Register::RCX)? as u32;
+    let th32_process_id = emu.reg_read(X86Register::RDX)? as u32;
     
     log::info!("[CreateToolhelp32Snapshot] dwFlags: 0x{:x}", dw_flags);
     log::info!("[CreateToolhelp32Snapshot] th32ProcessID: 0x{:x}", th32_process_id);
@@ -110,7 +110,7 @@ pub fn CreateToolhelp32Snapshot(emu: &mut Unicorn<()>) -> Result<(), unicorn_eng
     // Check for invalid flags
     if dw_flags == 0 {
         log::error!("[CreateToolhelp32Snapshot] No flags specified");
-        emu.reg_write(RegisterX86::RAX, 0xFFFFFFFFFFFFFFFF)?; // INVALID_HANDLE_VALUE
+        emu.reg_write(X86Register::RAX, 0xFFFFFFFFFFFFFFFF)?; // INVALID_HANDLE_VALUE
         return Ok(());
     }
     
@@ -150,7 +150,7 @@ pub fn CreateToolhelp32Snapshot(emu: &mut Unicorn<()>) -> Result<(), unicorn_eng
     }
     
     // Return the snapshot handle
-    emu.reg_write(RegisterX86::RAX, snapshot_handle)?;
+    emu.reg_write(X86Register::RAX, snapshot_handle)?;
     
     Ok(())
 }

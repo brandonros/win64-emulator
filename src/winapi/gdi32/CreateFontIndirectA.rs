@@ -21,7 +21,7 @@ If the function succeeds, the return value is a handle to a logical font.
 If the function fails, the return value is NULL.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // LOGFONTA structure
@@ -47,18 +47,18 @@ struct LOGFONTA {
 // Global handle counter for font handles
 static NEXT_FONT_HANDLE: AtomicU64 = AtomicU64::new(0x8000);
 
-pub fn CreateFontIndirectA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CreateFontIndirectA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HFONT CreateFontIndirectA(
     //   const LOGFONTA *lplf  // RCX
     // )
     
-    let logfont_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let logfont_ptr = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[CreateFontIndirectA] LOGFONTA ptr: 0x{:x}", logfont_ptr);
     
     if logfont_ptr == 0 {
         log::warn!("[CreateFontIndirectA] NULL LOGFONTA pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return NULL
+        emu.reg_write(X86Register::RAX, 0)?; // Return NULL
         return Ok(());
     }
     
@@ -89,7 +89,7 @@ pub fn CreateFontIndirectA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     log::info!("[CreateFontIndirectA] Created font handle: 0x{:x}", font_handle);
     
     // Return the font handle
-    emu.reg_write(RegisterX86::RAX, font_handle)?;
+    emu.reg_write(X86Register::RAX, font_handle)?;
     
     Ok(())
 }

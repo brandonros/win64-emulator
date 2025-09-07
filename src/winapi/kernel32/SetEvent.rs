@@ -1,11 +1,11 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn SetEvent(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SetEvent(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL SetEvent(
     //   HANDLE hEvent  // RCX
     // )
     
-    let event_handle = emu.reg_read(RegisterX86::RCX)?;
+    let event_handle = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[SetEvent] hEvent: 0x{:x}", event_handle);
     
@@ -13,7 +13,7 @@ pub fn SetEvent(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     if event_handle == 0 || event_handle == 0xFFFFFFFFFFFFFFFF {
         log::warn!("[SetEvent] Invalid event handle: 0x{:x}", event_handle);
         // Return FALSE (0) to indicate failure
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -28,7 +28,7 @@ pub fn SetEvent(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     log::info!("[SetEvent] Would release waiting threads in real implementation");
     
     // Return TRUE (1) to indicate success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

@@ -1,13 +1,13 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn TerminateThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn TerminateThread(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL TerminateThread(
     //   HANDLE hThread,   // RCX
     //   DWORD  dwExitCode // RDX
     // )
     
-    let thread_handle = emu.reg_read(RegisterX86::RCX)?;
-    let exit_code = emu.reg_read(RegisterX86::RDX)? as u32;
+    let thread_handle = emu.reg_read(X86Register::RCX)?;
+    let exit_code = emu.reg_read(X86Register::RDX)? as u32;
     
     log::info!("[TerminateThread] hThread: 0x{:x}, dwExitCode: 0x{:x}", 
               thread_handle, exit_code);
@@ -16,7 +16,7 @@ pub fn TerminateThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
     if thread_handle == 0 || thread_handle == 0xFFFFFFFFFFFFFFFF {
         log::warn!("[TerminateThread] Invalid thread handle: 0x{:x}", thread_handle);
         // Return FALSE (0) to indicate failure
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -30,7 +30,7 @@ pub fn TerminateThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
     log::warn!("[TerminateThread] Note: TerminateThread is dangerous in real code!");
     
     // Return TRUE (1) to indicate success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

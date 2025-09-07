@@ -1,11 +1,10 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::time::Instant;
 use crate::emulation::memory;
 
-pub fn QueryPerformanceCounter(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn QueryPerformanceCounter(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get the pointer to i64 from RCX register
-    let performance_count_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let performance_count_ptr = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[QueryPerformanceCounter] performance_count_ptr: 0x{:x}", performance_count_ptr);
     
@@ -29,10 +28,10 @@ pub fn QueryPerformanceCounter(emu: &mut Unicorn<()>) -> Result<(), unicorn_engi
         memory::write_qword_le(emu, performance_count_ptr, counter_value);
         
         // Set return value to TRUE (non-zero) in RAX register
-        emu.reg_write(RegisterX86::RAX, 1)?;
+        emu.reg_write(X86Register::RAX, 1)?;
     } else {
         // Set return value to FALSE (zero) in RAX register
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
     }
     
     Ok(())

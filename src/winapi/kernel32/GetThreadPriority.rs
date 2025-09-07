@@ -1,11 +1,11 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn GetThreadPriority(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetThreadPriority(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // int GetThreadPriority(
     //   HANDLE hThread  // RCX
     // )
     
-    let thread_handle = emu.reg_read(RegisterX86::RCX)?;
+    let thread_handle = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[GetThreadPriority] hThread: 0x{:x}", thread_handle);
     
@@ -23,7 +23,7 @@ pub fn GetThreadPriority(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     if thread_handle == 0 || thread_handle == 0xFFFFFFFFFFFFFFFF {
         log::warn!("[GetThreadPriority] Invalid thread handle: 0x{:x}", thread_handle);
         // Return THREAD_PRIORITY_ERROR_RETURN to indicate failure
-        emu.reg_write(RegisterX86::RAX, THREAD_PRIORITY_ERROR_RETURN as u64)?;
+        emu.reg_write(X86Register::RAX, THREAD_PRIORITY_ERROR_RETURN as u64)?;
         return Ok(());
     }
     
@@ -40,7 +40,7 @@ pub fn GetThreadPriority(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     
     // Return the priority value (sign-extended to 64 bits for RAX)
     // Note: negative values need proper sign extension
-    emu.reg_write(RegisterX86::RAX, priority as i64 as u64)?;
+    emu.reg_write(X86Register::RAX, priority as i64 as u64)?;
     
     Ok(())
 }

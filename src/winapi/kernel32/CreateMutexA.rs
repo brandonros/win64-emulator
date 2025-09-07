@@ -67,19 +67,19 @@ A process can specify a named mutex in a call to [OpenMutex](./nf-synchapi-openm
 Use the CloseHandle function to close the handle. The system closes the handle automatically when the process terminates. The mutex object is destroyed when its last handle has been closed.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 
-pub fn CreateMutexA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CreateMutexA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HANDLE CreateMutexA(
     //   LPSECURITY_ATTRIBUTES lpMutexAttributes,  // RCX
     //   BOOL                  bInitialOwner,      // RDX
     //   LPCSTR                lpName              // R8
     // )
     
-    let mutex_attributes = emu.reg_read(RegisterX86::RCX)?;
-    let initial_owner = emu.reg_read(RegisterX86::RDX)? != 0;
-    let name_ptr = emu.reg_read(RegisterX86::R8)?;
+    let mutex_attributes = emu.reg_read(X86Register::RCX)?;
+    let initial_owner = emu.reg_read(X86Register::RDX)? != 0;
+    let name_ptr = emu.reg_read(X86Register::R8)?;
     
     // Read the mutex name if provided
     let name = if name_ptr != 0 {
@@ -98,7 +98,7 @@ pub fn CreateMutexA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     let mutex_handle = NEXT_MUTEX_HANDLE.fetch_add(0x10, std::sync::atomic::Ordering::SeqCst);
     
     // Return the mutex handle
-    emu.reg_write(RegisterX86::RAX, mutex_handle)?;
+    emu.reg_write(X86Register::RAX, mutex_handle)?;
     
     log::info!("[CreateMutexA] Created mutex handle: 0x{:x}", mutex_handle);
     

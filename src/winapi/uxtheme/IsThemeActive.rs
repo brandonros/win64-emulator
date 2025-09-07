@@ -22,9 +22,9 @@ Remarks
 Do not call this function during DllMain or global objects constructors. This may cause invalid return values.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn IsThemeActive(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn IsThemeActive(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL IsThemeActive()
     // No parameters
     
@@ -32,7 +32,7 @@ pub fn IsThemeActive(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     
     // Return TRUE to indicate visual styles are enabled
     // Modern Windows has visual styles always active
-    emu.reg_write(RegisterX86::RAX, 1)?; // TRUE
+    emu.reg_write(X86Register::RAX, 1)?; // TRUE
     
     log::info!("[IsThemeActive] Returning TRUE (visual styles are active)");
     

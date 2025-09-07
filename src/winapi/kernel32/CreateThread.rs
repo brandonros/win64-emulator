@@ -1,6 +1,6 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn CreateThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CreateThread(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HANDLE CreateThread(
     //   LPSECURITY_ATTRIBUTES   lpThreadAttributes,  // RCX
     //   SIZE_T                  dwStackSize,         // RDX
@@ -10,13 +10,13 @@ pub fn CreateThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     //   LPDWORD                 lpThreadId           // [RSP+48]
     // )
     
-    let thread_attributes = emu.reg_read(RegisterX86::RCX)?;
-    let stack_size = emu.reg_read(RegisterX86::RDX)?;
-    let start_address = emu.reg_read(RegisterX86::R8)?;
-    let parameter = emu.reg_read(RegisterX86::R9)?;
+    let thread_attributes = emu.reg_read(X86Register::RCX)?;
+    let stack_size = emu.reg_read(X86Register::RDX)?;
+    let start_address = emu.reg_read(X86Register::R8)?;
+    let parameter = emu.reg_read(X86Register::R9)?;
     
     // Read stack parameters
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut creation_flags_bytes = [0u8; 4];
     emu.mem_read(rsp + 0x40, &mut creation_flags_bytes)?;
     let creation_flags = u32::from_le_bytes(creation_flags_bytes);
@@ -63,7 +63,7 @@ pub fn CreateThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     log::warn!("[CreateThread] Returning mock thread handle 0x{:x} (thread not actually created)", thread_handle);
     
     // Return the mock thread handle
-    emu.reg_write(RegisterX86::RAX, thread_handle)?;
+    emu.reg_write(X86Register::RAX, thread_handle)?;
     
     Ok(())
 }

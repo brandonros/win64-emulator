@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::Foundation::UNICODE_STRING;
 use crate::emulation::memory::utils::{read_wide_string_from_memory, write_struct};
 
@@ -46,14 +46,14 @@ You can use RTL_CONSTANT_STRING to initialize global variables.
 
 */
 
-pub fn RtlInitUnicodeString(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RtlInitUnicodeString(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // VOID RtlInitUnicodeString(
     //   [out]          PUNICODE_STRING DestinationString,  // RCX
     //   [in, optional] PCWSTR          SourceString        // RDX
     // )
     
-    let dest_string_ptr = emu.reg_read(RegisterX86::RCX)?;
-    let source_string_ptr = emu.reg_read(RegisterX86::RDX)?;
+    let dest_string_ptr = emu.reg_read(X86Register::RCX)?;
+    let source_string_ptr = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[RtlInitUnicodeString] DestinationString: 0x{:x}", dest_string_ptr);
     log::info!("[RtlInitUnicodeString] SourceString: 0x{:x}", source_string_ptr);

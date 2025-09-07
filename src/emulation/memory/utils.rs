@@ -1,10 +1,9 @@
-use unicorn_engine::{uc_error, Unicorn};
-
+use crate::emulation::engine::{EmulatorEngine, EmulatorError};
 use crate::emulation::memory::{STACK_BASE, STACK_SIZE, HEAP_BASE, HEAP_SIZE, TEB_BASE, TEB_SIZE, PEB_BASE, PEB_SIZE};
 
 // String reading utilities
 
-pub fn read_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<String, uc_error> {
+pub fn read_string_from_memory(emu: &mut dyn EmulatorEngine, addr: u64) -> Result<String, EmulatorError> {
     let mut bytes = Vec::new();
     let mut current_addr = addr;
     
@@ -25,7 +24,7 @@ pub fn read_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<Strin
 }
 
 #[allow(dead_code)]
-pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<String, uc_error> {
+pub fn read_wide_string_from_memory(emu: &mut dyn EmulatorEngine, addr: u64) -> Result<String, EmulatorError> {
     let mut bytes = Vec::new();
     let mut current_addr = addr;
     
@@ -48,7 +47,7 @@ pub fn read_wide_string_from_memory(emu: &mut Unicorn<()>, addr: u64) -> Result<
 
 // Memory write utilities
 
-pub fn write_string_to_memory(emu: &mut Unicorn<()>, addr: u64, s: &str) -> Result<(), uc_error> {
+pub fn write_string_to_memory(emu: &mut dyn EmulatorEngine, addr: u64, s: &str) -> Result<(), EmulatorError> {
     // Write the string bytes including null terminator
     let mut bytes = s.as_bytes().to_vec();
     bytes.push(0); // Add null terminator
@@ -59,7 +58,7 @@ pub fn write_string_to_memory(emu: &mut Unicorn<()>, addr: u64, s: &str) -> Resu
 }
 
 #[allow(dead_code)]
-pub fn write_wide_string_to_memory(emu: &mut Unicorn<()>, addr: u64, s: &str) -> Result<(), uc_error> {
+pub fn write_wide_string_to_memory(emu: &mut dyn EmulatorEngine, addr: u64, s: &str) -> Result<(), EmulatorError> {
     // Convert string to UTF-16 and write including null terminator
     let mut wide_chars: Vec<u16> = s.encode_utf16().collect();
     wide_chars.push(0); // Add null terminator
@@ -76,36 +75,36 @@ pub fn write_wide_string_to_memory(emu: &mut Unicorn<()>, addr: u64, s: &str) ->
 }
 
 #[allow(dead_code)]
-pub fn write_word_le(emu: &mut Unicorn<()>, addr: u64, value: u16) {
+pub fn write_word_le(emu: &mut dyn EmulatorEngine, addr: u64, value: u16) {
     emu.mem_write(addr, &value.to_le_bytes()).unwrap();
 }
 
 #[allow(dead_code)]
-pub fn write_word_be(emu: &mut Unicorn<()>, addr: u64, value: u16) {
+pub fn write_word_be(emu: &mut dyn EmulatorEngine, addr: u64, value: u16) {
     emu.mem_write(addr, &value.to_be_bytes()).unwrap();
 }
 
 #[allow(dead_code)]
-pub fn write_dword_le(emu: &mut Unicorn<()>, addr: u64, value: u32) {
+pub fn write_dword_le(emu: &mut dyn EmulatorEngine, addr: u64, value: u32) {
     emu.mem_write(addr, &value.to_le_bytes()).unwrap();
 }
 
 #[allow(dead_code)]
-pub fn write_dword_be(emu: &mut Unicorn<()>, addr: u64, value: u32) {
+pub fn write_dword_be(emu: &mut dyn EmulatorEngine, addr: u64, value: u32) {
     emu.mem_write(addr, &value.to_be_bytes()).unwrap();
 }
 
 #[allow(dead_code)]
-pub fn write_qword_le(emu: &mut Unicorn<()>, addr: u64, value: u64) {
+pub fn write_qword_le(emu: &mut dyn EmulatorEngine, addr: u64, value: u64) {
     emu.mem_write(addr, &value.to_le_bytes()).unwrap();
 }
 
 #[allow(dead_code)]
-pub fn write_qword_be(emu: &mut Unicorn<()>, addr: u64, value: u64) {
+pub fn write_qword_be(emu: &mut dyn EmulatorEngine, addr: u64, value: u64) {
     emu.mem_write(addr, &value.to_be_bytes()).unwrap();
 }
 
-pub fn write_struct<T>(emu: &mut Unicorn<()>, addr: u64, data: &T) -> Result<(), uc_error> {
+pub fn write_struct<T>(emu: &mut dyn EmulatorEngine, addr: u64, data: &T) -> Result<(), EmulatorError> {
     let size = std::mem::size_of::<T>();
     let bytes: &[u8] = unsafe {
         std::slice::from_raw_parts(
@@ -116,7 +115,7 @@ pub fn write_struct<T>(emu: &mut Unicorn<()>, addr: u64, data: &T) -> Result<(),
     emu.mem_write(addr, bytes)
 }
 
-pub fn read_struct<T>(emu: &mut Unicorn<()>, addr: u64) -> Result<T, uc_error> {
+pub fn read_struct<T>(emu: &mut dyn EmulatorEngine, addr: u64) -> Result<T, EmulatorError> {
     let size = std::mem::size_of::<T>();
     let mut bytes = vec![0u8; size];
     emu.mem_read(addr, &mut bytes)?;

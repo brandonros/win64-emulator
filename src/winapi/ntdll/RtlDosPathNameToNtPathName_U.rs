@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::Foundation::UNICODE_STRING;
 
 /*
@@ -36,7 +36,7 @@ Remarks
 This function has no associated import library or header file; you must call it using the LoadLibrary and GetProcAddress functions. The API is exported from ntdll.dll.
 */
 
-pub fn RtlDosPathNameToNtPathName_U(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RtlDosPathNameToNtPathName_U(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOLEAN RtlDosPathNameToNtPathName_U(
     //   [in]  PCWSTR DosFileName,             // RCX
     //   [out] PUNICODE_STRING NtFileName,     // RDX
@@ -44,10 +44,10 @@ pub fn RtlDosPathNameToNtPathName_U(emu: &mut Unicorn<()>) -> Result<(), unicorn
     //   [out] PRTL_RELATIVE_NAME_U RelativeName // R9
     // )
     
-    let dos_file_name = emu.reg_read(RegisterX86::RCX)?;
-    let nt_file_name = emu.reg_read(RegisterX86::RDX)?;
-    let file_part = emu.reg_read(RegisterX86::R8)?;
-    let relative_name = emu.reg_read(RegisterX86::R9)?;
+    let dos_file_name = emu.reg_read(X86Register::RCX)?;
+    let nt_file_name = emu.reg_read(X86Register::RDX)?;
+    let file_part = emu.reg_read(X86Register::R8)?;
+    let relative_name = emu.reg_read(X86Register::R9)?;
     
     log::info!("[RtlDosPathNameToNtPathName_U] DosFileName: 0x{:x}", dos_file_name);
     log::info!("[RtlDosPathNameToNtPathName_U] NtFileName: 0x{:x}", nt_file_name);
@@ -57,7 +57,7 @@ pub fn RtlDosPathNameToNtPathName_U(emu: &mut Unicorn<()>) -> Result<(), unicorn
     // Check for NULL pointers
     if dos_file_name == 0 || nt_file_name == 0 {
         log::error!("[RtlDosPathNameToNtPathName_U] NULL pointer in required parameters");
-        emu.reg_write(RegisterX86::RAX, 0u64)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0u64)?; // FALSE
         return Ok(());
     }
     
@@ -129,7 +129,7 @@ pub fn RtlDosPathNameToNtPathName_U(emu: &mut Unicorn<()>) -> Result<(), unicorn
     // According to SO, \??\ prefix still has MAX_PATH limitation
     if !dos_path_str.starts_with("\\\\?\\") && nt_path_wide.len() > 260 {
         log::warn!("[RtlDosPathNameToNtPathName_U] Path exceeds MAX_PATH without \\\\?\\ prefix");
-        emu.reg_write(RegisterX86::RAX, 0u64)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0u64)?; // FALSE
         return Ok(());
     }
     
@@ -190,7 +190,7 @@ pub fn RtlDosPathNameToNtPathName_U(emu: &mut Unicorn<()>) -> Result<(), unicorn
                dos_path_str, normalized_path);
     
     // Return TRUE (success)
-    emu.reg_write(RegisterX86::RAX, 1u64)?;
+    emu.reg_write(X86Register::RAX, 1u64)?;
     
     Ok(())
 }

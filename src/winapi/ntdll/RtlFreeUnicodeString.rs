@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::Foundation::UNICODE_STRING;
 use crate::emulation::memory;
 
@@ -28,12 +28,12 @@ This routine does not release the ANSI string buffer passed to RtlAnsiStringToUn
 Because there is no import library for this function, you must use GetProcAddress.
 */
 
-pub fn RtlFreeUnicodeString(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RtlFreeUnicodeString(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // VOID RtlFreeUnicodeString(
     //   [in, out] PUNICODE_STRING UnicodeString  // RCX
     // )
     
-    let unicode_string_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let unicode_string_ptr = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[RtlFreeUnicodeString] UnicodeString: 0x{:x}", unicode_string_ptr);
     

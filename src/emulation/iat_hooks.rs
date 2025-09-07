@@ -1,7 +1,7 @@
 use iced_x86::{Instruction, Mnemonic, OpKind, Register};
-use unicorn_engine::{RegisterX86, Unicorn};
 
 use crate::{emulation::iat::IAT_FUNCTION_MAP, pe::constants::*, winapi};
+use crate::emulation::engine::{EmulatorEngine, X86Register};
 
 #[derive(Debug, Clone, Copy)]
 enum CallType {
@@ -24,7 +24,7 @@ impl CallType {
     }
 }
 
-pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, instruction_size: u32, addr: u64, count: u64) {
+pub fn intercept_iat_call(emu: &mut dyn EmulatorEngine, instruction: Instruction, instruction_size: u32, addr: u64, count: u64) {
     let mnemonic = instruction.mnemonic();
     
     // Handle CALL, JMP, and RET instructions
@@ -108,7 +108,7 @@ pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, ins
         //log:trace!("RET instruction detected at 0x{:x}", addr);
         
         // Read the return address from the stack (what RET will pop and jump to)
-        let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
+        let rsp = emu.reg_read(X86Register::RSP).unwrap();
         if let Some(return_addr) = read_function_pointer(emu, rsp) {
             //log:trace!("RET will return to address: 0x{:x}", return_addr);
             
@@ -117,7 +117,7 @@ pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, ins
                 //log:trace!("✓ RET returning to mock function address, handling as IAT call");
                 
                 // Pop the return address from stack (simulate the RET)
-                emu.reg_write(RegisterX86::RSP, rsp + 8).unwrap();
+                emu.reg_write(X86Register::RSP, rsp + 8).unwrap();
                 
                 // RET to IAT function acts as a trampoline (no return address to push)
                 handle_iat_function_call(return_addr, emu, addr, &instruction, count, CallType::RetTrampoline);
@@ -131,10 +131,10 @@ pub fn intercept_iat_call<D>(emu: &mut Unicorn<D>, instruction: Instruction, ins
 }
 
 /// Get the target address for an indirect call instruction
-fn get_indirect_call_target<D>(
+fn get_indirect_call_target(
     instruction: &Instruction,
     instruction_size: u32,
-    emu: &mut Unicorn<D>,
+    emu: &mut dyn EmulatorEngine,
     addr: u64,
 ) -> Option<u64> {
     match instruction.op0_kind() {
@@ -151,10 +151,10 @@ fn get_indirect_call_target<D>(
 }
 
 /// Calculate the effective address for a memory operand
-fn calculate_effective_address<D>(
+fn calculate_effective_address(
     instruction: &Instruction,
     _instruction_size: u32,
-    emu: &mut Unicorn<D>,
+    emu: &mut dyn EmulatorEngine,
     addr: u64,
 ) -> u64 {
     //log:trace!("--- EFFECTIVE ADDRESS CALCULATION ---");
@@ -278,9 +278,9 @@ fn calculate_effective_address<D>(
 }
 
 /// Get the value of the base register
-fn get_base_register_value<D>(
+fn get_base_register_value(
     base_reg: Register,
-    emu: &mut Unicorn<D>,
+    emu: &mut dyn EmulatorEngine,
     addr: u64,
     instruction: &Instruction,
 ) -> u64 {
@@ -305,9 +305,9 @@ fn get_base_register_value<D>(
 }
 
 /// Calculate the contribution of the index register (value * scale)
-fn get_index_register_contribution<D>(
+fn get_index_register_contribution(
     instruction: &Instruction,
-    emu: &mut Unicorn<D>,
+    emu: &mut dyn EmulatorEngine,
 ) -> u64 {
     let index_reg = match map_iced_to_unicorn_register(instruction.memory_index()) {
         Some(reg) => reg,
@@ -326,33 +326,33 @@ fn get_index_register_contribution<D>(
     contribution
 }
 
-/// Map iced_x86 Register to unicorn RegisterX86
-fn map_iced_to_unicorn_register(reg: Register) -> Option<RegisterX86> {
+/// Map iced_x86 Register to X86Register
+fn map_iced_to_unicorn_register(reg: Register) -> Option<X86Register> {
     match reg {
-        Register::RAX => Some(RegisterX86::RAX),
-        Register::RBX => Some(RegisterX86::RBX),
-        Register::RCX => Some(RegisterX86::RCX),
-        Register::RDX => Some(RegisterX86::RDX),
-        Register::RSI => Some(RegisterX86::RSI),
-        Register::RDI => Some(RegisterX86::RDI),
-        Register::RBP => Some(RegisterX86::RBP),
-        Register::RSP => Some(RegisterX86::RSP),
-        Register::R8 => Some(RegisterX86::R8),
-        Register::R9 => Some(RegisterX86::R9),
-        Register::R10 => Some(RegisterX86::R10),
-        Register::R11 => Some(RegisterX86::R11),
-        Register::R12 => Some(RegisterX86::R12),
-        Register::R13 => Some(RegisterX86::R13),
-        Register::R14 => Some(RegisterX86::R14),
-        Register::R15 => Some(RegisterX86::R15),
+        Register::RAX => Some(X86Register::RAX),
+        Register::RBX => Some(X86Register::RBX),
+        Register::RCX => Some(X86Register::RCX),
+        Register::RDX => Some(X86Register::RDX),
+        Register::RSI => Some(X86Register::RSI),
+        Register::RDI => Some(X86Register::RDI),
+        Register::RBP => Some(X86Register::RBP),
+        Register::RSP => Some(X86Register::RSP),
+        Register::R8 => Some(X86Register::R8),
+        Register::R9 => Some(X86Register::R9),
+        Register::R10 => Some(X86Register::R10),
+        Register::R11 => Some(X86Register::R11),
+        Register::R12 => Some(X86Register::R12),
+        Register::R13 => Some(X86Register::R13),
+        Register::R14 => Some(X86Register::R14),
+        Register::R15 => Some(X86Register::R15),
         _ => None,
     }
 }
 
 /// Handle an IAT function call with the given function pointer
-fn handle_iat_function_call<D>(
+fn handle_iat_function_call(
     func_ptr: u64,
-    emu: &mut Unicorn<D>,
+    emu: &mut dyn EmulatorEngine,
     addr: u64,
     instruction: &Instruction,
     count: u64,
@@ -376,13 +376,13 @@ fn handle_iat_function_call<D>(
 }
 
 /// Check if a memory address is valid/accessible
-fn is_valid_memory_address<D>(emu: &mut Unicorn<D>, addr: u64) -> bool {
+fn is_valid_memory_address(emu: &mut dyn EmulatorEngine, addr: u64) -> bool {
     let mut test_byte = [0u8; 1];
     emu.mem_read(addr, &mut test_byte).is_ok()
 }
 
 /// Read a 64-bit function pointer from memory
-fn read_function_pointer<D>(emu: &mut Unicorn<D>, address: u64) -> Option<u64> {
+fn read_function_pointer(emu: &mut dyn EmulatorEngine, address: u64) -> Option<u64> {
     let mut func_ptr_bytes = [0u8; 8];
     match emu.mem_read(address, &mut func_ptr_bytes) {
         Ok(_) => {
@@ -425,8 +425,8 @@ fn lookup_iat_function(func_ptr: u64) -> Option<(String, String)> {
 }
 
 /// Execute an API call by setting up the stack and calling the handler
-fn execute_api_call<D>(
-    emu: &mut Unicorn<D>,
+fn execute_api_call(
+    emu: &mut dyn EmulatorEngine,
     addr: u64,
     instruction: &Instruction,
     dll_name: &str,
@@ -462,17 +462,17 @@ fn execute_api_call<D>(
 }
 
 /// Push the return address onto the stack
-fn push_return_address<D>(emu: &mut Unicorn<D>, return_addr: u64) {
-    let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
+fn push_return_address(emu: &mut dyn EmulatorEngine, return_addr: u64) {
+    let rsp = emu.reg_read(X86Register::RSP).unwrap();
     let new_rsp = rsp - 8;
     //log:trace!("Pushing return address 0x{:x} onto stack: RSP 0x{:x} -> 0x{:x}", return_addr, rsp, new_rsp);
-    emu.reg_write(RegisterX86::RSP, new_rsp).unwrap();
+    emu.reg_write(X86Register::RSP, new_rsp).unwrap();
     emu.mem_write(new_rsp, &return_addr.to_le_bytes()).unwrap();
 }
 
 /// Finalize API call by simulating the RET that would have happened
-fn finalize_api_call<D>(emu: &mut Unicorn<D>) {
-    //let rax = emu.reg_read(RegisterX86::RAX).unwrap();
+fn finalize_api_call(emu: &mut dyn EmulatorEngine) {
+    //let rax = emu.reg_read(X86Register::RAX).unwrap();
     //log:trace!("Finalizing API call - RAX return value: 0x{:x}", rax);
     //log:trace!("Call type: {:?}", call_type);
     
@@ -480,16 +480,16 @@ fn finalize_api_call<D>(emu: &mut Unicorn<D>) {
     // Real Windows API functions always end with RET
     
     // Read the return address from stack (what RET would pop)
-    let rsp = emu.reg_read(RegisterX86::RSP).unwrap();
+    let rsp = emu.reg_read(X86Register::RSP).unwrap();
     let mut ret_addr_bytes = [0u8; 8];
     emu.mem_read(rsp, &mut ret_addr_bytes).unwrap();
     let ret_addr_from_stack = u64::from_le_bytes(ret_addr_bytes);
     
     // Pop the stack (like RET would)
-    emu.reg_write(RegisterX86::RSP, rsp + 8).unwrap();
+    emu.reg_write(X86Register::RSP, rsp + 8).unwrap();
     
     // Jump to the return address (like RET would)
-    emu.reg_write(RegisterX86::RIP, ret_addr_from_stack).unwrap();
+    emu.reg_write(X86Register::RIP, ret_addr_from_stack).unwrap();
     
     //log:trace!("Simulated API RET: popped 0x{:x} from stack, RSP 0x{:x} -> 0x{:x}", 
     //    ret_addr_from_stack, rsp, rsp + 8);

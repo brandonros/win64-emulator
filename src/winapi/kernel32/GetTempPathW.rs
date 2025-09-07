@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 /*
 GetTempPathW function (fileapi.h)
@@ -30,14 +30,14 @@ If the function fails, the return value is zero. To get extended error informati
 The maximum possible return value is MAX_PATH+1 (261).
 */
 
-pub fn GetTempPathW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetTempPathW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD GetTempPathW(
     //   [in]  DWORD  nBufferLength,  // RCX
     //   [out] LPWSTR lpBuffer        // RDX
     // )
     
-    let n_buffer_length = emu.reg_read(RegisterX86::RCX)? as u32;
-    let lp_buffer = emu.reg_read(RegisterX86::RDX)?;
+    let n_buffer_length = emu.reg_read(X86Register::RCX)? as u32;
+    let lp_buffer = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[GetTempPathW] nBufferLength: {} wide characters", n_buffer_length);
     log::info!("[GetTempPathW] lpBuffer: 0x{:x}", lp_buffer);
@@ -52,7 +52,7 @@ pub fn GetTempPathW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
         // Return required buffer size (including null terminator) when buffer too small
         log::warn!("[GetTempPathW] Buffer too small or NULL: need {} wide characters, got {}", 
                   required_buffer_size, n_buffer_length);
-        emu.reg_write(RegisterX86::RAX, required_buffer_size as u64)?;
+        emu.reg_write(X86Register::RAX, required_buffer_size as u64)?;
         return Ok(());
     }
     
@@ -73,7 +73,7 @@ pub fn GetTempPathW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     log::warn!("[GetTempPathW] Mock implementation - returned temp path: '{}'", temp_path);
     
     // Return the length of the string copied (NOT including null terminator)
-    emu.reg_write(RegisterX86::RAX, temp_path_wide_len as u64)?;
+    emu.reg_write(X86Register::RAX, temp_path_wide_len as u64)?;
     
     Ok(())
 }

@@ -50,3 +50,9 @@ log-mem-read = []
 log-mem-write = []
 log-instruction = []
 trace-instruction = []
+
+#[profile.coverage]
+#inherits = "release"
+#debug = true
+#lto = false
+#codegen-units = 16

@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::{vfs::VIRTUAL_FS, memory};
 use windows_sys::Win32::{System::IO::IO_STATUS_BLOCK, Foundation::NTSTATUS};
 
@@ -123,7 +123,7 @@ pub union IO_STATUS_BLOCK_0 {
     pub Pointer: *mut c_void,
 }
 */
-pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn ZwReadFile(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // NTSTATUS ZwReadFile(
     //   [in]           HANDLE           FileHandle,     // RCX
     //   [in, optional] HANDLE           Event,          // RDX
@@ -136,13 +136,13 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     //   [in, optional] PULONG           Key             // [RSP+0x48]
     // )
     
-    let file_handle = emu.reg_read(RegisterX86::RCX)?;
-    let event = emu.reg_read(RegisterX86::RDX)?;
-    let apc_routine = emu.reg_read(RegisterX86::R8)?;
-    let apc_context = emu.reg_read(RegisterX86::R9)?;
+    let file_handle = emu.reg_read(X86Register::RCX)?;
+    let event = emu.reg_read(X86Register::RDX)?;
+    let apc_routine = emu.reg_read(X86Register::R8)?;
+    let apc_context = emu.reg_read(X86Register::R9)?;
     
     // Read remaining parameters from stack
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     
     let mut io_status_block_bytes = [0u8; 8];
     emu.mem_read(rsp + 0x28, &mut io_status_block_bytes)?;
@@ -173,7 +173,7 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     // Basic validation
     if file_handle == 0 || io_status_block == 0 || buffer == 0 {
         log::error!("[ZwReadFile] Invalid parameters");
-        emu.reg_write(RegisterX86::RAX, STATUS_INVALID_PARAMETER as u64)?;
+        emu.reg_write(X86Register::RAX, STATUS_INVALID_PARAMETER as u64)?;
         return Ok(());
     }
     
@@ -239,7 +239,7 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
             } else if offset < 0 {
                 // Negative offsets (other than the special value) are invalid
                 log::error!("[ZwReadFile] Invalid negative offset: {}", offset);
-                emu.reg_write(RegisterX86::RAX, STATUS_INVALID_PARAMETER as u64)?;
+                emu.reg_write(X86Register::RAX, STATUS_INVALID_PARAMETER as u64)?;
                 return Ok(());
             } else {
                 log::debug!("[ZwReadFile] Using explicit ByteOffset: {}", offset);
@@ -247,7 +247,7 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
             }
         } else {
             log::error!("[ZwReadFile] Failed to read LARGE_INTEGER at ByteOffset pointer 0x{:x}", byte_offset_ptr);
-            emu.reg_write(RegisterX86::RAX, STATUS_INVALID_PARAMETER as u64)?;
+            emu.reg_write(X86Register::RAX, STATUS_INVALID_PARAMETER as u64)?;
             return Ok(());
         }
     };
@@ -309,7 +309,7 @@ pub fn ZwReadFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error>
     }
     
     // TODO: return STATUS_END_OF_FILE or always STATUS_SUCCESS?
-    emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+    emu.reg_write(X86Register::RAX, STATUS_SUCCESS as u64)?;
     
     log::debug!("[ZwReadFile] Returning NTSTATUS: 0x{:08x}", status);
     

@@ -57,7 +57,7 @@ File version info has fixed and non-fixed part. The fixed part contains informat
 Call the GetFileVersionInfoSize function before calling the GetFileVersionInfo function. To retrieve information from the file-version information buffer, use the VerQueryValue function.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use crate::winapi;
 use windows_sys::Win32::Storage::FileSystem::VS_FIXEDFILEINFO;
@@ -74,7 +74,7 @@ struct VS_VERSIONINFO {
     // VS_FIXEDFILEINFO value follows
 }
 
-fn write_version_info(emu: &mut Unicorn<()>, address: u64, filename: &str) -> Result<(), unicorn_engine::uc_error> {
+fn write_version_info(emu: &mut dyn EmulatorEngine, address: u64, filename: &str) -> Result<(), EmulatorError> {
     // VS_VERSION_INFO header
     let header = VS_VERSIONINFO {
         length: 348,  // Total size of the version resource
@@ -140,7 +140,7 @@ fn write_version_info(emu: &mut Unicorn<()>, address: u64, filename: &str) -> Re
     Ok(())
 }
 
-pub fn GetFileVersionInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetFileVersionInfoA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL GetFileVersionInfoA(
     //   LPCSTR lptstrFilename,  // RCX
     //   DWORD  dwHandle,        // RDX (ignored)
@@ -148,10 +148,10 @@ pub fn GetFileVersionInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     //   LPVOID lpData           // R9
     // )
     
-    let filename_ptr = emu.reg_read(RegisterX86::RCX)?;
-    let _handle = emu.reg_read(RegisterX86::RDX)?; // Ignored per documentation
-    let buffer_len = emu.reg_read(RegisterX86::R8)? as u32;
-    let data_ptr = emu.reg_read(RegisterX86::R9)?;
+    let filename_ptr = emu.reg_read(X86Register::RCX)?;
+    let _handle = emu.reg_read(X86Register::RDX)?; // Ignored per documentation
+    let buffer_len = emu.reg_read(X86Register::R8)? as u32;
+    let data_ptr = emu.reg_read(X86Register::R9)?;
     
     // Read the filename
     let filename = if filename_ptr != 0 {
@@ -170,7 +170,7 @@ pub fn GetFileVersionInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     if buffer_len < MIN_VERSION_SIZE {
         log::warn!("[GetFileVersionInfoA] Buffer too small: {} < {}", buffer_len, MIN_VERSION_SIZE);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
@@ -183,7 +183,7 @@ pub fn GetFileVersionInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::
     log::info!("[GetFileVersionInfoA] Successfully wrote version info for {}", filename_only);
     
     // Return TRUE for success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

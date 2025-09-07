@@ -19,7 +19,7 @@ Return value
 This function returns S_OK on success. Other possible values include the following.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 // Track OLE initialization state
@@ -30,12 +30,12 @@ const S_OK: u32 = 0x00000000;
 const S_FALSE: u32 = 0x00000001;
 const RPC_E_CHANGED_MODE: u32 = 0x80010106;
 
-pub fn OleInitialize(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn OleInitialize(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HRESULT OleInitialize(
     //   LPVOID pvReserved  // RCX
     // )
     
-    let reserved = emu.reg_read(RegisterX86::RCX)?;
+    let reserved = emu.reg_read(X86Register::RCX)?;
     
     if reserved != 0 {
         log::warn!("[OleInitialize] pvReserved should be NULL, got: 0x{:x}", reserved);
@@ -53,7 +53,7 @@ pub fn OleInitialize(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     };
     
     // Return HRESULT
-    emu.reg_write(RegisterX86::RAX, result as u64)?;
+    emu.reg_write(X86Register::RAX, result as u64)?;
     
     Ok(())
 }

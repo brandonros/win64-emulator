@@ -1,15 +1,15 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn RtlLookupFunctionEntry(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RtlLookupFunctionEntry(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // PRUNTIME_FUNCTION RtlLookupFunctionEntry(
     //   DWORD64 ControlPc,              // RCX
     //   PDWORD64 ImageBase,             // RDX
     //   PUNWIND_HISTORY_TABLE HistoryTable  // R8
     // )
     
-    let control_pc = emu.reg_read(RegisterX86::RCX)?;
-    let image_base_ptr = emu.reg_read(RegisterX86::RDX)?;
-    let history_table = emu.reg_read(RegisterX86::R8)?;
+    let control_pc = emu.reg_read(X86Register::RCX)?;
+    let image_base_ptr = emu.reg_read(X86Register::RDX)?;
+    let history_table = emu.reg_read(X86Register::R8)?;
     
     log::info!("[RtlLookupFunctionEntry] ControlPc: 0x{:x}", control_pc);
     log::info!("[RtlLookupFunctionEntry] ImageBase: 0x{:x}", image_base_ptr);
@@ -35,7 +35,7 @@ pub fn RtlLookupFunctionEntry(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
     // Return NULL - no function entry found
     // This is valid and means the function has no exception handling info
     log::warn!("[RtlLookupFunctionEntry] Mock implementation - returning NULL (no function entry)");
-    emu.reg_write(RegisterX86::RAX, 0)?;
+    emu.reg_write(X86Register::RAX, 0)?;
     
     Ok(())
 }

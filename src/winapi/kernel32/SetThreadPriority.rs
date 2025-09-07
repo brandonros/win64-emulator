@@ -1,13 +1,13 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn SetThreadPriority(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SetThreadPriority(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL SetThreadPriority(
     //   HANDLE hThread,  // RCX
     //   int    nPriority // RDX (EDX for 32-bit int)
     // )
     
-    let thread_handle = emu.reg_read(RegisterX86::RCX)?;
-    let priority = emu.reg_read(RegisterX86::RDX)? as i32;
+    let thread_handle = emu.reg_read(X86Register::RCX)?;
+    let priority = emu.reg_read(X86Register::RDX)? as i32;
     
     // Priority constants
     const THREAD_PRIORITY_IDLE: i32 = -15;
@@ -36,7 +36,7 @@ pub fn SetThreadPriority(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     if thread_handle == 0 || thread_handle == 0xFFFFFFFFFFFFFFFF {
         log::warn!("[SetThreadPriority] Invalid thread handle: 0x{:x}", thread_handle);
         // Return FALSE (0) to indicate failure
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -44,7 +44,7 @@ pub fn SetThreadPriority(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     if priority < THREAD_PRIORITY_IDLE || priority > THREAD_PRIORITY_TIME_CRITICAL {
         log::warn!("[SetThreadPriority] Invalid priority value: {}", priority);
         // Return FALSE (0) to indicate failure
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -55,7 +55,7 @@ pub fn SetThreadPriority(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     log::warn!("[SetThreadPriority] Mock implementation - priority not actually changed");
     
     // Return TRUE (1) to indicate success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

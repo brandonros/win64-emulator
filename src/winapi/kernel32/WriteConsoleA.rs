@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 
 /*
@@ -38,7 +38,7 @@ If the function succeeds, the return value is nonzero.
 If the function fails, the return value is zero. To get extended error information, call GetLastError.
 */
 
-pub fn WriteConsoleA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn WriteConsoleA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL WINAPI WriteConsoleA(
     //   HANDLE  hConsoleOutput,              // RCX
     //   const VOID *lpBuffer,                // RDX
@@ -47,13 +47,13 @@ pub fn WriteConsoleA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     //   LPVOID  lpReserved                   // [RSP+40]
     // )
     
-    let console_handle = emu.reg_read(RegisterX86::RCX)?;
-    let buffer_ptr = emu.reg_read(RegisterX86::RDX)?;
-    let num_chars_to_write = emu.reg_read(RegisterX86::R8)? as u32;
-    let num_chars_written_ptr = emu.reg_read(RegisterX86::R9)?;
+    let console_handle = emu.reg_read(X86Register::RCX)?;
+    let buffer_ptr = emu.reg_read(X86Register::RDX)?;
+    let num_chars_to_write = emu.reg_read(X86Register::R8)? as u32;
+    let num_chars_written_ptr = emu.reg_read(X86Register::R9)?;
     
     // Read stack parameter for lpReserved
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut reserved_bytes = [0u8; 8];
     emu.mem_read(rsp + 0x40, &mut reserved_bytes)?;
     let reserved = u64::from_le_bytes(reserved_bytes);
@@ -67,21 +67,21 @@ pub fn WriteConsoleA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     // Validate reserved parameter (must be NULL)
     /*if reserved != 0 {
         log::error!("[WriteConsoleA] lpReserved must be NULL");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }*/
     
     // Check for NULL buffer
     if buffer_ptr == 0 {
         log::error!("[WriteConsoleA] NULL buffer pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
     // Check for invalid console handle (basic validation)
     if console_handle == 0 || console_handle == 0xFFFFFFFFFFFFFFFF {
         log::error!("[WriteConsoleA] Invalid console handle");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
@@ -91,7 +91,7 @@ pub fn WriteConsoleA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
         Ok(_) => {},
         Err(e) => {
             log::error!("[WriteConsoleA] Failed to read buffer: {:?}", e);
-            emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+            emu.reg_write(X86Register::RAX, 0)?; // FALSE
             return Ok(());
         }
     }
@@ -111,7 +111,7 @@ pub fn WriteConsoleA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
             },
             Err(e) => {
                 log::error!("[WriteConsoleA] Failed to write to lpNumberOfCharsWritten: {:?}", e);
-                emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+                emu.reg_write(X86Register::RAX, 0)?; // FALSE
                 return Ok(());
             }
         }
@@ -120,7 +120,7 @@ pub fn WriteConsoleA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_err
     log::info!("[WriteConsoleA] Successfully wrote {} characters to console", num_chars_to_write);
     
     // Return TRUE (non-zero) for success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

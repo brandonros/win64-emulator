@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::vfs::VIRTUAL_FS;
 
 /*
@@ -33,12 +33,12 @@ Callers of ZwClose should not assume that this routine automatically waits for a
 Requirements
 */
 
-pub fn ZwClose(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn ZwClose(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // NTSTATUS ZwClose(
     //   [in] HANDLE Handle  // RCX
     // )
     
-    let handle = emu.reg_read(RegisterX86::RCX)?;
+    let handle = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[ZwClose] Handle: 0x{:x}", handle);
     
@@ -50,7 +50,7 @@ pub fn ZwClose(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Check for null handle
     if handle == 0 {
         log::error!("[ZwClose] NULL handle provided");
-        emu.reg_write(RegisterX86::RAX, STATUS_INVALID_HANDLE as u64)?;
+        emu.reg_write(X86Register::RAX, STATUS_INVALID_HANDLE as u64)?;
         return Ok(());
     }
     
@@ -59,7 +59,7 @@ pub fn ZwClose(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     // Console handles: 0x20, NUL device: 0x30
     if handle == 0x10 || handle == 0x14 || handle == 0x18 || handle == 0x20 || handle == 0x30 {
         log::warn!("[ZwClose] Attempting to close system handle 0x{:x}", handle);
-        emu.reg_write(RegisterX86::RAX, STATUS_HANDLE_NOT_CLOSABLE as u64)?;
+        emu.reg_write(X86Register::RAX, STATUS_HANDLE_NOT_CLOSABLE as u64)?;
         return Ok(());
     }
     
@@ -71,12 +71,12 @@ pub fn ZwClose(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     
     if closed {
         log::info!("[ZwClose] Successfully closed handle 0x{:x}", handle);
-        emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+        emu.reg_write(X86Register::RAX, STATUS_SUCCESS as u64)?;
     } else {
         // Handle might be a non-file handle (event, thread, etc.)
         // For now, just log and return success for unknown handles
         log::info!("[ZwClose] Handle 0x{:x} not found in VFS (might be non-file handle)", handle);
-        emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+        emu.reg_write(X86Register::RAX, STATUS_SUCCESS as u64)?;
     }
     
     Ok(())

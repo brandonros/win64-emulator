@@ -65,9 +65,9 @@ If the call to this function occurs in kernel mode, you should use the name ZwSe
 For calls from kernel-mode drivers, the NtXxx and ZwXxx versions of a Windows Native System Services routine can behave differently in the way that they handle and interpret input parameters. For more information about the relationship between the NtXxx and ZwXxx versions of a routine, see Using Nt and Zw Versions of the Native System Services Routines..
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn NtSetInformationThread(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // NTSTATUS NtSetInformationThread(
     //   HANDLE          ThreadHandle,            // RCX
     //   THREADINFOCLASS ThreadInformationClass,  // RDX
@@ -75,10 +75,10 @@ pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
     //   ULONG           ThreadInformationLength  // R9
     // )
     
-    let thread_handle = emu.reg_read(RegisterX86::RCX)?;
-    let info_class = emu.reg_read(RegisterX86::RDX)?;
-    let info_ptr = emu.reg_read(RegisterX86::R8)?;
-    let info_length = emu.reg_read(RegisterX86::R9)? as u32;
+    let thread_handle = emu.reg_read(X86Register::RCX)?;
+    let info_class = emu.reg_read(X86Register::RDX)?;
+    let info_ptr = emu.reg_read(X86Register::R8)?;
+    let info_length = emu.reg_read(X86Register::R9)? as u32;
     
     // NTSTATUS constants
     const STATUS_SUCCESS: u32 = 0x00000000;
@@ -104,7 +104,7 @@ pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
     // Check for null handle
     if thread_handle == 0 {
         log::error!("[NtSetInformationThread] NULL handle provided");
-        emu.reg_write(RegisterX86::RAX, STATUS_INVALID_HANDLE as u64)?;
+        emu.reg_write(X86Register::RAX, STATUS_INVALID_HANDLE as u64)?;
         return Ok(());
     }
     
@@ -114,7 +114,7 @@ pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             // ThreadPriority expects a KPRIORITY (LONG)
             if info_length != 4 {
                 log::error!("[NtSetInformationThread] Invalid length for ThreadPriority: {}", info_length);
-                emu.reg_write(RegisterX86::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
+                emu.reg_write(X86Register::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
                 return Ok(());
             }
             
@@ -129,7 +129,7 @@ pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             // ThreadBasePriority expects a LONG
             if info_length != 4 {
                 log::error!("[NtSetInformationThread] Invalid length for ThreadBasePriority: {}", info_length);
-                emu.reg_write(RegisterX86::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
+                emu.reg_write(X86Register::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
                 return Ok(());
             }
             
@@ -153,7 +153,7 @@ pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             // ThreadAffinityMask expects a KAFFINITY (ULONG_PTR on 64-bit)
             if info_length != 8 {
                 log::error!("[NtSetInformationThread] Invalid length for ThreadAffinityMask: {}", info_length);
-                emu.reg_write(RegisterX86::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
+                emu.reg_write(X86Register::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
                 return Ok(());
             }
             
@@ -168,7 +168,7 @@ pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             // ThreadPagePriority expects a PAGE_PRIORITY_INFORMATION structure
             if info_length < 4 {
                 log::error!("[NtSetInformationThread] Invalid length for ThreadPagePriority: {}", info_length);
-                emu.reg_write(RegisterX86::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
+                emu.reg_write(X86Register::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
                 return Ok(());
             }
             
@@ -183,7 +183,7 @@ pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             // Win32StartAddress expects a PVOID
             if info_length != 8 {
                 log::error!("[NtSetInformationThread] Invalid length for Win32StartAddress: {}", info_length);
-                emu.reg_write(RegisterX86::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
+                emu.reg_write(X86Register::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
                 return Ok(());
             }
             
@@ -198,7 +198,7 @@ pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
             // ThreadImpersonationToken expects a HANDLE
             if info_length != 8 {
                 log::error!("[NtSetInformationThread] Invalid length for ImpersonationToken: {}", info_length);
-                emu.reg_write(RegisterX86::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
+                emu.reg_write(X86Register::RAX, STATUS_INFO_LENGTH_MISMATCH as u64)?;
                 return Ok(());
             }
             
@@ -216,7 +216,7 @@ pub fn NtSetInformationThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engin
     }
     
     // Return STATUS_SUCCESS
-    emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+    emu.reg_write(X86Register::RAX, STATUS_SUCCESS as u64)?;
     
     log::info!("[NtSetInformationThread] Returning STATUS_SUCCESS");
     

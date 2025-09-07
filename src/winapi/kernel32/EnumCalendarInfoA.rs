@@ -1,6 +1,6 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn EnumCalendarInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn EnumCalendarInfoA(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL EnumCalendarInfoA(
     //   CALINFO_ENUMPROCA pCalInfoEnumProc,  // RCX
     //   LCID              Locale,            // RDX
@@ -8,10 +8,10 @@ pub fn EnumCalendarInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     //   CALTYPE           CalType            // R9
     // )
     
-    let cal_info_enum_proc = emu.reg_read(RegisterX86::RCX)?;
-    let locale = emu.reg_read(RegisterX86::RDX)?;
-    let calendar = emu.reg_read(RegisterX86::R8)?;
-    let cal_type = emu.reg_read(RegisterX86::R9)?;
+    let cal_info_enum_proc = emu.reg_read(X86Register::RCX)?;
+    let locale = emu.reg_read(X86Register::RDX)?;
+    let calendar = emu.reg_read(X86Register::R8)?;
+    let cal_type = emu.reg_read(X86Register::R9)?;
     
     log::info!("[EnumCalendarInfoA] pCalInfoEnumProc: 0x{:x}", cal_info_enum_proc);
     log::info!("[EnumCalendarInfoA] Locale: 0x{:x}", locale);
@@ -21,7 +21,7 @@ pub fn EnumCalendarInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     // Check for NULL callback
     if cal_info_enum_proc == 0 {
         log::warn!("[EnumCalendarInfoA] NULL callback function");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -133,7 +133,7 @@ pub fn EnumCalendarInfoA(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     
     // Return TRUE - enumeration completed successfully
     log::info!("[EnumCalendarInfoA] Enumeration complete");
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

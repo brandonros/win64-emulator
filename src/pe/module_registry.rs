@@ -71,19 +71,6 @@ impl ModuleRegistry {
         inner.modules.values().cloned().collect()
     }
     
-    pub fn get_allocation_info(&self) -> (u64, u64) {
-        let inner = self.inner.read().unwrap();
-        (inner.next_dll_base, inner.next_mock_addr)
-    }
-    
-    pub fn restore_state(&self, modules: HashMap<String, LoadedModule>, next_dll_base: u64, next_mock_addr: u64) {
-        let mut inner = self.inner.write().unwrap();
-        inner.modules = modules;
-        inner.next_dll_base = next_dll_base;
-        inner.next_mock_addr = next_mock_addr;
-        log::info!("[ModuleRegistry] Restored {} modules", inner.modules.len());
-    }
-    
     pub fn allocate_base_address(&self, size: u64) -> u64 {
         let mut inner = self.inner.write().unwrap();
         let base = inner.next_dll_base;
@@ -108,7 +95,7 @@ impl ModuleRegistry {
         match name {
             None => {
                 // NULL means main module - look it up from registered modules
-                inner.modules.get("enigma_test_protected")
+                inner.modules.get("main")
                     .map(|m| m.base_address)
             },
             Some(module_name) => {
@@ -131,9 +118,9 @@ impl ModuleRegistry {
         let image_size = loaded_pe.image_size();
 
         inner.modules.insert(
-            "enigma_test_protected".to_string(),
+            "main".to_string(),
             LoadedModule::new(
-                "enigma_test_protected".to_string(),
+                "main".to_string(),
                 base,
                 image_size as u64,
             )

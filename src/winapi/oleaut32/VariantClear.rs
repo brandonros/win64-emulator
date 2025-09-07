@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::System::Variant::*;
 
 /*
@@ -53,12 +53,12 @@ for(int i = 0; i < celt; ++i)
    VariantClear(&rgvar[i]);
 */
 
-pub fn VariantClear(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn VariantClear(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HRESULT VariantClear(
     //   [in, out] VARIANTARG *pvarg  // RCX
     // )
     
-    let pvarg = emu.reg_read(RegisterX86::RCX)?;
+    let pvarg = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[VariantClear] pvarg: 0x{:x}", pvarg);
     
@@ -71,7 +71,7 @@ pub fn VariantClear(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     // Check for NULL pointer
     if pvarg == 0 {
         log::error!("[VariantClear] NULL pvarg pointer");
-        emu.reg_write(RegisterX86::RAX, E_INVALIDARG as u64)?;
+        emu.reg_write(X86Register::RAX, E_INVALIDARG as u64)?;
         return Ok(());
     }
     
@@ -131,7 +131,7 @@ pub fn VariantClear(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     // Check for invalid variant type
     if base_type > 0xFF && base_type != VT_ARRAY as u16 {
         log::error!("[VariantClear] Invalid variant type: 0x{:04x}", vt);
-        emu.reg_write(RegisterX86::RAX, DISP_E_BADVARTYPE as u64)?;
+        emu.reg_write(X86Register::RAX, DISP_E_BADVARTYPE as u64)?;
         return Ok(());
     }
     
@@ -178,7 +178,7 @@ pub fn VariantClear(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
                 // In reality, we'd need to check the actual array structure
                 if false {  // Mock check - never locked in our simulation
                     log::error!("[VariantClear] Array is locked");
-                    emu.reg_write(RegisterX86::RAX, DISP_E_ARRAYISLOCKED as u64)?;
+                    emu.reg_write(X86Register::RAX, DISP_E_ARRAYISLOCKED as u64)?;
                     return Ok(());
                 }
             } else {
@@ -203,7 +203,7 @@ pub fn VariantClear(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     log::warn!("[VariantClear] Mock implementation - resource cleanup simulated");
     
     // Return S_OK
-    emu.reg_write(RegisterX86::RAX, S_OK as u64)?;
+    emu.reg_write(X86Register::RAX, S_OK as u64)?;
     
     Ok(())
 }

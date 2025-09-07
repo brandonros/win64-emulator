@@ -1,11 +1,11 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn ExitThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn ExitThread(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // void ExitThread(
     //   DWORD dwExitCode  // RCX
     // )
     
-    let exit_code = emu.reg_read(RegisterX86::RCX)? as u32;
+    let exit_code = emu.reg_read(X86Register::RCX)? as u32;
     
     log::info!("[ExitThread] Thread exiting with code: 0x{:x}", exit_code);
     

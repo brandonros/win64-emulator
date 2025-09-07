@@ -1,13 +1,11 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
+use crate::emulation::memory;
 use windows_sys::Win32::Globalization::CPINFO;
 
-use crate::emulation::memory;
-
-pub fn GetCPInfo(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetCPInfo(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get parameters from registers (x64 calling convention)
-    let code_page = emu.reg_read(RegisterX86::RCX)? as u32;  // UINT CodePage
-    let cpinfo_ptr = emu.reg_read(RegisterX86::RDX)?;        // LPCPINFO lpCPInfo
+    let code_page = emu.reg_read(X86Register::RCX)? as u32;  // UINT CodePage
+    let cpinfo_ptr = emu.reg_read(X86Register::RDX)?;        // LPCPINFO lpCPInfo
     
     log::info!("[GetCPInfo] CodePage: {}, cpinfo_ptr: 0x{:x}", code_page, cpinfo_ptr);
     
@@ -35,7 +33,7 @@ pub fn GetCPInfo(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> 
     }
     
     // Return TRUE (1) for success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

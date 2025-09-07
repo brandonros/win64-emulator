@@ -1,11 +1,11 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn Sleep(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn Sleep(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // void Sleep(
     //   DWORD dwMilliseconds  // RCX
     // )
     
-    let milliseconds = emu.reg_read(RegisterX86::RCX)? as u32;
+    let milliseconds = emu.reg_read(X86Register::RCX)? as u32;
     
     log::info!("[Sleep] dwMilliseconds: {}", milliseconds);
     

@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::Foundation::UNICODE_STRING;
 use crate::emulation::{memory, vfs::VIRTUAL_FS};
 
@@ -252,7 +252,7 @@ For calls from kernel-mode drivers, the NtXxx and ZwXxx versions of a Windows Na
 Requirements
 */
 
-pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn ZwCreateFile(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // NTSTATUS ZwCreateFile(
     //   [out]          PHANDLE            FileHandle,       // RCX
     //   [in]           ACCESS_MASK        DesiredAccess,    // RDX
@@ -267,10 +267,10 @@ pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     //   [in]           ULONG              EaLength          // [RSP+0x58]
     // )
     
-    let file_handle = emu.reg_read(RegisterX86::RCX)?;
-    let desired_access = emu.reg_read(RegisterX86::RDX)? as u32;
-    let object_attributes = emu.reg_read(RegisterX86::R8)?;
-    let io_status_block = emu.reg_read(RegisterX86::R9)?;
+    let file_handle = emu.reg_read(X86Register::RCX)?;
+    let desired_access = emu.reg_read(X86Register::RDX)? as u32;
+    let object_attributes = emu.reg_read(X86Register::R8)?;
+    let io_status_block = emu.reg_read(X86Register::R9)?;
     
     log::info!("[ZwCreateFile] FileHandle: 0x{:x}", file_handle);
     log::info!("[ZwCreateFile] DesiredAccess: 0x{:x}", desired_access);
@@ -285,7 +285,7 @@ pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     // Check for required parameters
     if file_handle == 0 || io_status_block == 0 {
         log::error!("[ZwCreateFile] NULL pointer in required parameters");
-        emu.reg_write(RegisterX86::RAX, STATUS_INVALID_PARAMETER as u64)?;
+        emu.reg_write(X86Register::RAX, STATUS_INVALID_PARAMETER as u64)?;
         return Ok(());
     }
     
@@ -318,7 +318,7 @@ pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     };
     
     // Read stack parameters for additional file info
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut share_access_bytes = [0u8; 4];
     emu.mem_read(rsp + 0x38, &mut share_access_bytes)?;
     let share_access = u32::from_le_bytes(share_access_bytes);
@@ -450,7 +450,7 @@ pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
         emu.mem_write(io_status_block + 8, &information.to_le_bytes())?;
         
         log::info!("[ZwCreateFile] Created file handle: 0x{:x}, Information: {}", mock_handle, information);
-        emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+        emu.reg_write(X86Register::RAX, STATUS_SUCCESS as u64)?;
     } else {
         // Handle error cases
         const STATUS_OBJECT_NAME_COLLISION: u32 = 0xC0000035;
@@ -472,11 +472,11 @@ pub fn ZwCreateFile(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
         emu.mem_write(io_status_block + 8, &information.to_le_bytes())?;
         
         log::info!("[ZwCreateFile] Failed with status: 0x{:x}", error_status);
-        emu.reg_write(RegisterX86::RAX, error_status as u64)?;
+        emu.reg_write(X86Register::RAX, error_status as u64)?;
     }
     
     // Return STATUS_SUCCESS
-    emu.reg_write(RegisterX86::RAX, STATUS_SUCCESS as u64)?;
+    emu.reg_write(X86Register::RAX, STATUS_SUCCESS as u64)?;
     
     Ok(())
 }

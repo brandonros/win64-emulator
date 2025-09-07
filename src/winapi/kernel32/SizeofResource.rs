@@ -1,13 +1,13 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn SizeofResource(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SizeofResource(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD SizeofResource(
     //   HMODULE hModule,  // RCX
     //   HRSRC   hResInfo  // RDX
     // )
     
-    let h_module = emu.reg_read(RegisterX86::RCX)?;
-    let h_res_info = emu.reg_read(RegisterX86::RDX)?;
+    let h_module = emu.reg_read(X86Register::RCX)?;
+    let h_res_info = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[SizeofResource] hModule: 0x{:x}", h_module);
     log::info!("[SizeofResource] hResInfo: 0x{:x}", h_res_info);
@@ -15,7 +15,7 @@ pub fn SizeofResource(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     // Check for NULL resource handle
     if h_res_info == 0 {
         log::warn!("[SizeofResource] NULL resource handle");
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         return Ok(());
     }
     
@@ -81,7 +81,7 @@ pub fn SizeofResource(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     }
     
     // Return as DWORD (32-bit)
-    emu.reg_write(RegisterX86::RAX, size & 0xFFFFFFFF)?;
+    emu.reg_write(X86Register::RAX, size & 0xFFFFFFFF)?;
     
     Ok(())
 }

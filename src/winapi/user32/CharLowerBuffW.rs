@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 /*
 CharLowerBuffW function (winuser.h)
@@ -37,14 +37,14 @@ Note that CharLowerBuff always maps uppercase I to lowercase I ("i"), even when 
 Conversion to Unicode in the ANSI version of the function is done with the system default locale in all cases.
 */
 
-pub fn CharLowerBuffW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CharLowerBuffW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD CharLowerBuffW(
     //   [in, out] LPWSTR lpsz,       // RCX
     //   [in]      DWORD  cchLength   // RDX
     // )
     
-    let lpsz = emu.reg_read(RegisterX86::RCX)?;
-    let cch_length = emu.reg_read(RegisterX86::RDX)? as u32;
+    let lpsz = emu.reg_read(X86Register::RCX)?;
+    let cch_length = emu.reg_read(X86Register::RDX)? as u32;
     
     log::info!("[CharLowerBuffW] lpsz: 0x{:x}", lpsz);
     log::info!("[CharLowerBuffW] cchLength: {} characters", cch_length);
@@ -52,14 +52,14 @@ pub fn CharLowerBuffW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     // Check for NULL pointer
     if lpsz == 0 {
         log::error!("[CharLowerBuffW] NULL buffer pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 characters processed
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 characters processed
         return Ok(());
     }
     
     // Check for zero length
     if cch_length == 0 {
         log::info!("[CharLowerBuffW] Zero length - no characters to process");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 characters processed
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 characters processed
         return Ok(());
     }
     
@@ -107,7 +107,7 @@ pub fn CharLowerBuffW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_er
     log::warn!("[CharLowerBuffW] Mock implementation - processed {} characters", processed_count);
     
     // Return the number of characters processed
-    emu.reg_write(RegisterX86::RAX, processed_count as u64)?;
+    emu.reg_write(X86Register::RAX, processed_count as u64)?;
     
     Ok(())
 }

@@ -14,19 +14,19 @@ Type: HWND
 The return value is a handle to the desktop window.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 // Mock desktop window handle - using a fixed value
 const DESKTOP_WINDOW_HANDLE: u64 = 0x10010;
 
-pub fn GetDesktopWindow(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetDesktopWindow(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HWND GetDesktopWindow()
     // No parameters
     
     log::info!("[GetDesktopWindow] Returning desktop window handle: 0x{:x}", DESKTOP_WINDOW_HANDLE);
     
     // Return the desktop window handle
-    emu.reg_write(RegisterX86::RAX, DESKTOP_WINDOW_HANDLE)?;
+    emu.reg_write(X86Register::RAX, DESKTOP_WINDOW_HANDLE)?;
     
     Ok(())
 }

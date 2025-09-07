@@ -175,7 +175,7 @@ void _tmain(int argc, TCHAR *argv[])
 The fileapi.h header defines FindFirstFileEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.
 */
 
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 use crate::emulation::vfs::VIRTUAL_FS;
 use std::collections::HashMap;
@@ -192,7 +192,7 @@ pub static FIND_FILE_HANDLES: LazyLock<RwLock<HashMap<u64, FindFileState>>> = La
     RwLock::new(HashMap::new())
 });
 
-pub fn FindFirstFileExW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn FindFirstFileExW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HANDLE FindFirstFileExW(
     //   LPCWSTR            lpFileName,        // RCX
     //   FINDEX_INFO_LEVELS fInfoLevelId,      // RDX
@@ -202,13 +202,13 @@ pub fn FindFirstFileExW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     //   DWORD              dwAdditionalFlags  // Stack [RSP+0x30]
     // )
     
-    let file_name_ptr = emu.reg_read(RegisterX86::RCX)?;
-    let info_level = emu.reg_read(RegisterX86::RDX)?;
-    let find_data_ptr = emu.reg_read(RegisterX86::R8)?;
-    let search_op = emu.reg_read(RegisterX86::R9)?;
+    let file_name_ptr = emu.reg_read(X86Register::RCX)?;
+    let info_level = emu.reg_read(X86Register::RDX)?;
+    let find_data_ptr = emu.reg_read(X86Register::R8)?;
+    let search_op = emu.reg_read(X86Register::R9)?;
     
     // Read stack parameters
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut search_filter_bytes = [0u8; 8];
     let mut additional_flags_bytes = [0u8; 4];
     emu.mem_read(rsp + 0x28, &mut search_filter_bytes)?;
@@ -234,7 +234,7 @@ pub fn FindFirstFileExW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     
     if files.is_empty() {
         log::info!("[FindFirstFileExW] No files found matching pattern: {}", file_name);
-        emu.reg_write(RegisterX86::RAX, INVALID_HANDLE_VALUE)?;
+        emu.reg_write(X86Register::RAX, INVALID_HANDLE_VALUE)?;
         return Ok(());
     }
     
@@ -274,7 +274,7 @@ pub fn FindFirstFileExW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     }
     
     // Return the search handle
-    emu.reg_write(RegisterX86::RAX, search_handle)?;
+    emu.reg_write(X86Register::RAX, search_handle)?;
     
     log::info!("[FindFirstFileExW] Created search handle 0x{:x}, found {} files", search_handle, files.len());
     

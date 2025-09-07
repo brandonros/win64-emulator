@@ -1,6 +1,6 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn RtlVirtualUnwind(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RtlVirtualUnwind(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // PEXCEPTION_ROUTINE RtlVirtualUnwind(
     //   DWORD             HandlerType,        // RCX
     //   DWORD64           ImageBase,          // RDX
@@ -12,13 +12,13 @@ pub fn RtlVirtualUnwind(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     //   PKNONVOLATILE_CONTEXT_POINTERS ContextPointers // [RSP+0x40]
     // )
     
-    let handler_type = emu.reg_read(RegisterX86::RCX)? as u32;
-    let image_base = emu.reg_read(RegisterX86::RDX)?;
-    let control_pc = emu.reg_read(RegisterX86::R8)?;
-    let function_entry = emu.reg_read(RegisterX86::R9)?;
+    let handler_type = emu.reg_read(X86Register::RCX)? as u32;
+    let image_base = emu.reg_read(X86Register::RDX)?;
+    let control_pc = emu.reg_read(X86Register::R8)?;
+    let function_entry = emu.reg_read(X86Register::R9)?;
     
     // Read stack parameters
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
     let mut context_record_bytes = [0u8; 8];
     emu.mem_read(rsp + 0x28, &mut context_record_bytes)?;
     let context_record = u64::from_le_bytes(context_record_bytes);
@@ -110,7 +110,7 @@ pub fn RtlVirtualUnwind(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     log::warn!("[RtlVirtualUnwind] Mock implementation - simple stack unwind");
     
     // Return NULL (no exception handler)
-    emu.reg_write(RegisterX86::RAX, 0)?;
+    emu.reg_write(X86Register::RAX, 0)?;
     
     Ok(())
 }

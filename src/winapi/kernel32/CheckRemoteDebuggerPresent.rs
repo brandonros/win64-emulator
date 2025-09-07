@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 /*
 CheckRemoteDebuggerPresent function (debugapi.h)
@@ -28,14 +28,14 @@ If the function succeeds, the return value is nonzero.
 If the function fails, the return value is zero. To get extended error information, call GetLastError.
 */
 
-pub fn CheckRemoteDebuggerPresent(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn CheckRemoteDebuggerPresent(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL CheckRemoteDebuggerPresent(
     //   [in]      HANDLE hProcess,          // RCX
     //   [in, out] PBOOL  pbDebuggerPresent  // RDX
     // )
     
-    let h_process = emu.reg_read(RegisterX86::RCX)?;
-    let pb_debugger_present = emu.reg_read(RegisterX86::RDX)?;
+    let h_process = emu.reg_read(X86Register::RCX)?;
+    let pb_debugger_present = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[CheckRemoteDebuggerPresent] hProcess: 0x{:x}", h_process);
     log::info!("[CheckRemoteDebuggerPresent] pbDebuggerPresent: 0x{:x}", pb_debugger_present);
@@ -43,14 +43,14 @@ pub fn CheckRemoteDebuggerPresent(emu: &mut Unicorn<()>) -> Result<(), unicorn_e
     // Check for NULL output pointer
     if pb_debugger_present == 0 {
         log::error!("[CheckRemoteDebuggerPresent] NULL pbDebuggerPresent pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
     // Check for invalid process handle
     if h_process == 0 || h_process == 0xFFFFFFFFFFFFFFFF {
         log::error!("[CheckRemoteDebuggerPresent] Invalid process handle");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
@@ -67,7 +67,7 @@ pub fn CheckRemoteDebuggerPresent(emu: &mut Unicorn<()>) -> Result<(), unicorn_e
         }
         Err(e) => {
             log::error!("[CheckRemoteDebuggerPresent] Failed to write to pbDebuggerPresent: {:?}", e);
-            emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+            emu.reg_write(X86Register::RAX, 0)?; // FALSE
             return Ok(());
         }
     }
@@ -81,7 +81,7 @@ pub fn CheckRemoteDebuggerPresent(emu: &mut Unicorn<()>) -> Result<(), unicorn_e
     log::warn!("[CheckRemoteDebuggerPresent] Mock implementation - always returns no debugger");
     
     // Return TRUE (non-zero) to indicate success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

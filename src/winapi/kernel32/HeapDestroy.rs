@@ -1,18 +1,18 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn HeapDestroy(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn HeapDestroy(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL HeapDestroy(
     //   HANDLE hHeap  // RCX
     // )
     
-    let h_heap = emu.reg_read(RegisterX86::RCX)?;
+    let h_heap = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[HeapDestroy] hHeap: 0x{:x}", h_heap);
     
     // Check for NULL heap handle
     if h_heap == 0 {
         log::warn!("[HeapDestroy] NULL heap handle");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -23,7 +23,7 @@ pub fn HeapDestroy(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
     if h_heap == MOCK_PROCESS_HEAP_HANDLE {
         log::error!("[HeapDestroy] Cannot destroy the process heap!");
         log::info!("[HeapDestroy] Returning FALSE");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -43,7 +43,7 @@ pub fn HeapDestroy(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         log::info!("[HeapDestroy] Mock: Heap destroyed successfully");
         log::warn!("[HeapDestroy] Mock implementation - not actually freeing memory");
         
-        emu.reg_write(RegisterX86::RAX, 1)?; // Return TRUE - success
+        emu.reg_write(X86Register::RAX, 1)?; // Return TRUE - success
     } else {
         // Unknown or invalid heap handle
         log::warn!("[HeapDestroy] Invalid or unknown heap handle: 0x{:x} ERROR_INVALID_HANDLE", h_heap);
@@ -53,7 +53,7 @@ pub fn HeapDestroy(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         const ERROR_INVALID_HANDLE: u32 = 6;
         crate::winapi::set_last_error(emu, ERROR_INVALID_HANDLE)?;
         
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
     }
     
     Ok(())

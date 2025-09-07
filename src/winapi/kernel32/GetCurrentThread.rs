@@ -1,6 +1,6 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn GetCurrentThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetCurrentThread(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // HANDLE GetCurrentThread(void)
     // Takes no parameters, returns a pseudo-handle to the current thread
     
@@ -12,7 +12,7 @@ pub fn GetCurrentThread(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     log::info!("[GetCurrentThread] Returning pseudo-handle: 0x{:x}", CURRENT_THREAD_PSEUDO_HANDLE);
     
     // Return the pseudo-handle in RAX
-    emu.reg_write(RegisterX86::RAX, CURRENT_THREAD_PSEUDO_HANDLE)?;
+    emu.reg_write(X86Register::RAX, CURRENT_THREAD_PSEUDO_HANDLE)?;
     
     Ok(())
 }

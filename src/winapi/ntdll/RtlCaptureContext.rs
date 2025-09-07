@@ -1,11 +1,11 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn RtlCaptureContext(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn RtlCaptureContext(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // void RtlCaptureContext(
     //   PCONTEXT ContextRecord  // RCX
     // )
     
-    let context_ptr = emu.reg_read(RegisterX86::RCX)?;
+    let context_ptr = emu.reg_read(X86Register::RCX)?;
     
     log::info!("[RtlCaptureContext] ContextRecord: 0x{:x}", context_ptr);
     
@@ -65,24 +65,24 @@ pub fn RtlCaptureContext(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc
     emu.mem_write(context_ptr + CONTEXT_FLAGS as u64, &flags.to_le_bytes())?;
     
     // Capture general purpose registers
-    let rax = emu.reg_read(RegisterX86::RAX)?;
-    let rcx = emu.reg_read(RegisterX86::RCX)?;
-    let rdx = emu.reg_read(RegisterX86::RDX)?;
-    let rbx = emu.reg_read(RegisterX86::RBX)?;
-    let rsp = emu.reg_read(RegisterX86::RSP)?;
-    let rbp = emu.reg_read(RegisterX86::RBP)?;
-    let rsi = emu.reg_read(RegisterX86::RSI)?;
-    let rdi = emu.reg_read(RegisterX86::RDI)?;
-    let r8 = emu.reg_read(RegisterX86::R8)?;
-    let r9 = emu.reg_read(RegisterX86::R9)?;
-    let r10 = emu.reg_read(RegisterX86::R10)?;
-    let r11 = emu.reg_read(RegisterX86::R11)?;
-    let r12 = emu.reg_read(RegisterX86::R12)?;
-    let r13 = emu.reg_read(RegisterX86::R13)?;
-    let r14 = emu.reg_read(RegisterX86::R14)?;
-    let r15 = emu.reg_read(RegisterX86::R15)?;
-    let rip = emu.reg_read(RegisterX86::RIP)?;
-    let rflags = emu.reg_read(RegisterX86::RFLAGS)?;
+    let rax = emu.reg_read(X86Register::RAX)?;
+    let rcx = emu.reg_read(X86Register::RCX)?;
+    let rdx = emu.reg_read(X86Register::RDX)?;
+    let rbx = emu.reg_read(X86Register::RBX)?;
+    let rsp = emu.reg_read(X86Register::RSP)?;
+    let rbp = emu.reg_read(X86Register::RBP)?;
+    let rsi = emu.reg_read(X86Register::RSI)?;
+    let rdi = emu.reg_read(X86Register::RDI)?;
+    let r8 = emu.reg_read(X86Register::R8)?;
+    let r9 = emu.reg_read(X86Register::R9)?;
+    let r10 = emu.reg_read(X86Register::R10)?;
+    let r11 = emu.reg_read(X86Register::R11)?;
+    let r12 = emu.reg_read(X86Register::R12)?;
+    let r13 = emu.reg_read(X86Register::R13)?;
+    let r14 = emu.reg_read(X86Register::R14)?;
+    let r15 = emu.reg_read(X86Register::R15)?;
+    let rip = emu.reg_read(X86Register::RIP)?;
+    let rflags = emu.reg_read(X86Register::RFLAGS)?;
     
     // Write registers to CONTEXT structure
     emu.mem_write(context_ptr + CONTEXT_RAX as u64, &rax.to_le_bytes())?;

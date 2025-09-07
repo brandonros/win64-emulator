@@ -1,10 +1,10 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::{Mutex, LazyLock};
 use crate::emulation::memory::{TEB_BASE, TEB_TLS_SLOTS_OFFSET, TLS_MINIMUM_AVAILABLE, TLS_OUT_OF_INDEXES};
 
 static TLS_ALLOCATION_BITMAP: LazyLock<Mutex<u64>> = LazyLock::new(|| Mutex::new(0));
 
-pub fn TlsAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn TlsAlloc(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     let mut bitmap = TLS_ALLOCATION_BITMAP.lock().unwrap();
     
     // Find first free slot (bit = 0 means free, bit = 1 means allocated)
@@ -25,13 +25,13 @@ pub fn TlsAlloc(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
             emu.mem_write(slot_addr, &0u64.to_le_bytes())?;
             
             // Return index in RAX
-            emu.reg_write(RegisterX86::RAX, i as u64)?;
+            emu.reg_write(X86Register::RAX, i as u64)?;
             
             log::info!("kernel32!TlsAlloc() -> {} (slot 0x{:016x})", i, slot_addr);
         }
         None => {
             // No free slots, return TLS_OUT_OF_INDEXES
-            emu.reg_write(RegisterX86::RAX, TLS_OUT_OF_INDEXES as u64)?;
+            emu.reg_write(X86Register::RAX, TLS_OUT_OF_INDEXES as u64)?;
 
             // TODO: set last error?
             

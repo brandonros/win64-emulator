@@ -1,16 +1,16 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use std::sync::{Mutex, LazyLock};
 use crate::emulation::memory::{TEB_BASE, TEB_TLS_SLOTS_OFFSET, TLS_MINIMUM_AVAILABLE};
 use crate::winapi;
 
 static TLS_ALLOCATION_BITMAP: LazyLock<Mutex<u64>> = LazyLock::new(|| Mutex::new(0));
 
-pub fn TlsFree(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn TlsFree(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL TlsFree(
     //   DWORD dwTlsIndex  // RCX
     // )
     
-    let tls_index = emu.reg_read(RegisterX86::RCX)? as u32;
+    let tls_index = emu.reg_read(X86Register::RCX)? as u32;
     
     log::info!("[TlsFree] dwTlsIndex: {}", tls_index);
     
@@ -19,7 +19,7 @@ pub fn TlsFree(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
         log::warn!("[TlsFree] Invalid TLS index: {} (max: {})", 
                   tls_index, TLS_MINIMUM_AVAILABLE - 1);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -29,7 +29,7 @@ pub fn TlsFree(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
     if (*bitmap & (1u64 << tls_index)) == 0 {
         log::warn!("[TlsFree] Attempting to free unallocated TLS index: {}", tls_index);
         winapi::set_last_error(emu, windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER)?;
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // Return FALSE
         return Ok(());
     }
     
@@ -44,7 +44,7 @@ pub fn TlsFree(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
               tls_index, slot_addr);
     
     // Return TRUE for success
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

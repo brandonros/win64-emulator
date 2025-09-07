@@ -1,9 +1,8 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn GetStdHandle(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetStdHandle(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get the nStdHandle parameter from RCX register
-    let n_std_handle = emu.reg_read(RegisterX86::RCX)? as u32;
+    let n_std_handle = emu.reg_read(X86Register::RCX)? as u32;
     
     // Define the standard handle constants
     const STD_INPUT_HANDLE: u32 = 0xFFFFFFF6;  // (DWORD)-10
@@ -31,7 +30,7 @@ pub fn GetStdHandle(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     };
     
     // Set the return value in RAX register
-    emu.reg_write(RegisterX86::RAX, handle)?;
+    emu.reg_write(X86Register::RAX, handle)?;
     
     Ok(())
 }

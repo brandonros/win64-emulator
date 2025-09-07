@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use windows_sys::Win32::System::Diagnostics::ToolHelp::MODULEENTRY32;
 use crate::emulation::memory::utils::write_struct;
 use crate::pe::module_registry::MODULE_REGISTRY;
@@ -36,14 +36,14 @@ static SNAPSHOT_MODULE_STATE: LazyLock<RwLock<HashMap<u64, usize>>> = LazyLock::
     RwLock::new(HashMap::new())
 });
 
-pub fn Module32Next(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn Module32Next(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL Module32Next(
     //   [in]  HANDLE          hSnapshot,  // RCX
     //   [out] LPMODULEENTRY32 lpme        // RDX
     // )
     
-    let h_snapshot = emu.reg_read(RegisterX86::RCX)?;
-    let lpme = emu.reg_read(RegisterX86::RDX)?;
+    let h_snapshot = emu.reg_read(X86Register::RCX)?;
+    let lpme = emu.reg_read(X86Register::RDX)?;
     
     log::info!("[Module32Next] hSnapshot: 0x{:x}", h_snapshot);
     log::info!("[Module32Next] lpme: 0x{:x}", lpme);
@@ -51,14 +51,14 @@ pub fn Module32Next(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     // Check for NULL module entry pointer
     if lpme == 0 {
         log::error!("[Module32Next] NULL lpme pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
     // Check for invalid snapshot handle
     if h_snapshot == 0 || h_snapshot == 0xFFFFFFFFFFFFFFFF {
         log::error!("[Module32Next] Invalid snapshot handle");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
@@ -68,7 +68,7 @@ pub fn Module32Next(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
         Ok(_) => {},
         Err(e) => {
             log::error!("[Module32Next] Failed to read dwSize: {:?}", e);
-            emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+            emu.reg_write(X86Register::RAX, 0)?; // FALSE
             return Ok(());
         }
     }
@@ -78,7 +78,7 @@ pub fn Module32Next(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     if dw_size < std::mem::size_of::<MODULEENTRY32>() as u32 {
         log::error!("[Module32Next] Invalid dwSize: {} (expected at least {})", 
                    dw_size, std::mem::size_of::<MODULEENTRY32>());
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
@@ -87,7 +87,7 @@ pub fn Module32Next(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     
     if modules.is_empty() {
         log::error!("[Module32Next] No modules registered in the module registry");
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE
         return Ok(());
     }
     
@@ -106,7 +106,7 @@ pub fn Module32Next(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
         log::info!("[Module32Next] No more modules to enumerate (index {} >= {})", 
                   *current_index, modules.len());
         drop(state); // Release the lock before returning
-        emu.reg_write(RegisterX86::RAX, 0)?; // FALSE - no more modules
+        emu.reg_write(X86Register::RAX, 0)?; // FALSE - no more modules
         return Ok(());
     }
     
@@ -176,7 +176,7 @@ pub fn Module32Next(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
         Err(e) => {
             log::error!("[Module32Next] Failed to write module entry: {:?}", e);
             drop(state); // Release the lock before returning
-            emu.reg_write(RegisterX86::RAX, 0)?; // FALSE
+            emu.reg_write(X86Register::RAX, 0)?; // FALSE
             return Ok(());
         }
     }
@@ -184,7 +184,7 @@ pub fn Module32Next(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_erro
     drop(state); // Release the lock
     
     // Return TRUE (success)
-    emu.reg_write(RegisterX86::RAX, 1)?;
+    emu.reg_write(X86Register::RAX, 1)?;
     
     Ok(())
 }

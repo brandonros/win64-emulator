@@ -1,4 +1,4 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 use crate::emulation::memory;
 
 /*
@@ -80,7 +80,7 @@ To avoid problems caused by inconsistent results, multithreaded applications and
 In Windows 8 and Windows Server 2012, this function is supported by the following technologies.
 */
 
-pub fn GetFullPathNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn GetFullPathNameW(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // DWORD GetFullPathNameW(
     //   [in]  LPCWSTR lpFileName,     // RCX
     //   [in]  DWORD   nBufferLength,  // RDX
@@ -88,10 +88,10 @@ pub fn GetFullPathNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     //   [out] LPWSTR  *lpFilePart     // R9
     // )
     
-    let lp_file_name = emu.reg_read(RegisterX86::RCX)?;
-    let n_buffer_length = emu.reg_read(RegisterX86::RDX)? as u32;
-    let lp_buffer = emu.reg_read(RegisterX86::R8)?;
-    let lp_file_part = emu.reg_read(RegisterX86::R9)?;
+    let lp_file_name = emu.reg_read(X86Register::RCX)?;
+    let n_buffer_length = emu.reg_read(X86Register::RDX)? as u32;
+    let lp_buffer = emu.reg_read(X86Register::R8)?;
+    let lp_file_part = emu.reg_read(X86Register::R9)?;
     
     log::info!("[GetFullPathNameW] lpFileName: 0x{:x}", lp_file_name);
     log::info!("[GetFullPathNameW] nBufferLength: {} wide characters", n_buffer_length);
@@ -104,13 +104,13 @@ pub fn GetFullPathNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
             Ok(s) => s,
             Err(_) => {
                 log::error!("[GetFullPathNameW] Failed to read input filename");
-                emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+                emu.reg_write(X86Register::RAX, 0)?; // Return 0 for failure
                 return Ok(());
             }
         }
     } else {
         log::error!("[GetFullPathNameW] NULL filename pointer");
-        emu.reg_write(RegisterX86::RAX, 0)?; // Return 0 for failure
+        emu.reg_write(X86Register::RAX, 0)?; // Return 0 for failure
         return Ok(());
     };
     
@@ -138,7 +138,7 @@ pub fn GetFullPathNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
         // Return required buffer size (including null terminator)
         log::warn!("[GetFullPathNameW] Buffer too small or NULL: need {} wide characters, got {}", 
                   required_buffer_size, n_buffer_length);
-        emu.reg_write(RegisterX86::RAX, required_buffer_size as u64)?;
+        emu.reg_write(X86Register::RAX, required_buffer_size as u64)?;
         return Ok(());
     }
     
@@ -176,7 +176,7 @@ pub fn GetFullPathNameW(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_
     log::warn!("[GetFullPathNameW] Mock implementation - simple path resolution");
     
     // Return the length of the string copied (NOT including null terminator)
-    emu.reg_write(RegisterX86::RAX, full_path_wide_len as u64)?;
+    emu.reg_write(X86Register::RAX, full_path_wide_len as u64)?;
     
     Ok(())
 }

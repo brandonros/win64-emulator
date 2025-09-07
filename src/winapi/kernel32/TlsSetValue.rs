@@ -1,19 +1,19 @@
-use unicorn_engine::{Unicorn, RegisterX86};
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
 use crate::{emulation::memory::{TEB_BASE, TEB_TLS_SLOTS_OFFSET, TLS_MINIMUM_AVAILABLE}, winapi};
 
-pub fn TlsSetValue(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn TlsSetValue(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // BOOL TlsSetValue(DWORD dwTlsIndex, LPVOID lpTlsValue)
     // dwTlsIndex in RCX, lpTlsValue in RDX (x64 calling convention)
     
     // Get the TLS index from RCX
-    let tls_index = emu.reg_read(RegisterX86::RCX)? as u32;
+    let tls_index = emu.reg_read(X86Register::RCX)? as u32;
     // Get the value to store from RDX
-    let value = emu.reg_read(RegisterX86::RDX)?;
+    let value = emu.reg_read(X86Register::RDX)?;
     
     if tls_index >= TLS_MINIMUM_AVAILABLE as u32 {
         // Invalid index - return FALSE (0) and set last error
-        emu.reg_write(RegisterX86::RAX, 0)?;
+        emu.reg_write(X86Register::RAX, 0)?;
         
         // Set LastError to ERROR_INVALID_PARAMETER (87)
         winapi::set_last_error(emu, 87)?;
@@ -25,7 +25,7 @@ pub fn TlsSetValue(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error
         emu.mem_write(slot_addr, &value.to_le_bytes())?;
         
         // Return TRUE (1) for success
-        emu.reg_write(RegisterX86::RAX, 1)?;
+        emu.reg_write(X86Register::RAX, 1)?;
         
         // Clear LastError on success
         winapi::set_last_error(emu, 0)?;

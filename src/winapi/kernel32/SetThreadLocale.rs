@@ -1,9 +1,8 @@
-use unicorn_engine::Unicorn;
-use unicorn_engine::RegisterX86;
+use crate::emulation::engine::{EmulatorEngine, EmulatorError, X86Register};
 
-pub fn SetThreadLocale(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_error> {
+pub fn SetThreadLocale(emu: &mut dyn EmulatorEngine) -> Result<(), EmulatorError> {
     // Get the new locale from RCX register
-    let new_locale = emu.reg_read(RegisterX86::RCX)? as u32;
+    let new_locale = emu.reg_read(X86Register::RCX)? as u32;
     
     log::debug!("[SetThreadLocale] Setting thread locale to: 0x{:04x}", new_locale);
     
@@ -14,7 +13,7 @@ pub fn SetThreadLocale(emu: &mut Unicorn<()>) -> Result<(), unicorn_engine::uc_e
     log::debug!("[SetThreadLocale] Returning previous locale: 0x{:04x}", previous_locale);
     
     // Return the previous LCID in EAX
-    emu.reg_write(RegisterX86::RAX, previous_locale as u64)?;
+    emu.reg_write(X86Register::RAX, previous_locale as u64)?;
     
     Ok(())
 }
